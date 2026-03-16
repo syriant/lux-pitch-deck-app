@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { Users } from './pages/admin/Users';
 import { RequireRole } from './components/common/RequireRole';
 
 export const router = createBrowserRouter([
@@ -13,6 +14,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['pcm', 'admin']}>
         <Dashboard />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/admin/users',
+    element: (
+      <RequireRole roles={['admin']}>
+        <Users />
       </RequireRole>
     ),
   },
