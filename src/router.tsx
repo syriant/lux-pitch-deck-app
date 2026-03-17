@@ -5,6 +5,7 @@ import { Users } from './pages/admin/Users';
 import { Differentiators } from './pages/admin/Differentiators';
 import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { DealTiers } from './pages/admin/DealTiers';
+import { ParserTest } from './pages/admin/ParserTest';
 import { RequireRole } from './components/common/RequireRole';
 
 export const router = createBrowserRouter([
@@ -49,6 +50,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['admin']}>
         <DealTiers />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/admin/parser-test',
+    element: (
+      <RequireRole roles={['admin']}>
+        <ParserTest />
       </RequireRole>
     ),
   },
