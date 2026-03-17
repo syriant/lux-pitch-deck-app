@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Users } from './pages/admin/Users';
 import { Differentiators } from './pages/admin/Differentiators';
 import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
+import { DealTiers } from './pages/admin/DealTiers';
 import { RequireRole } from './components/common/RequireRole';
 
 export const router = createBrowserRouter([
@@ -40,6 +41,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['admin']}>
         <ObjectiveTemplates />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/admin/deal-tiers',
+    element: (
+      <RequireRole roles={['admin']}>
+        <DealTiers />
       </RequireRole>
     ),
   },
