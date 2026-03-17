@@ -3,6 +3,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Users } from './pages/admin/Users';
 import { Differentiators } from './pages/admin/Differentiators';
+import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { RequireRole } from './components/common/RequireRole';
 
 export const router = createBrowserRouter([
@@ -31,6 +32,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['admin']}>
         <Differentiators />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/admin/objectives',
+    element: (
+      <RequireRole roles={['admin']}>
+        <ObjectiveTemplates />
       </RequireRole>
     ),
   },
