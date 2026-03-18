@@ -19,7 +19,7 @@ function getUniqueOptions(options: DeckOption[]): DeckOption[] {
 
 export function MarketingAssetsSlide({ property }: MarketingAssetsSlideProps) {
   const uniqueOptions = property ? getUniqueOptions(property.options) : [];
-  const hasAssets = uniqueOptions.some((o) => o.marketingAssets && Object.keys(o.marketingAssets).length > 0);
+  const hasAssets = uniqueOptions.some((o) => o.marketingAssets && Object.values(o.marketingAssets).some(Boolean));
 
   const optionLabels = uniqueOptions.map((o) =>
     o.tierLabel ?? `Option ${o.optionNumber === 1 ? 'One' : o.optionNumber === 2 ? 'Two' : 'Three'}`

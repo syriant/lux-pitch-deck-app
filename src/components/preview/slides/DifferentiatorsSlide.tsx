@@ -1,75 +1,80 @@
 import { type FullDeck } from '@/api/decks.api';
+import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { SlideEditableText } from '../SlideEditableText';
 
-// Brand colours
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
 
 interface DifferentiatorsSlideProps {
   deck: FullDeck;
+  onFieldChange?: FieldChangeHandler;
 }
 
 const defaultDifferentiators = [
-  {
-    title: 'High-Value Customers',
-    description: 'Access more than 9 million engaged Luxury Escapes members: high-spending travellers looking for inspiration',
-  },
-  {
-    title: 'Reach New Customers',
-    description: "More than 90% of Luxury Escapes members weren't planning to stay at the hotel they booked until they discovered it on Luxury Escapes",
-  },
+  { title: 'High-Value Customers', description: 'Access more than 9 million engaged Luxury Escapes members: high-spending travellers looking for inspiration' },
+  { title: 'Reach New Customers', description: "More than 90% of Luxury Escapes members weren't planning to stay at the hotel they booked until they discovered it on Luxury Escapes" },
+  { title: 'Multi-Channel Marketing', description: 'Exclusive access to 360-degree media assets that amplify your brand across social, email, push, and web' },
+  { title: 'Tailored Campaigns', description: 'Our in-house team of world-class writers, editors, designers and videographers will create an incredible campaign' },
 ];
 
-export function DifferentiatorsSlide({ deck }: DifferentiatorsSlideProps) {
+export function DifferentiatorsSlide({ deck, onFieldChange }: DifferentiatorsSlideProps) {
   const items = deck.differentiators.length > 0
     ? deck.differentiators.map((d) => ({
         title: d.differentiator.title,
         description: d.differentiator.description ?? '',
+        key: d.id,
       }))
-    : defaultDifferentiators;
+    : defaultDifferentiators.map((d, i) => ({ ...d, key: `default-${i}` }));
 
-  const property = deck.properties[0];
-  const hotelName = property?.propertyName ?? deck.name;
+  const hotelName = deck.properties[0]?.propertyName ?? deck.name;
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       <div className="flex-1 flex p-[5%] gap-[4%]">
-        {/* Left — value prop + differentiators */}
         <div className="flex-1 flex flex-col">
-          <p className="text-xl font-light italic leading-snug mb-6" style={{ color: GREEN }}>
-            By leveraging Luxury Escapes' global member base, curated campaigns, and{' '}
-            <span className="font-semibold not-italic px-1" style={{ backgroundColor: GREEN, color: 'white' }}>
-              powerful marketing reach
-            </span>{' '}
-            {hotelName} can attract premium travellers, generate incremental demand, and strengthen market share
-          </p>
+          <SlideEditableText
+            fieldKey="diff.headline"
+            defaultValue={`By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach ${hotelName} can attract premium travellers, generate incremental demand, and strengthen market share`}
+            customFields={deck.customFields}
+            onFieldChange={onFieldChange}
+            className="text-xl font-light italic leading-snug mb-6"
+            as="p"
+            multiline
+          />
 
-          {/* Differentiator cards */}
           <div className="grid grid-cols-2 gap-4 mt-auto">
-            {items.slice(0, 4).map((item, i) => (
-              <div key={i}>
+            {items.map((item) => (
+              <div key={item.key}>
                 <div className="w-8 border-t-2 mb-2" style={{ borderColor: GREEN }} />
-                <h3 className="text-sm font-bold mb-1" style={{ color: '#333' }}>
-                  {item.title}
-                </h3>
-                <p className="text-[10px] leading-relaxed" style={{ color: '#555' }}>
-                  {item.description}
-                </p>
+                <SlideEditableText
+                  fieldKey={`diff.title.${item.key}`}
+                  defaultValue={item.title}
+                  customFields={deck.customFields}
+                  onFieldChange={onFieldChange}
+                  className="text-sm font-bold mb-1"
+                  as="h3"
+                />
+                <SlideEditableText
+                  fieldKey={`diff.desc.${item.key}`}
+                  defaultValue={item.description}
+                  customFields={deck.customFields}
+                  onFieldChange={onFieldChange}
+                  className="text-[10px] leading-relaxed"
+                  as="p"
+                  multiline
+                />
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right — photo placeholder */}
         <div className="w-[40%] rounded-lg overflow-hidden" style={{
           background: 'linear-gradient(135deg, #a3c4bd 0%, #8eb8b0 50%, #c8ddd8 100%)',
         }}>
-          <div className="h-full w-full flex items-center justify-center text-white/50 text-xs">
-            Hotel photo
-          </div>
+          <div className="h-full w-full flex items-center justify-center text-white/50 text-xs">Hotel photo</div>
         </div>
       </div>
 
-      {/* Bottom-right logo */}
       <div className="flex justify-end px-[5%] pb-[3%]">
         <div className="flex items-center gap-1.5">
           <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: GREEN }} />

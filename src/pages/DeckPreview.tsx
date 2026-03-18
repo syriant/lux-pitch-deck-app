@@ -1,9 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getFullDeck, type FullDeck } from '@/api/decks.api';
+import {
+  getFullDeck, updateDeck, updateProperty, setDeckObjectives, updateOption,
+  type FullDeck,
+} from '@/api/decks.api';
+import { updateCaseStudy } from '@/api/case-studies.api';
 import { buildSlideList, type SlideDefinition } from '@/components/preview/slide-types';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
+
+export type FieldChangeHandler = (
+  entityType: 'property' | 'objective' | 'option' | 'case-study' | 'custom',
+  entityId: string,
+  field: string,
+  value: string,
+) => void;
 
 export function DeckPreview() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +40,88 @@ export function DeckPreview() {
     })();
   }, [id]);
 
+  const handleFieldChange: FieldChangeHandler = useCallback(
+    async (entityType, entityId, field, value) => {
+      if (!deck || !id) return;
+
+      try {
+        if (entityType === 'property') {
+          await updateProperty(id, entityId, { [field]: value });
+          setDeck((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              properties: prev.properties.map((p) =>
+                p.id === entityId ? { ...p, [field]: value } : p,
+              ),
+            };
+          });
+        } else if (entityType === 'objective') {
+          // Update the specific objective text, then save full array
+          const updated = deck.objectives.map((o) =>
+            o.id === entityId ? { ...o, objectiveText: value } : o,
+          );
+          await setDeckObjectives(
+            id,
+            updated.map((o) => ({ text: o.objectiveText, source: o.source })),
+          );
+          setDeck((prev) => {
+            if (!prev) return prev;
+            return { ...prev, objectives: updated };
+          });
+        } else if (entityType === 'option') {
+          await updateOption(id, entityId, { [field]: value });
+          setDeck((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              properties: prev.properties.map((p) => ({
+                ...p,
+                options: p.options.map((o) =>
+                  o.id === entityId ? { ...o, [field]: value } : o,
+                ),
+              })),
+            };
+          });
+        } else if (entityType === 'custom') {
+          // Save to deck.customFields — merge with existing
+          const updated = { ...(deck.customFields ?? {}), [field]: value };
+          await updateDeck(id, { customFields: updated });
+          setDeck((prev) => {
+            if (!prev) return prev;
+            return { ...prev, customFields: updated };
+          });
+        } else if (entityType === 'case-study') {
+          await updateCaseStudy(entityId, { [field]: value });
+          setDeck((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              properties: prev.properties.map((p) => ({
+                ...p,
+                caseStudies: p.caseStudies.map((cs) =>
+                  cs.caseStudyId === entityId
+                    ? { ...cs, caseStudy: { ...cs.caseStudy, [field]: value } }
+                    : cs,
+                ),
+              })),
+            };
+          });
+        }
+      } catch {
+        // Silently fail for now — could add toast notifications later
+        console.error(`Failed to save ${entityType}.${field}`);
+      }
+
+      // Rebuild slides from updated deck
+      setDeck((prev) => {
+        if (prev) setSlides(buildSlideList(prev));
+        return prev;
+      });
+    },
+    [deck, id],
+  );
+
   const handleReorder = useCallback((fromIndex: number, toIndex: number) => {
     setSlides((prev) => {
       const next = [...prev];
@@ -36,7 +129,6 @@ export function DeckPreview() {
       next.splice(toIndex, 0, moved);
       return next;
     });
-    // Adjust active index
     setActiveIndex((prev) => {
       if (prev === fromIndex) return toIndex;
       if (fromIndex < prev && toIndex >= prev) return prev - 1;
@@ -48,6 +140,8 @@ export function DeckPreview() {
   // Keyboard navigation
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
+      // Don't navigate when editing text
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         e.preventDefault();
         setActiveIndex((prev) => Math.min(prev + 1, slides.length - 1));
@@ -113,7 +207,7 @@ export function DeckPreview() {
         <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
           {activeSlide && (
             <div className="w-full max-w-5xl">
-              <SlideRenderer slide={activeSlide} deck={deck} />
+              <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} />
               <div className="mt-3 text-center text-xs text-gray-400">
                 {activeIndex + 1} / {slides.length} — {activeSlide.label}
               </div>

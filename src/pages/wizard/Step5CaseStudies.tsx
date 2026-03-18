@@ -1,21 +1,25 @@
 import { useState, useEffect } from 'react';
 import { getCaseStudies, type CaseStudy } from '@/api/case-studies.api';
-import { type DeckProperty } from '@/api/decks.api';
+import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 
 interface Step5Props {
-  properties: DeckProperty[];
+  deckId: string;
+  properties: DeckPropertyFull[];
   onBack: () => void;
   onNext: () => void;
 }
 
-export function Step5CaseStudies({ properties, onBack, onNext }: Step5Props) {
+export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Props) {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Record<string, Set<string>>>(() => {
     const init: Record<string, Set<string>> = {};
-    for (const p of properties) init[p.id] = new Set();
+    for (const p of properties) {
+      const savedIds = p.caseStudies?.map((cs) => cs.caseStudyId) ?? [];
+      init[p.id] = new Set(savedIds);
+    }
     return init;
   });
   const [activeProperty, setActiveProperty] = useState(properties[0]?.id ?? '');
@@ -45,6 +49,28 @@ export function Step5CaseStudies({ properties, onBack, onNext }: Step5Props) {
       next[propertyId] = set;
       return next;
     });
+  }
+
+  const [saving, setSaving] = useState(false);
+
+  async function handleSaveAndNext() {
+    setSaving(true);
+    setError('');
+    try {
+      for (const prop of properties) {
+        const ids = Array.from(selected[prop.id] ?? []);
+        await setPropertyCaseStudies(
+          deckId,
+          prop.id,
+          ids.map((caseStudyId, i) => ({ caseStudyId, sortOrder: i })),
+        );
+      }
+      onNext();
+    } catch {
+      setError('Failed to save case study selections');
+    } finally {
+      setSaving(false);
+    }
   }
 
   const totalSelected = Object.values(selected).reduce((sum, s) => sum + s.size, 0);
@@ -149,10 +175,11 @@ export function Step5CaseStudies({ properties, onBack, onNext }: Step5Props) {
           Back
         </button>
         <button
-          onClick={onNext}
-          className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700"
+          onClick={handleSaveAndNext}
+          disabled={saving}
+          className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          Next: Marketing Assets
+          {saving ? 'Saving...' : 'Next: Marketing Assets'}
         </button>
       </div>
     </div>

@@ -5,6 +5,8 @@ export interface Deck {
   name: string;
   status: string;
   locale: string;
+  coverImage: string | null;
+  heroImage: string | null;
   createdBy: string;
   createdByName: string | null;
   createdAt: string;
@@ -206,6 +208,7 @@ export interface FullDeck {
   locale: string;
   coverImage: string | null;
   heroImage: string | null;
+  customFields: Record<string, string>;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -219,12 +222,66 @@ export async function getFullDeck(id: string): Promise<FullDeck> {
   return res.data;
 }
 
+// --- Options ---
+
+export interface SetOptionRequest {
+  optionNumber: number;
+  tierLabel?: string | null;
+  roomType?: string | null;
+  sellPrice?: string | null;
+  costPrice?: string | null;
+  nights?: number | null;
+  allocation?: number | null;
+  surcharges?: Array<{ name: string; amount: number; period?: string }> | null;
+  blackoutDates?: Array<{ from: string; to: string }> | null;
+  inclusions?: string[] | null;
+  marketingAssets?: Record<string, boolean> | null;
+}
+
+export async function setPropertyOptions(
+  deckId: string,
+  propertyId: string,
+  options: SetOptionRequest[],
+): Promise<DeckOption[]> {
+  const res = await apiClient.put<DeckOption[]>(
+    `/decks/${deckId}/properties/${propertyId}/options`,
+    { options },
+  );
+  return res.data;
+}
+
+export async function updateOption(
+  deckId: string,
+  optionId: string,
+  data: Partial<SetOptionRequest>,
+): Promise<DeckOption> {
+  const res = await apiClient.patch<DeckOption>(`/decks/${deckId}/options/${optionId}`, data);
+  return res.data;
+}
+
+// --- Property Case Studies ---
+
+export async function setPropertyCaseStudies(
+  deckId: string,
+  propertyId: string,
+  caseStudies: Array<{ caseStudyId: string; pcmContext?: string | null; sortOrder?: number }>,
+): Promise<DeckCaseStudyLink[]> {
+  const res = await apiClient.put<DeckCaseStudyLink[]>(
+    `/decks/${deckId}/properties/${propertyId}/case-studies`,
+    { caseStudies },
+  );
+  return res.data;
+}
+
+// --- Deck ---
+
 export async function updateDeck(id: string, data: {
   name?: string;
   status?: string;
   locale?: string;
   coverImage?: string | null;
   heroImage?: string | null;
+  customFields?: Record<string, string>;
 }): Promise<{ id: string }> {
   const res = await apiClient.patch(`/decks/${id}`, data);
   return res.data;

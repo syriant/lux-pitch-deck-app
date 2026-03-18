@@ -1,10 +1,10 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import { parsePricingTool, type ParsedPricingTool } from '@/api/parser.api';
-import { type DeckProperty } from '@/api/decks.api';
+import { type DeckPropertyFull, type SetOptionRequest, setPropertyOptions, updateProperty } from '@/api/decks.api';
 
 interface Step2Props {
-
-  properties: DeckProperty[];
+  deckId: string;
+  properties: DeckPropertyFull[];
   onBack: () => void;
   onNext: () => void;
 }
@@ -13,10 +13,20 @@ interface PropertyParseState {
   loading: boolean;
   error: string;
   result: ParsedPricingTool | null;
+  hasSavedOptions?: boolean;
 }
 
-export function Step2Pricing({ properties, onBack, onNext }: Step2Props) {
-  const [parseStates, setParseStates] = useState<Record<string, PropertyParseState>>({});
+export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props) {
+  // Pre-populate parse states from existing saved options
+  const [parseStates, setParseStates] = useState<Record<string, PropertyParseState>>(() => {
+    const init: Record<string, PropertyParseState> = {};
+    for (const p of properties) {
+      if (p.options.length > 0) {
+        init[p.id] = { loading: false, error: '', result: null, hasSavedOptions: true };
+      }
+    }
+    return init;
+  });
   const [expandedProperty, setExpandedProperty] = useState<string | null>(
     properties.length === 1 ? properties[0].id : null,
   );
@@ -33,6 +43,51 @@ export function Step2Pricing({ properties, onBack, onNext }: Step2Props) {
 
     try {
       const result = await parsePricingTool(file);
+
+      // Save parsed options to database
+      const options: SetOptionRequest[] = [];
+      for (const opt of result.options) {
+        const optSurcharges = [
+          ...result.surcharges.seasonal
+            .filter((s) => s.optionNumber === opt.optionNumber)
+            .map((s) => ({ name: s.dates, amount: s.supplement ?? 0, period: s.period })),
+          ...result.surcharges.dayOfWeek
+            .filter((s) => s.optionNumber === opt.optionNumber)
+            .map((s) => ({ name: s.day, amount: s.allYear, period: 'Day of week' })),
+        ];
+
+        const inclusionNames = result.inclusions.map((inc) => inc.assetName);
+
+        for (const deal of opt.dealOptions) {
+          options.push({
+            optionNumber: opt.optionNumber,
+            tierLabel: opt.tierLabel,
+            roomType: deal.roomType,
+            sellPrice: deal.sellPrice?.toString() ?? null,
+            costPrice: deal.costPrice?.toString() ?? null,
+            nights: deal.nights,
+            allocation: deal.allocationPerDay,
+            surcharges: optSurcharges.length > 0 ? optSurcharges : null,
+            blackoutDates: result.blackoutDates.length > 0
+              ? result.blackoutDates.map((d) => ({ from: d, to: d }))
+              : null,
+            inclusions: inclusionNames.length > 0 ? inclusionNames : null,
+            marketingAssets: null,
+          });
+        }
+      }
+
+      await setPropertyOptions(deckId, propertyId, options);
+
+      // Update property grade/tier if parser extracted them
+      const firstOpt = result.options[0];
+      if (firstOpt?.tier != null || result.metadata.grade) {
+        await updateProperty(deckId, propertyId, {
+          grade: result.metadata.grade ?? undefined,
+          tier: firstOpt?.tier ?? undefined,
+        });
+      }
+
       setParseStates((prev) => ({
         ...prev,
         [propertyId]: { loading: false, error: '', result },
@@ -41,7 +96,7 @@ export function Step2Pricing({ properties, onBack, onNext }: Step2Props) {
     } catch {
       setParseStates((prev) => ({
         ...prev,
-        [propertyId]: { loading: false, error: 'Failed to parse file', result: null },
+        [propertyId]: { loading: false, error: 'Failed to parse or save pricing data', result: null },
       }));
     }
 
@@ -49,7 +104,7 @@ export function Step2Pricing({ properties, onBack, onNext }: Step2Props) {
     if (ref) ref.value = '';
   }
 
-  const allParsed = properties.every((p) => parseStates[p.id]?.result);
+  const allParsed = properties.every((p) => parseStates[p.id]?.result || parseStates[p.id]?.hasSavedOptions);
 
   return (
     <div>
@@ -69,15 +124,17 @@ export function Step2Pricing({ properties, onBack, onNext }: Step2Props) {
                 onClick={() => setExpandedProperty(isExpanded ? null : prop.id)}
               >
                 <div className="flex items-center gap-3">
-                  <span className={`w-2 h-2 rounded-full ${state?.result ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className={`w-2 h-2 rounded-full ${(state?.result || state?.hasSavedOptions) ? 'bg-green-500' : 'bg-gray-300'}`} />
                   <div>
                     <div className="font-medium text-gray-900">{prop.propertyName}</div>
                     {prop.destination && <div className="text-xs text-gray-500">{prop.destination}</div>}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {state?.result && (
-                    <span className="text-xs text-green-600 font-medium">Parsed</span>
+                  {(state?.result || state?.hasSavedOptions) && (
+                    <span className="text-xs text-green-600 font-medium">
+                      {state?.result ? 'Parsed' : 'Saved'}
+                    </span>
                   )}
                   <span className="text-gray-400 text-sm">{isExpanded ? '▲' : '▼'}</span>
                 </div>
@@ -100,6 +157,10 @@ export function Step2Pricing({ properties, onBack, onNext }: Step2Props) {
                   {state?.error && <div className="text-sm text-red-600">{state.error}</div>}
 
                   {state?.result && <ParsedResult result={state.result} />}
+
+                  {!state?.result && state?.hasSavedOptions && (
+                    <SavedOptionsView options={prop.options} />
+                  )}
                 </div>
               )}
             </div>
@@ -211,6 +272,61 @@ function ParsedResult({ result }: { result: ParsedPricingTool }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function SavedOptionsView({ options }: { options: import('@/api/decks.api').DeckOption[] }) {
+  const grouped = new Map<number, typeof options>();
+  for (const opt of options) {
+    const group = grouped.get(opt.optionNumber) ?? [];
+    group.push(opt);
+    grouped.set(opt.optionNumber, group);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-md bg-green-50 border border-green-200 p-3 text-xs text-green-700">
+        Pricing data saved from a previous upload. Upload a new file to replace.
+      </div>
+
+      {Array.from(grouped.entries()).map(([optNum, opts]) => (
+        <div key={optNum}>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">
+            Option {optNum} — {opts[0].tierLabel ?? ''}
+            <span className="ml-2 font-normal text-gray-500">{opts.length} room types</span>
+          </h4>
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-gray-500">
+                <th className="pb-1 pr-2">Room Type</th>
+                <th className="pb-1 pr-2">Nights</th>
+                <th className="pb-1 pr-2 text-right">Sell</th>
+                <th className="pb-1 pr-2 text-right">Cost</th>
+                <th className="pb-1 text-right">Alloc</th>
+              </tr>
+            </thead>
+            <tbody>
+              {opts.map((d) => (
+                <tr key={d.id} className="border-b border-gray-50">
+                  <td className="py-1 pr-2">{d.roomType ?? '-'}</td>
+                  <td className="py-1 pr-2">{d.nights ?? '-'}</td>
+                  <td className="py-1 pr-2 text-right font-mono">{d.sellPrice ? `$${Number(d.sellPrice).toLocaleString()}` : '-'}</td>
+                  <td className="py-1 pr-2 text-right font-mono">{d.costPrice ? `$${Number(d.costPrice).toLocaleString()}` : '-'}</td>
+                  <td className="py-1 text-right">{d.allocation ?? '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {opts[0].inclusions && opts[0].inclusions.length > 0 && (
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">Inclusions: </span>
+              <span className="text-xs text-gray-600">{opts[0].inclusions.join(', ')}</span>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

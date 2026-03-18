@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getObjectiveTemplates, type ObjectiveTemplate } from '@/api/objectives.api';
 import { getDifferentiators, type Differentiator } from '@/api/differentiators.api';
-import { setDeckObjectives, setDeckDifferentiators } from '@/api/decks.api';
+import { setDeckObjectives, setDeckDifferentiators, getDeckObjectives, getDeckDifferentiators } from '@/api/decks.api';
 
 interface Step4Props {
   deckId: string;
@@ -24,12 +24,35 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
   useEffect(() => {
     async function load() {
       try {
-        const [tmpl, diffs] = await Promise.all([
+        const [tmpl, diffs, savedObjs, savedDiffs] = await Promise.all([
           getObjectiveTemplates(),
           getDifferentiators(),
+          getDeckObjectives(deckId),
+          getDeckDifferentiators(deckId),
         ]);
         setTemplates(tmpl.filter((t) => t.active));
         setAllDifferentiators(diffs.filter((d) => d.active));
+
+        // Pre-populate from saved data
+        if (savedObjs.length > 0) {
+          const selectedIds = new Set<string>();
+          const freeItems: string[] = [];
+
+          for (const obj of savedObjs) {
+            const matchingTemplate = tmpl.find((t) => t.text === obj.objectiveText);
+            if (matchingTemplate) {
+              selectedIds.add(matchingTemplate.id);
+            } else {
+              freeItems.push(obj.objectiveText);
+            }
+          }
+          setSelectedTemplateIds(selectedIds);
+          setFreeTexts(freeItems);
+        }
+
+        if (savedDiffs.length > 0) {
+          setSelectedDiffIds(new Set(savedDiffs.map((d) => d.differentiatorId)));
+        }
       } catch {
         setError('Failed to load data');
       } finally {
@@ -37,7 +60,7 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
       }
     }
     load();
-  }, []);
+  }, [deckId]);
 
   // Auto-suggest differentiators when objectives change
   useEffect(() => {

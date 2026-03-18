@@ -1,11 +1,12 @@
 import { type DeckPropertyFull, type DeckOption } from '@/api/decks.api';
+import { type FieldChangeHandler } from '@/pages/DeckPreview';
 
-// Brand colours
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
 
 interface DealOptionsSlideProps {
   property?: DeckPropertyFull;
+  onFieldChange?: FieldChangeHandler;
 }
 
 function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {

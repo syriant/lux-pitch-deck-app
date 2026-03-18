@@ -1,14 +1,16 @@
 import { type DeckObjective } from '@/api/decks.api';
+import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { EditableText } from '../EditableText';
 
-// Brand colours
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
 
 interface ObjectivesSlideProps {
   objectives: DeckObjective[];
+  onFieldChange?: FieldChangeHandler;
 }
 
-export function ObjectivesSlide({ objectives }: ObjectivesSlideProps) {
+export function ObjectivesSlide({ objectives, onFieldChange }: ObjectivesSlideProps) {
   const primary = objectives[0];
   const secondary = objectives.slice(1);
   const hasObjectives = objectives.length > 0;
@@ -50,9 +52,19 @@ export function ObjectivesSlide({ objectives }: ObjectivesSlideProps) {
                 <div className="mb-6">
                   <div className="w-12 border-t-2 mb-3" style={{ borderColor: GREEN }} />
                   <h3 className="text-sm font-bold mb-2" style={{ color: '#333' }}>Primary Objective</h3>
-                  <p className="text-[11px] leading-relaxed" style={{ color: '#444' }}>
-                    {primary.objectiveText}
-                  </p>
+                  {onFieldChange ? (
+                    <EditableText
+                      value={primary.objectiveText}
+                      onChange={(v) => onFieldChange('objective', primary.id, 'objectiveText', v)}
+                      className="text-[11px] leading-relaxed"
+                      as="p"
+                      multiline
+                    />
+                  ) : (
+                    <p className="text-[11px] leading-relaxed" style={{ color: '#444' }}>
+                      {primary.objectiveText}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -61,9 +73,19 @@ export function ObjectivesSlide({ objectives }: ObjectivesSlideProps) {
                   <div className="w-12 border-t-2 mb-3" style={{ borderColor: GREEN }} />
                   <h3 className="text-sm font-bold mb-2" style={{ color: '#333' }}>Secondary Objectives</h3>
                   {secondary.map((obj) => (
-                    <p key={obj.id} className="text-[11px] leading-relaxed mb-1" style={{ color: '#444' }}>
-                      {obj.objectiveText}
-                    </p>
+                    onFieldChange ? (
+                      <EditableText
+                        key={obj.id}
+                        value={obj.objectiveText}
+                        onChange={(v) => onFieldChange('objective', obj.id, 'objectiveText', v)}
+                        className="text-[11px] leading-relaxed mb-1"
+                        as="p"
+                      />
+                    ) : (
+                      <p key={obj.id} className="text-[11px] leading-relaxed mb-1" style={{ color: '#444' }}>
+                        {obj.objectiveText}
+                      </p>
+                    )
                   ))}
                 </div>
               )}

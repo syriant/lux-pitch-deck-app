@@ -1,13 +1,15 @@
 import { type DeckCaseStudyLink } from '@/api/decks.api';
+import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { EditableText } from '../EditableText';
 
-// Brand colours
 const GREEN = '#00b2a0';
 
 interface CaseStudySlideProps {
   caseStudies?: DeckCaseStudyLink[];
+  onFieldChange?: FieldChangeHandler;
 }
 
-export function CaseStudySlide({ caseStudies }: CaseStudySlideProps) {
+export function CaseStudySlide({ caseStudies, onFieldChange }: CaseStudySlideProps) {
   const hasCaseStudies = caseStudies && caseStudies.length > 0;
 
   return (
@@ -54,9 +56,19 @@ export function CaseStudySlide({ caseStudies }: CaseStudySlideProps) {
                   {cs.hotelName}
                 </h3>
                 {cs.narrative ? (
-                  <p className="text-[9px] leading-relaxed" style={{ color: '#555' }}>
-                    {cs.narrative.length > 150 ? cs.narrative.slice(0, 150) + '...' : cs.narrative}
-                  </p>
+                  onFieldChange ? (
+                    <EditableText
+                      value={cs.narrative.length > 150 ? cs.narrative.slice(0, 150) + '...' : cs.narrative}
+                      onChange={(v) => onFieldChange('case-study', cs.id, 'narrative', v)}
+                      className="text-[9px] leading-relaxed"
+                      as="p"
+                      multiline
+                    />
+                  ) : (
+                    <p className="text-[9px] leading-relaxed" style={{ color: '#555' }}>
+                      {cs.narrative.length > 150 ? cs.narrative.slice(0, 150) + '...' : cs.narrative}
+                    </p>
+                  )
                 ) : (
                   <p className="text-[9px]" style={{ color: '#999' }}>
                     {[cs.destination, cs.region].filter(Boolean).join(' · ')}

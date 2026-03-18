@@ -1,5 +1,6 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type SlideDefinition } from './slide-types';
+import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { CoverSlide } from './slides/CoverSlide';
 import { HotelIntroSlide } from './slides/HotelIntroSlide';
 import { DifferentiatorsSlide } from './slides/DifferentiatorsSlide';
@@ -15,12 +16,12 @@ interface SlideRendererProps {
   slide: SlideDefinition;
   deck: FullDeck;
   scale?: number;
+  onFieldChange?: FieldChangeHandler;
 }
 
-export function SlideRenderer({ slide, deck, scale }: SlideRendererProps) {
-  const content = renderSlideContent(slide, deck);
+export function SlideRenderer({ slide, deck, scale, onFieldChange }: SlideRendererProps) {
+  const content = renderSlideContent(slide, deck, onFieldChange);
 
-  // Slides use 16:9 aspect ratio (1280x720 base)
   const style = scale
     ? {
         width: 1280,
@@ -43,26 +44,26 @@ export function SlideRenderer({ slide, deck, scale }: SlideRendererProps) {
   );
 }
 
-function renderSlideContent(slide: SlideDefinition, deck: FullDeck) {
+function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChange?: FieldChangeHandler) {
   switch (slide.type) {
     case 'cover':
-      return <CoverSlide deck={deck} />;
+      return <CoverSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'hotel-intro':
-      return <HotelIntroSlide deck={deck} />;
+      return <HotelIntroSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'differentiators':
-      return <DifferentiatorsSlide deck={deck} />;
+      return <DifferentiatorsSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'reach':
-      return <ReachSlide />;
+      return <ReachSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'demographics':
-      return <DemographicsSlide />;
+      return <DemographicsSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'region-stats':
-      return <RegionStatsSlide property={slide.property} />;
+      return <RegionStatsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
     case 'case-study':
-      return <CaseStudySlide caseStudies={slide.caseStudies} />;
+      return <CaseStudySlide caseStudies={slide.caseStudies} onFieldChange={onFieldChange} />;
     case 'objectives':
-      return <ObjectivesSlide objectives={deck.objectives} />;
+      return <ObjectivesSlide objectives={deck.objectives} onFieldChange={onFieldChange} />;
     case 'deal-options':
-      return <DealOptionsSlide property={slide.property} />;
+      return <DealOptionsSlide property={slide.property} onFieldChange={onFieldChange} />;
     case 'marketing-assets':
       return <MarketingAssetsSlide property={slide.property} />;
     default:

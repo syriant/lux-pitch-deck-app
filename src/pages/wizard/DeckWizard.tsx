@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDeck, type DeckWithProperties } from '@/api/decks.api';
+import { getFullDeck, type FullDeck } from '@/api/decks.api';
 import { StepIndicator } from '@/components/wizard/StepIndicator';
 import { Step1Hotels } from './Step1Hotels';
 import { Step2Pricing } from './Step2Pricing';
@@ -12,7 +12,7 @@ import { Step6Assets } from './Step6Assets';
 export function DeckWizard() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [deck, setDeck] = useState<DeckWithProperties | null>(null);
+  const [deck, setDeck] = useState<FullDeck | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -20,7 +20,7 @@ export function DeckWizard() {
   async function loadDeck() {
     if (!id) return;
     try {
-      setDeck(await getDeck(id));
+      setDeck(await getFullDeck(id));
     } catch {
       setError('Failed to load deck');
     } finally {
@@ -59,7 +59,7 @@ export function DeckWizard() {
         </div>
       </div>
 
-      <StepIndicator currentStep={currentStep} />
+      <StepIndicator currentStep={currentStep} onStepClick={setCurrentStep} />
 
       {currentStep === 1 && (
         <Step1Hotels
@@ -72,6 +72,7 @@ export function DeckWizard() {
 
       {currentStep === 2 && (
         <Step2Pricing
+          deckId={deck.id}
           properties={deck.properties}
           onBack={() => setCurrentStep(1)}
           onNext={() => setCurrentStep(3)}
@@ -80,6 +81,9 @@ export function DeckWizard() {
 
       {currentStep === 3 && (
         <Step3Images
+          deckId={deck.id}
+          coverImage={deck.coverImage ?? null}
+          heroImage={deck.heroImage ?? null}
           onBack={() => setCurrentStep(2)}
           onNext={() => setCurrentStep(4)}
         />
@@ -95,6 +99,7 @@ export function DeckWizard() {
 
       {currentStep === 5 && (
         <Step5CaseStudies
+          deckId={deck.id}
           properties={deck.properties}
           onBack={() => setCurrentStep(4)}
           onNext={() => setCurrentStep(6)}
