@@ -37,11 +37,11 @@ export function Dashboard() {
     setCreating(true);
     setError('');
     try {
-      await createDeck({ name });
+      const deck = await createDeck({ name });
       setShowCreate(false);
       setName('');
-      setLoading(true);
-      await load();
+      navigate(`/decks/${deck.id}/edit`);
+      return;
     } catch {
       setError('Failed to create deck');
     } finally {
@@ -162,7 +162,7 @@ export function Dashboard() {
             </thead>
             <tbody>
               {decks.map((deck) => (
-                <tr key={deck.id} className="border-b border-gray-100 text-sm hover:bg-gray-50 cursor-pointer">
+                <tr key={deck.id} className="border-b border-gray-100 text-sm hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/decks/${deck.id}/edit`)}>
                   <td className="py-3 pr-4 font-medium text-gray-900">{deck.name}</td>
                   <td className="py-3 pr-4">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusColors[deck.status] ?? 'bg-gray-100 text-gray-700'}`}>

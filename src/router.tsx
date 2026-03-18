@@ -6,6 +6,7 @@ import { Differentiators } from './pages/admin/Differentiators';
 import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { DealTiers } from './pages/admin/DealTiers';
 import { ParserTest } from './pages/admin/ParserTest';
+import { DeckWizard } from './pages/wizard/DeckWizard';
 import { RequireRole } from './components/common/RequireRole';
 
 export const router = createBrowserRouter([
@@ -50,6 +51,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['admin']}>
         <DealTiers />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/decks/:id/edit',
+    element: (
+      <RequireRole roles={['pcm', 'admin']}>
+        <DeckWizard />
       </RequireRole>
     ),
   },
