@@ -87,6 +87,7 @@ export function DeckWizard() {
 
       {currentStep === 5 && (
         <Step5CaseStudies
+          properties={deck.properties}
           onBack={() => setCurrentStep(4)}
           onNext={() => setCurrentStep(6)}
         />

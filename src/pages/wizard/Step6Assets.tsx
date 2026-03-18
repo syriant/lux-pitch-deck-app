@@ -53,7 +53,6 @@ export function Step6Assets({ properties, onBack }: Step6Props) {
         Auto-recommended marketing assets based on deal tier rules. These can be overridden per property.
       </p>
 
-      {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       <div className="space-y-6 mb-6">
         {properties.map((prop) => {

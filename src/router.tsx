@@ -7,6 +7,7 @@ import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { DealTiers } from './pages/admin/DealTiers';
 import { ParserTest } from './pages/admin/ParserTest';
 import { DeckWizard } from './pages/wizard/DeckWizard';
+import { CaseStudies } from './pages/CaseStudies';
 import { RequireRole } from './components/common/RequireRole';
 
 export const router = createBrowserRouter([
@@ -51,6 +52,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['admin']}>
         <DealTiers />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/case-studies',
+    element: (
+      <RequireRole roles={['pcm', 'admin']}>
+        <CaseStudies />
       </RequireRole>
     ),
   },
