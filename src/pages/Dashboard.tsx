@@ -111,34 +111,42 @@ export function Dashboard() {
         </form>
       )}
 
-      {isAdmin && (
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => navigate('/admin/differentiators')}
-            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Differentiators
-          </button>
-          <button
-            onClick={() => navigate('/admin/objectives')}
-            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Objective Templates
-          </button>
-          <button
-            onClick={() => navigate('/admin/deal-tiers')}
-            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Deal Tiers
-          </button>
-          <button
-            onClick={() => navigate('/admin/users')}
-            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Users
-          </button>
-        </div>
-      )}
+      <div className="mb-6 flex gap-3 flex-wrap">
+        <button
+          onClick={() => navigate('/case-studies')}
+          className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          Case Studies
+        </button>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => navigate('/admin/differentiators')}
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Differentiators
+            </button>
+            <button
+              onClick={() => navigate('/admin/objectives')}
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Objective Templates
+            </button>
+            <button
+              onClick={() => navigate('/admin/deal-tiers')}
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Deal Tiers
+            </button>
+            <button
+              onClick={() => navigate('/admin/users')}
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Users
+            </button>
+          </>
+        )}
+      </div>
 
       {loading ? (
         <div className="text-gray-500">Loading...</div>
@@ -157,7 +165,8 @@ export function Dashboard() {
                 <th className="pb-3 pr-4">Status</th>
                 <th className="pb-3 pr-4">Created By</th>
                 <th className="pb-3 pr-4">Created</th>
-                <th className="pb-3">Updated</th>
+                <th className="pb-3 pr-4">Updated</th>
+                <th className="pb-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -171,7 +180,15 @@ export function Dashboard() {
                   </td>
                   <td className="py-3 pr-4 text-gray-600">{deck.createdByName ?? '-'}</td>
                   <td className="py-3 pr-4 text-gray-500">{formatDate(deck.createdAt)}</td>
-                  <td className="py-3 text-gray-500">{formatDate(deck.updatedAt)}</td>
+                  <td className="py-3 pr-4 text-gray-500">{formatDate(deck.updatedAt)}</td>
+                  <td className="py-3">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/decks/${deck.id}/preview`); }}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Preview
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

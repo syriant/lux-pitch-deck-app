@@ -138,3 +138,94 @@ export async function setDeckDifferentiators(deckId: string, differentiatorIds: 
   const res = await apiClient.put<DeckDifferentiator[]>(`/decks/${deckId}/differentiators`, { differentiatorIds });
   return res.data;
 }
+
+// --- Full deck for preview ---
+
+export interface DeckOption {
+  id: string;
+  propertyId: string;
+  optionNumber: number;
+  tierLabel: string | null;
+  roomType: string | null;
+  sellPrice: string | null;
+  costPrice: string | null;
+  nights: number | null;
+  allocation: number | null;
+  surcharges: Array<{ name: string; amount: number; period?: string }> | null;
+  blackoutDates: Array<{ from: string; to: string }> | null;
+  inclusions: string[] | null;
+  marketingAssets: Record<string, boolean> | null;
+}
+
+export interface DeckCaseStudyLink {
+  id: string;
+  propertyId: string;
+  caseStudyId: string;
+  pcmContext: string | null;
+  sortOrder: number;
+  caseStudy: {
+    id: string;
+    title: string;
+    hotelName: string;
+    destination: string | null;
+    region: string | null;
+    propertyType: string | null;
+    roomNights: number | null;
+    revenue: string | null;
+    adr: string | null;
+    alos: string | null;
+    leadTime: number | null;
+    bookings: number | null;
+    narrative: string | null;
+    tags: string[] | null;
+  };
+}
+
+export interface DeckPropertyFull extends DeckProperty {
+  options: DeckOption[];
+  caseStudies: DeckCaseStudyLink[];
+}
+
+export interface DeckDifferentiatorFull {
+  id: string;
+  deckId: string;
+  differentiatorId: string;
+  sortOrder: number;
+  differentiator: {
+    id: string;
+    title: string;
+    description: string | null;
+    category: string | null;
+  };
+}
+
+export interface FullDeck {
+  id: string;
+  name: string;
+  status: string;
+  locale: string;
+  coverImage: string | null;
+  heroImage: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  properties: DeckPropertyFull[];
+  objectives: DeckObjective[];
+  differentiators: DeckDifferentiatorFull[];
+}
+
+export async function getFullDeck(id: string): Promise<FullDeck> {
+  const res = await apiClient.get<FullDeck>(`/decks/${id}/full`);
+  return res.data;
+}
+
+export async function updateDeck(id: string, data: {
+  name?: string;
+  status?: string;
+  locale?: string;
+  coverImage?: string | null;
+  heroImage?: string | null;
+}): Promise<{ id: string }> {
+  const res = await apiClient.patch(`/decks/${id}`, data);
+  return res.data;
+}

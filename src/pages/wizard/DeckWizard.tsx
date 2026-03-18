@@ -43,12 +43,20 @@ export function DeckWizard() {
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-bold text-gray-900">{deck.name}</h1>
-        <button
-          onClick={() => navigate('/')}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Save & Exit
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/decks/${deck.id}/preview`)}
+            className="text-sm text-blue-600 hover:text-blue-700"
+          >
+            Preview
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Save & Exit
+          </button>
+        </div>
       </div>
 
       <StepIndicator currentStep={currentStep} />
@@ -95,6 +103,7 @@ export function DeckWizard() {
 
       {currentStep === 6 && (
         <Step6Assets
+          deckId={deck.id}
           properties={deck.properties}
           onBack={() => setCurrentStep(5)}
         />

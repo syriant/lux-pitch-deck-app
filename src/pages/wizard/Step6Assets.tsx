@@ -4,11 +4,12 @@ import { type DeckProperty } from '@/api/decks.api';
 import { useNavigate } from 'react-router-dom';
 
 interface Step6Props {
+  deckId: string;
   properties: DeckProperty[];
   onBack: () => void;
 }
 
-export function Step6Assets({ properties, onBack }: Step6Props) {
+export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
   const navigate = useNavigate();
   const [lookups, setLookups] = useState<Record<string, LookupResult | null>>({});
   const [loading, setLoading] = useState(true);
@@ -119,10 +120,10 @@ export function Step6Assets({ properties, onBack }: Step6Props) {
           Back
         </button>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate(`/decks/${deckId}/preview`)}
           className="rounded-md bg-green-600 px-6 py-2 text-sm text-white hover:bg-green-700"
         >
-          Finish
+          Preview Deck
         </button>
       </div>
     </div>

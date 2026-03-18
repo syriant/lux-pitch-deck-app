@@ -7,6 +7,7 @@ import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { DealTiers } from './pages/admin/DealTiers';
 import { ParserTest } from './pages/admin/ParserTest';
 import { DeckWizard } from './pages/wizard/DeckWizard';
+import { DeckPreview } from './pages/DeckPreview';
 import { CaseStudies } from './pages/CaseStudies';
 import { RequireRole } from './components/common/RequireRole';
 
@@ -68,6 +69,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['pcm', 'admin']}>
         <DeckWizard />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/decks/:id/preview',
+    element: (
+      <RequireRole roles={['pcm', 'admin']}>
+        <DeckPreview />
       </RequireRole>
     ),
   },
