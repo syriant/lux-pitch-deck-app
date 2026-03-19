@@ -4,44 +4,8 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { EditableText } from '../EditableText';
 import { SlideEditableText } from '../SlideEditableText';
-
-type Align = 'left' | 'center' | 'right';
-
-const alignItems: { value: Align; icon: React.ReactNode }[] = [
-  {
-    value: 'left',
-    icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-        <rect x="1" y="2" width="14" height="1.5" rx=".5" />
-        <rect x="1" y="6" width="10" height="1.5" rx=".5" />
-        <rect x="1" y="10" width="12" height="1.5" rx=".5" />
-        <rect x="1" y="14" width="8" height="1.5" rx=".5" />
-      </svg>
-    ),
-  },
-  {
-    value: 'center',
-    icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-        <rect x="1" y="2" width="14" height="1.5" rx=".5" />
-        <rect x="3" y="6" width="10" height="1.5" rx=".5" />
-        <rect x="2" y="10" width="12" height="1.5" rx=".5" />
-        <rect x="4" y="14" width="8" height="1.5" rx=".5" />
-      </svg>
-    ),
-  },
-  {
-    value: 'right',
-    icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
-        <rect x="1" y="2" width="14" height="1.5" rx=".5" />
-        <rect x="5" y="6" width="10" height="1.5" rx=".5" />
-        <rect x="3" y="10" width="12" height="1.5" rx=".5" />
-        <rect x="7" y="14" width="8" height="1.5" rx=".5" />
-      </svg>
-    ),
-  },
-];
+import { AlignToggle, type Align } from '../AlignToggle';
+import { FontSizeControl } from '../FontSizeControl';
 
 const alignToFlex: Record<Align, string> = {
   left: 'items-start',
@@ -61,6 +25,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
   const coverImgUrl = uploadUrl(deck.coverImage);
   const quarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}${String(new Date().getFullYear()).slice(2)}`;
   const align = (deck.customFields?.['cover.hookAlign'] as Align) || 'center';
+  const fontSize = Number(deck.customFields?.['cover.hookSize']) || 45;
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -86,28 +51,16 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
             className="font-bold text-white leading-snug max-w-2xl drop-shadow-md"
             style={{
               fontFamily: 'Arial, "Helvetica Neue", sans-serif',
-              fontSize: '45px',
+              fontSize: `${fontSize}px`,
               textAlign: align,
             }}
             as="h1"
             multiline
           />
-          {/* Alignment toggle */}
           {onFieldChange && hovered && (
-            <div className="mt-3 flex gap-0.5 rounded bg-black/50 p-0.5">
-              {alignItems.map((item) => (
-                <button
-                  key={item.value}
-                  onClick={() => onFieldChange('custom', '', 'cover.hookAlign', item.value)}
-                  className={`p-1.5 rounded transition-colors ${
-                    align === item.value
-                      ? 'bg-white text-gray-900'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  {item.icon}
-                </button>
-              ))}
+            <div className="mt-3 flex gap-2">
+              <AlignToggle fieldKey="cover.hookAlign" align={align} onFieldChange={onFieldChange} />
+              <FontSizeControl fieldKey="cover.hookSize" size={fontSize} onFieldChange={onFieldChange} />
             </div>
           )}
         </div>

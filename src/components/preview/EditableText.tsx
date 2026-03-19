@@ -62,8 +62,9 @@ export function EditableText({
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={handleKeyDown}
-          className={`${inputClasses} resize-none`}
-          rows={3}
+          className={`${inputClasses} resize-none w-full`}
+          style={style}
+          rows={5}
         />
       );
     }
@@ -77,6 +78,7 @@ export function EditableText({
         onBlur={commit}
         onKeyDown={handleKeyDown}
         className={inputClasses}
+        style={style}
       />
     );
   }
