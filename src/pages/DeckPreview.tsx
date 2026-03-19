@@ -8,6 +8,7 @@ import { updateCaseStudy } from '@/api/case-studies.api';
 import { buildSlideList, type SlideDefinition } from '@/components/preview/slide-types';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
+import { exportPptx } from '@/api/export.api';
 
 export type FieldChangeHandler = (
   entityType: 'property' | 'objective' | 'option' | 'case-study' | 'custom',
@@ -24,6 +25,7 @@ export function DeckPreview() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -217,6 +219,23 @@ export function DeckPreview() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              if (!id || exporting) return;
+              setExporting(true);
+              try {
+                await exportPptx(id);
+              } catch {
+                console.error('Export failed');
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={exporting}
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {exporting ? 'Exporting...' : 'Export PPTX'}
+          </button>
           <button
             onClick={() => navigate('/')}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
