@@ -134,6 +134,33 @@ export function DeckPreview() {
       const next = [...prev];
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
+
+      // Persist the reorder as slideOrder if deck has a template
+      if (id && deck?.templateId) {
+        // Deduplicate: collapse per-property slides back to a single entry
+        const seen = new Set<string>();
+        const slideOrder = next.reduce<Array<{ type: string; label: string; required?: boolean; perProperty?: boolean }>>((acc, s) => {
+          // Strip property suffix from id to get base type
+          const baseType = s.type;
+          if (seen.has(baseType)) return acc;
+          seen.add(baseType);
+
+          // Find original template slide definition for metadata
+          const original = deck.slideOrder?.find((ts) => ts.type === baseType);
+          acc.push({
+            type: baseType,
+            label: original?.label ?? s.label,
+            required: original?.required,
+            perProperty: original?.perProperty,
+          });
+          return acc;
+        }, []);
+
+        updateDeckApi(id, { slideOrder }).catch(() => {
+          console.error('Failed to persist slide order');
+        });
+      }
+
       return next;
     });
     setActiveIndex((prev) => {
@@ -142,7 +169,7 @@ export function DeckPreview() {
       if (fromIndex > prev && toIndex <= prev) return prev + 1;
       return prev;
     });
-  }, []);
+  }, [id, deck]);
 
   // Keyboard navigation
   useEffect(() => {

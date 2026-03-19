@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDecks, createDeck, type Deck } from '@/api/decks.api';
+import { getTemplates, type DeckTemplate } from '@/api/templates.api';
 import { useAuthStore } from '@/stores/auth.store';
 
 const statusColors: Record<string, string> = {
@@ -18,6 +19,9 @@ export function Dashboard() {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [templates, setTemplates] = useState<DeckTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
 
   async function load() {
     try {
@@ -32,14 +36,34 @@ export function Dashboard() {
 
   useEffect(() => { load(); }, []);
 
+  async function handleShowCreate() {
+    setShowCreate(true);
+    setLoadingTemplates(true);
+    try {
+      const t = await getTemplates();
+      setTemplates(t);
+      if (t.length > 0) {
+        setSelectedTemplateId(t[0].id);
+      }
+    } catch {
+      // Templates are optional — proceed without them
+    } finally {
+      setLoadingTemplates(false);
+    }
+  }
+
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setCreating(true);
     setError('');
     try {
-      const deck = await createDeck({ name });
+      const deck = await createDeck({
+        name,
+        templateId: selectedTemplateId ?? undefined,
+      });
       setShowCreate(false);
       setName('');
+      setSelectedTemplateId(null);
       navigate(`/decks/${deck.id}/edit`);
       return;
     } catch {
@@ -69,7 +93,7 @@ export function Dashboard() {
           </p>
         </div>
         <button
-          onClick={() => setShowCreate(true)}
+          onClick={handleShowCreate}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
         >
           Create New Deck
@@ -92,6 +116,36 @@ export function Dashboard() {
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
+
+          {/* Template picker */}
+          {loadingTemplates ? (
+            <div className="text-sm text-gray-400">Loading templates...</div>
+          ) : templates.length > 0 ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Template</label>
+              <div className="grid grid-cols-2 gap-3">
+                {templates.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTemplateId(t.id)}
+                    className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                      selectedTemplateId === t.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-sm font-medium text-gray-900">{t.name}</div>
+                    {t.description && (
+                      <div className="mt-1 text-xs text-gray-500">{t.description}</div>
+                    )}
+                    <div className="mt-1 text-xs text-gray-400">{t.slides.length} slides</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex gap-3">
             <button
               type="submit"
@@ -102,7 +156,7 @@ export function Dashboard() {
             </button>
             <button
               type="button"
-              onClick={() => { setShowCreate(false); setName(''); }}
+              onClick={() => { setShowCreate(false); setName(''); setSelectedTemplateId(null); }}
               className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
               Cancel
@@ -137,6 +191,12 @@ export function Dashboard() {
               className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
               Deal Tiers
+            </button>
+            <button
+              onClick={() => navigate('/admin/templates')}
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Templates
             </button>
             <button
               onClick={() => navigate('/admin/users')}

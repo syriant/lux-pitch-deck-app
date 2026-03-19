@@ -6,6 +6,7 @@ import { Differentiators } from './pages/admin/Differentiators';
 import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { DealTiers } from './pages/admin/DealTiers';
 import { ParserTest } from './pages/admin/ParserTest';
+import { Templates } from './pages/admin/Templates';
 import { DeckWizard } from './pages/wizard/DeckWizard';
 import { DeckPreview } from './pages/DeckPreview';
 import { CaseStudies } from './pages/CaseStudies';
@@ -53,6 +54,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['admin']}>
         <DealTiers />
+      </RequireRole>
+    ),
+  },
+  {
+    path: '/admin/templates',
+    element: (
+      <RequireRole roles={['admin']}>
+        <Templates />
       </RequireRole>
     ),
   },

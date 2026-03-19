@@ -41,9 +41,18 @@ export interface DeckListResponse {
   };
 }
 
+export interface TemplateSlide {
+  type: string;
+  label: string;
+  required?: boolean;
+  perProperty?: boolean;
+  config?: Record<string, unknown>;
+}
+
 export interface CreateDeckRequest {
   name: string;
   locale?: string;
+  templateId?: string;
 }
 
 export interface CreatePropertyRequest {
@@ -210,12 +219,15 @@ export interface FullDeck {
   heroImage: string | null;
   customFields: Record<string, string>;
   gallery: string[];
+  templateId: string | null;
+  slideOrder: TemplateSlide[] | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
   properties: DeckPropertyFull[];
   objectives: DeckObjective[];
   differentiators: DeckDifferentiatorFull[];
+  templateDefaults: Record<string, string>;
 }
 
 export async function getFullDeck(id: string): Promise<FullDeck> {
@@ -284,6 +296,7 @@ export async function updateDeck(id: string, data: {
   heroImage?: string | null;
   customFields?: Record<string, string>;
   gallery?: string[];
+  slideOrder?: TemplateSlide[];
 }): Promise<{ id: string }> {
   const res = await apiClient.patch(`/decks/${id}`, data);
   return res.data;

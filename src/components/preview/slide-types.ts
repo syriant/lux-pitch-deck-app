@@ -10,7 +10,8 @@ export type SlideType =
   | 'case-study'
   | 'objectives'
   | 'deal-options'
-  | 'marketing-assets';
+  | 'marketing-assets'
+  | 'market-challenges';
 
 export interface SlideDefinition {
   id: string;
@@ -21,6 +22,67 @@ export interface SlideDefinition {
 }
 
 export function buildSlideList(deck: FullDeck): SlideDefinition[] {
+  // If deck has a template-driven slideOrder, use it
+  if (deck.slideOrder && deck.slideOrder.length > 0) {
+    return buildFromSlideOrder(deck);
+  }
+
+  // Fallback: hardcoded layout (backwards compat for decks without templates)
+  return buildHardcodedList(deck);
+}
+
+function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
+  const slides: SlideDefinition[] = [];
+
+  for (const entry of deck.slideOrder!) {
+    const slideType = entry.type as SlideType;
+
+    if (entry.perProperty) {
+      if (deck.properties.length > 0) {
+        for (const prop of deck.properties) {
+          slides.push({
+            id: `${slideType}-${prop.id}`,
+            type: slideType,
+            label: getPerPropertyLabel(slideType, entry.label, prop),
+            property: prop,
+            caseStudies: slideType === 'case-study' ? prop.caseStudies : undefined,
+          });
+        }
+      } else {
+        slides.push({
+          id: `${slideType}-empty`,
+          type: slideType,
+          label: entry.label,
+        });
+      }
+    } else {
+      slides.push({
+        id: slideType,
+        type: slideType,
+        label: entry.label,
+      });
+    }
+  }
+
+  return slides;
+}
+
+function getPerPropertyLabel(type: SlideType, defaultLabel: string, prop: DeckPropertyFull): string {
+  switch (type) {
+    case 'region-stats':
+      return `${prop.destination ?? prop.propertyName} & LE`;
+    case 'deal-options':
+      return `${prop.propertyName} Options`;
+    case 'marketing-assets':
+      return `${prop.propertyName} Details`;
+    case 'case-study':
+      return 'Case Studies';
+    default:
+      return defaultLabel;
+  }
+}
+
+function buildHardcodedList(deck: FullDeck): SlideDefinition[] {
   const slides: SlideDefinition[] = [];
 
   // 1. Cover — always

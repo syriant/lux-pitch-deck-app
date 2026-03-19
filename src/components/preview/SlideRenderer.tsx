@@ -11,6 +11,7 @@ import { CaseStudySlide } from './slides/CaseStudySlide';
 import { ObjectivesSlide } from './slides/ObjectivesSlide';
 import { DealOptionsSlide } from './slides/DealOptionsSlide';
 import { MarketingAssetsSlide } from './slides/MarketingAssetsSlide';
+import { MarketChallengesSlide } from './slides/MarketChallengesSlide';
 
 interface SlideRendererProps {
   slide: SlideDefinition;
@@ -68,6 +69,8 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
       return <DealOptionsSlide property={slide.property} onFieldChange={onFieldChange} />;
     case 'marketing-assets':
       return <MarketingAssetsSlide property={slide.property} />;
+    case 'market-challenges':
+      return <MarketChallengesSlide deck={deck} onFieldChange={onFieldChange} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center text-gray-400">
