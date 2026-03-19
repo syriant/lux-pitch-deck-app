@@ -84,6 +84,7 @@ export function DeckWizard() {
           deckId={deck.id}
           coverImage={deck.coverImage ?? null}
           heroImage={deck.heroImage ?? null}
+          gallery={deck.gallery ?? []}
           onBack={() => setCurrentStep(2)}
           onNext={() => setCurrentStep(4)}
         />

@@ -17,10 +17,11 @@ interface SlideRendererProps {
   deck: FullDeck;
   scale?: number;
   onFieldChange?: FieldChangeHandler;
+  onGalleryAdd?: (url: string) => void;
 }
 
-export function SlideRenderer({ slide, deck, scale, onFieldChange }: SlideRendererProps) {
-  const content = renderSlideContent(slide, deck, onFieldChange);
+export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd }: SlideRendererProps) {
+  const content = renderSlideContent(slide, deck, onFieldChange, onGalleryAdd);
 
   const style = scale
     ? {
@@ -44,24 +45,25 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange }: SlideRender
   );
 }
 
-function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChange?: FieldChangeHandler) {
+function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChange?: FieldChangeHandler, onGalleryAdd?: (url: string) => void) {
+  const ga = onGalleryAdd;
   switch (slide.type) {
     case 'cover':
       return <CoverSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'hotel-intro':
       return <HotelIntroSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'differentiators':
-      return <DifferentiatorsSlide deck={deck} onFieldChange={onFieldChange} />;
+      return <DifferentiatorsSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'reach':
       return <ReachSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'demographics':
       return <DemographicsSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'region-stats':
-      return <RegionStatsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
+      return <RegionStatsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'case-study':
-      return <CaseStudySlide caseStudies={slide.caseStudies} onFieldChange={onFieldChange} />;
+      return <CaseStudySlide caseStudies={slide.caseStudies} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'objectives':
-      return <ObjectivesSlide objectives={deck.objectives} onFieldChange={onFieldChange} />;
+      return <ObjectivesSlide objectives={deck.objectives} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'deal-options':
       return <DealOptionsSlide property={slide.property} onFieldChange={onFieldChange} />;
     case 'marketing-assets':

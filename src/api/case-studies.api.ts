@@ -15,6 +15,7 @@ export interface CaseStudy {
   bookings: number | null;
   narrative: string | null;
   pcmNotes: string | null;
+  images: string[] | null;
   tags: string[] | null;
   compSetTags: string[] | null;
   dealId: string | null;
@@ -48,6 +49,7 @@ export interface CreateCaseStudyRequest {
   bookings?: number;
   narrative?: string;
   pcmNotes?: string;
+  images?: string[];
   tags?: string[];
   compSetTags?: string[];
   dealId?: string;
@@ -67,6 +69,7 @@ export interface UpdateCaseStudyRequest {
   bookings?: number | null;
   narrative?: string | null;
   pcmNotes?: string | null;
+  images?: string[] | null;
   tags?: string[] | null;
   compSetTags?: string[] | null;
   dealId?: string | null;

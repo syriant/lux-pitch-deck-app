@@ -2,6 +2,7 @@ import { type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { EditableText } from '../EditableText';
 import { SlideEditableText } from '../SlideEditableText';
+import { SlideImage } from '../SlideImage';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -10,9 +11,10 @@ interface RegionStatsSlideProps {
   property?: DeckPropertyFull;
   deck?: FullDeck;
   onFieldChange?: FieldChangeHandler;
+  onGalleryAdd?: (url: string) => void;
 }
 
-export function RegionStatsSlide({ property, deck, onFieldChange }: RegionStatsSlideProps) {
+export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }: RegionStatsSlideProps) {
   const destination = property?.destination ?? property?.propertyName ?? 'Your Destination';
   const cf = deck?.customFields;
   const propKey = property?.id ?? 'empty';
@@ -87,11 +89,15 @@ export function RegionStatsSlide({ property, deck, onFieldChange }: RegionStatsS
         </div>
       </div>
 
-      <div className="w-[42%]" style={{
-        background: 'linear-gradient(180deg, #a3c4bd, #8eb8b0, #c8ddd8)',
-      }}>
-        <div className="h-full w-full flex items-center justify-center text-white/50 text-xs">Destination photo</div>
-      </div>
+      <SlideImage
+        fieldKey={`image.regionStats.${propKey}`}
+        customFields={cf}
+        gallery={deck?.gallery}
+        onFieldChange={onFieldChange}
+        onGalleryAdd={onGalleryAdd}
+        className="w-[42%]"
+        placeholderText="Destination photo"
+      />
     </div>
   );
 }

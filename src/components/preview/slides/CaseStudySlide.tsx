@@ -1,23 +1,33 @@
-import { type DeckCaseStudyLink } from '@/api/decks.api';
+import { type DeckCaseStudyLink, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { EditableText } from '../EditableText';
+import { SlideImage } from '../SlideImage';
 
 const GREEN = '#00b2a0';
 
 interface CaseStudySlideProps {
   caseStudies?: DeckCaseStudyLink[];
+  deck?: FullDeck;
   onFieldChange?: FieldChangeHandler;
+  onGalleryAdd?: (url: string) => void;
 }
 
-export function CaseStudySlide({ caseStudies, onFieldChange }: CaseStudySlideProps) {
+export function CaseStudySlide({ caseStudies, deck, onFieldChange, onGalleryAdd }: CaseStudySlideProps) {
   const hasCaseStudies = caseStudies && caseStudies.length > 0;
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* Background photo placeholder */}
-      <div className="absolute inset-0" style={{
-        background: 'linear-gradient(135deg, #c8ddd8 0%, #a3c4bd 40%, #8eb8b0 70%, #d4e8e4 100%)',
-      }} />
+      {/* Background image — always clickable to change */}
+      <SlideImage
+        fieldKey="image.caseStudy"
+        customFields={deck?.customFields}
+        gallery={deck?.gallery}
+        onFieldChange={onFieldChange}
+        onGalleryAdd={onGalleryAdd}
+        className="absolute inset-0"
+        placeholderText="Background image"
+        fallbackGradient="linear-gradient(135deg, #c8ddd8 0%, #a3c4bd 40%, #8eb8b0 70%, #d4e8e4 100%)"
+      />
 
       {/* Large "Case Studies" title bottom-left */}
       <div className="absolute bottom-[6%] left-[5%]">

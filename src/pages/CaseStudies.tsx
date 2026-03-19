@@ -6,6 +6,7 @@ import {
   deleteCaseStudy,
   type CaseStudy,
 } from '@/api/case-studies.api';
+import { uploadImage, uploadUrl } from '@/api/upload.api';
 
 interface FormData {
   title: string;
@@ -21,12 +22,13 @@ interface FormData {
   bookings: string;
   narrative: string;
   tags: string;
+  images: string[];
 }
 
 const emptyForm: FormData = {
   title: '', hotelName: '', destination: '', region: '', propertyType: '',
   roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
-  narrative: '', tags: '',
+  narrative: '', tags: '', images: [],
 };
 
 export function CaseStudies() {
@@ -82,6 +84,7 @@ export function CaseStudies() {
       bookings: item.bookings?.toString() ?? '',
       narrative: item.narrative ?? '',
       tags: item.tags?.join(', ') ?? '',
+      images: item.images ?? [],
     });
     setEditingId(item.id);
     setShowForm(true);
@@ -105,6 +108,7 @@ export function CaseStudies() {
         bookings: form.bookings ? parseInt(form.bookings) : undefined,
         narrative: form.narrative || undefined,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+        images: form.images.length > 0 ? form.images : undefined,
       };
 
       if (editingId) {
@@ -243,6 +247,43 @@ export function CaseStudies() {
             <label className="block text-sm font-medium text-gray-700">Narrative</label>
             <textarea rows={3} value={form.narrative} onChange={(e) => setForm({ ...form, narrative: e.target.value })}
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+            <div className="flex gap-2 flex-wrap mb-2">
+              {form.images.map((url) => (
+                <div key={url} className="relative group w-20 h-20 rounded border border-gray-200 overflow-hidden">
+                  <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, images: form.images.filter((u) => u !== url) })}
+                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+              <label className="w-20 h-20 rounded border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center text-gray-400 cursor-pointer text-lg">
+                +
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const result = await uploadImage(file);
+                      setForm((prev) => ({ ...prev, images: [...prev.images, result.url] }));
+                    } catch {
+                      setError('Failed to upload image');
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
           </div>
 
           <div className="flex gap-3">

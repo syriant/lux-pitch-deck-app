@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getFullDeck, updateDeck, updateProperty, setDeckObjectives, updateOption,
+  getFullDeck, updateDeck as updateDeckApi, updateProperty, setDeckObjectives, updateOption,
   type FullDeck,
 } from '@/api/decks.api';
 import { updateCaseStudy } from '@/api/case-studies.api';
@@ -86,7 +86,7 @@ export function DeckPreview() {
         } else if (entityType === 'custom') {
           // Save to deck.customFields — merge with existing
           const updated = { ...(deck.customFields ?? {}), [field]: value };
-          await updateDeck(id, { customFields: updated });
+          await updateDeckApi(id, { customFields: updated });
           setDeck((prev) => {
             if (!prev) return prev;
             return { ...prev, customFields: updated };
@@ -121,6 +121,13 @@ export function DeckPreview() {
     },
     [deck, id],
   );
+
+  const handleGalleryAdd = useCallback(async (url: string) => {
+    if (!deck || !id) return;
+    const updated = [...(deck.gallery ?? []), url];
+    await updateDeckApi(id, { gallery: updated });
+    setDeck((prev) => prev ? { ...prev, gallery: updated } : prev);
+  }, [deck, id]);
 
   const handleReorder = useCallback((fromIndex: number, toIndex: number) => {
     setSlides((prev) => {
@@ -207,7 +214,7 @@ export function DeckPreview() {
         <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
           {activeSlide && (
             <div className="w-full max-w-5xl">
-              <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} />
+              <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
               <div className="mt-3 text-center text-xs text-gray-400">
                 {activeIndex + 1} / {slides.length} — {activeSlide.label}
               </div>

@@ -209,6 +209,7 @@ export interface FullDeck {
   coverImage: string | null;
   heroImage: string | null;
   customFields: Record<string, string>;
+  gallery: string[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -282,6 +283,7 @@ export async function updateDeck(id: string, data: {
   coverImage?: string | null;
   heroImage?: string | null;
   customFields?: Record<string, string>;
+  gallery?: string[];
 }): Promise<{ id: string }> {
   const res = await apiClient.patch(`/decks/${id}`, data);
   return res.data;

@@ -1,16 +1,19 @@
-import { type DeckObjective } from '@/api/decks.api';
+import { type DeckObjective, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { EditableText } from '../EditableText';
+import { SlideImage } from '../SlideImage';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
 
 interface ObjectivesSlideProps {
   objectives: DeckObjective[];
+  deck?: FullDeck;
   onFieldChange?: FieldChangeHandler;
+  onGalleryAdd?: (url: string) => void;
 }
 
-export function ObjectivesSlide({ objectives, onFieldChange }: ObjectivesSlideProps) {
+export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd }: ObjectivesSlideProps) {
   const primary = objectives[0];
   const secondary = objectives.slice(1);
   const hasObjectives = objectives.length > 0;
@@ -29,14 +32,15 @@ export function ObjectivesSlide({ objectives, onFieldChange }: ObjectivesSlidePr
             to achieve your specific key objectives
           </p>
 
-          {/* Photo placeholder */}
-          <div className="flex-1 rounded-lg overflow-hidden" style={{
-            background: 'linear-gradient(135deg, #a3c4bd, #8eb8b0, #c8ddd8)',
-          }}>
-            <div className="h-full w-full flex items-center justify-center text-white/50 text-xs">
-              Hotel photo
-            </div>
-          </div>
+          <SlideImage
+            fieldKey="image.objectives"
+            customFields={deck?.customFields}
+            gallery={deck?.gallery}
+            onFieldChange={onFieldChange}
+            onGalleryAdd={onGalleryAdd}
+            className="flex-1 rounded-lg overflow-hidden"
+            placeholderText="Hotel photo"
+          />
         </div>
 
         {/* Right column — objectives */}

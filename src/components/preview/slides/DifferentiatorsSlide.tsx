@@ -1,6 +1,7 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideEditableText } from '../SlideEditableText';
+import { SlideImage } from '../SlideImage';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -8,6 +9,7 @@ const MINT = '#dff0ee';
 interface DifferentiatorsSlideProps {
   deck: FullDeck;
   onFieldChange?: FieldChangeHandler;
+  onGalleryAdd?: (url: string) => void;
 }
 
 const defaultDifferentiators = [
@@ -17,7 +19,7 @@ const defaultDifferentiators = [
   { title: 'Tailored Campaigns', description: 'Our in-house team of world-class writers, editors, designers and videographers will create an incredible campaign' },
 ];
 
-export function DifferentiatorsSlide({ deck, onFieldChange }: DifferentiatorsSlideProps) {
+export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: DifferentiatorsSlideProps) {
   const items = deck.differentiators.length > 0
     ? deck.differentiators.map((d) => ({
         title: d.differentiator.title,
@@ -68,11 +70,15 @@ export function DifferentiatorsSlide({ deck, onFieldChange }: DifferentiatorsSli
           </div>
         </div>
 
-        <div className="w-[40%] rounded-lg overflow-hidden" style={{
-          background: 'linear-gradient(135deg, #a3c4bd 0%, #8eb8b0 50%, #c8ddd8 100%)',
-        }}>
-          <div className="h-full w-full flex items-center justify-center text-white/50 text-xs">Hotel photo</div>
-        </div>
+        <SlideImage
+          fieldKey="image.differentiators"
+          customFields={deck.customFields}
+          gallery={deck.gallery}
+          onFieldChange={onFieldChange}
+          onGalleryAdd={onGalleryAdd}
+          className="w-[40%] rounded-lg overflow-hidden"
+          placeholderText="Hotel photo"
+        />
       </div>
 
       <div className="flex justify-end px-[5%] pb-[3%]">
