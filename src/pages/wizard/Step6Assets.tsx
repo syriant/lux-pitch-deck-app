@@ -155,7 +155,7 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
                           <label
                             key={channel}
                             className={`flex items-start gap-3 rounded-md border px-3 py-2 cursor-pointer text-sm ${
-                              enabled ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50 opacity-60'
+                              enabled ? 'border-[#01B18B]/30 bg-[#E6F9F5]' : 'border-gray-200 bg-gray-50 opacity-60'
                             }`}
                           >
                             <input

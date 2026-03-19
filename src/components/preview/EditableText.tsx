@@ -50,7 +50,7 @@ export function EditableText({
   }
 
   if (editing) {
-    const inputClasses = `${className} bg-white/80 border border-blue-400 rounded px-1 outline-none ring-1 ring-blue-300`;
+    const inputClasses = `${className} bg-white/80 border border-[#01B18B] rounded px-1 outline-none ring-1 ring-[#01B18B]/40`;
 
     if (multiline) {
       return (

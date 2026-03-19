@@ -43,12 +43,12 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onClose
                 key={url}
                 onClick={() => { onSelect(url); onClose(); }}
                 className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
-                  isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-400'
+                  isSelected ? 'border-[#01B18B] ring-2 ring-[#01B18B]/30' : 'border-gray-200 hover:border-gray-400'
                 }`}
               >
                 <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-32 object-cover" />
                 {isSelected && (
-                  <div className="absolute top-1 right-1 rounded-full bg-blue-500 w-5 h-5 flex items-center justify-center text-white text-xs">
+                  <div className="absolute top-1 right-1 rounded-full bg-[#01B18B] w-5 h-5 flex items-center justify-center text-white text-xs">
                     ✓
                   </div>
                 )}

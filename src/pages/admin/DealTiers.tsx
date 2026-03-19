@@ -39,7 +39,7 @@ function formatGm(val: string | null): string {
 }
 
 const gradeColors: Record<string, string> = {
-  A: 'bg-blue-100 text-blue-700',
+  A: 'bg-[#E6F9F5] text-[#009977]',
   B: 'bg-amber-100 text-amber-700',
 };
 
@@ -104,7 +104,7 @@ export function DealTiers() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
           >
             {uploading ? 'Uploading...' : 'Upload Deal Tiers MASTER'}
           </button>

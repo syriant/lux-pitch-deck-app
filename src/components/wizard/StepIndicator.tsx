@@ -23,7 +23,7 @@ export function StepIndicator({ currentStep, onStepClick }: StepIndicatorProps) 
         return (
           <div key={step.number} className="flex items-center">
             {i > 0 && (
-              <div className={`w-8 h-0.5 ${isComplete ? 'bg-blue-500' : 'bg-gray-200'}`} />
+              <div className={`w-8 h-0.5 ${isComplete ? 'bg-[#01B18B]' : 'bg-gray-200'}`} />
             )}
             <button
               type="button"
@@ -34,17 +34,17 @@ export function StepIndicator({ currentStep, onStepClick }: StepIndicatorProps) 
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                   isActive
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[#01B18B] text-white'
                     : isComplete
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
+                      ? 'bg-[#01B18B] text-white'
+                      : 'bg-gray-200 text-[#7E8188]'
                 }`}
               >
-                {isComplete ? '✓' : step.number}
+                {isComplete ? '\u2713' : step.number}
               </div>
               <span
                 className={`text-xs ${
-                  isActive ? 'font-semibold text-gray-900' : 'text-gray-500'
+                  isActive ? 'font-semibold text-[#363A45]' : 'text-[#7E8188]'
                 }`}
               >
                 {step.label}

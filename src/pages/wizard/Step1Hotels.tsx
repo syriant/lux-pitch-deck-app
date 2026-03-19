@@ -99,7 +99,7 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
                 )}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => openEdit(prop)} className="text-blue-600 hover:underline text-xs">Edit</button>
+                <button onClick={() => openEdit(prop)} className="text-[#01B18B] hover:underline text-xs">Edit</button>
                 <button onClick={() => handleDelete(prop.id)} className="text-red-600 hover:underline text-xs">Remove</button>
               </div>
             </div>
@@ -120,7 +120,7 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
               value={form.propertyName}
               onChange={(e) => setForm({ ...form, propertyName: e.target.value })}
               placeholder="e.g. InterContinental Sanctuary Cove"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
           <div>
@@ -130,14 +130,14 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
               value={form.destination}
               onChange={(e) => setForm({ ...form, destination: e.target.value })}
               placeholder="e.g. Gold Coast, Australia"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
           <div className="flex gap-3">
             <button
               type="submit"
               disabled={saving}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
             >
               {saving ? 'Saving...' : editingId ? 'Save' : 'Add Property'}
             </button>
@@ -163,7 +163,7 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
         <button
           onClick={onNext}
           disabled={!canProceed}
-          className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
         >
           Next: Pricing Tool
         </button>

@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/auth.store';
+import { useAuthStore } from '@/stores/auth.store.ts';
 
 interface RequireRoleProps {
   roles: string[];
@@ -21,7 +21,7 @@ export function RequireRole({ roles, children }: RequireRoleProps) {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
           <p className="mt-2 text-gray-600">You don't have access to this page.</p>
-          <a href="/" className="mt-4 inline-block text-blue-600 hover:underline">
+          <a href="/" className="mt-4 inline-block text-[#01B18B] hover:underline">
             Back to Dashboard
           </a>
         </div>

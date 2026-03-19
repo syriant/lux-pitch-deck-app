@@ -185,7 +185,7 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
                         key={tmpl.id}
                         className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm ${
                           selectedTemplateIds.has(tmpl.id)
-                            ? 'border-blue-300 bg-blue-50'
+                            ? 'border-[#01B18B]/50 bg-[#E6F9F5]'
                             : 'border-gray-200 hover:bg-gray-50'
                         }`}
                       >
@@ -219,7 +219,7 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
                 onChange={(e) => setFreeText(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFreeText(); } }}
                 placeholder="Type a custom objective..."
-                className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
               />
               <button
                 onClick={addFreeText}
@@ -253,7 +253,7 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
                     isSelected
                       ? isSuggested
                         ? 'border-green-300 bg-green-50'
-                        : 'border-blue-300 bg-blue-50'
+                        : 'border-[#01B18B]/50 bg-[#E6F9F5]'
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
@@ -286,7 +286,7 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
         <button
           onClick={handleSaveAndNext}
           disabled={saving}
-          className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Next: Case Studies'}
         </button>

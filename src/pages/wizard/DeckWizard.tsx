@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getFullDeck, type FullDeck } from '@/api/decks.api';
+import { AppShell } from '@/components/layout/AppShell';
 import { StepIndicator } from '@/components/wizard/StepIndicator';
 import { Step1Hotels } from './Step1Hotels';
 import { Step2Pricing } from './Step2Pricing';
@@ -30,90 +31,101 @@ export function DeckWizard() {
 
   useEffect(() => { loadDeck(); }, [id]);
 
-  if (loading) return <div className="p-8 text-gray-500">Loading...</div>;
+  if (loading) {
+    return (
+      <AppShell sidebar={false}>
+        <div className="p-8 text-[#7E8188]">Loading...</div>
+      </AppShell>
+    );
+  }
+
   if (error || !deck) {
     return (
-      <div className="p-8">
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error || 'Deck not found'}</div>
-      </div>
+      <AppShell sidebar={false}>
+        <div className="p-8">
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error || 'Deck not found'}</div>
+        </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-bold text-gray-900">{deck.name}</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(`/decks/${deck.id}/preview`)}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            Preview
-          </button>
-          <button
-            onClick={() => navigate('/')}
-            className="text-sm text-gray-500 hover:text-gray-700"
-          >
-            Save & Exit
-          </button>
+    <AppShell sidebar={false} breadcrumb={deck.name}>
+      <div className="p-8 max-w-5xl">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-[#363A45]">{deck.name}</h1>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/decks/${deck.id}/preview`)}
+              className="text-sm text-[#01B18B] hover:text-[#009977]"
+            >
+              Preview
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="text-sm text-[#7E8188] hover:text-[#363A45]"
+            >
+              Save & Exit
+            </button>
+          </div>
         </div>
+
+        <StepIndicator currentStep={currentStep} onStepClick={setCurrentStep} />
+
+        {currentStep === 1 && (
+          <Step1Hotels
+            deckId={deck.id}
+            properties={deck.properties}
+            onPropertiesChange={loadDeck}
+            onNext={() => setCurrentStep(2)}
+          />
+        )}
+
+        {currentStep === 2 && (
+          <Step2Pricing
+            deckId={deck.id}
+            properties={deck.properties}
+            onBack={() => setCurrentStep(1)}
+            onNext={() => setCurrentStep(3)}
+          />
+        )}
+
+        {currentStep === 3 && (
+          <Step3Images
+            deckId={deck.id}
+            coverImage={deck.coverImage ?? null}
+            heroImage={deck.heroImage ?? null}
+            gallery={deck.gallery ?? []}
+            onBack={() => setCurrentStep(2)}
+            onNext={() => setCurrentStep(4)}
+          />
+        )}
+
+        {currentStep === 4 && (
+          <Step4Objectives
+            deckId={deck.id}
+            onBack={() => setCurrentStep(3)}
+            onNext={() => setCurrentStep(5)}
+          />
+        )}
+
+        {currentStep === 5 && (
+          <Step5CaseStudies
+            deckId={deck.id}
+            properties={deck.properties}
+            onBack={() => setCurrentStep(4)}
+            onNext={() => setCurrentStep(6)}
+          />
+        )}
+
+        {currentStep === 6 && (
+          <Step6Assets
+            deckId={deck.id}
+            properties={deck.properties}
+            onBack={() => setCurrentStep(5)}
+          />
+        )}
       </div>
-
-      <StepIndicator currentStep={currentStep} onStepClick={setCurrentStep} />
-
-      {currentStep === 1 && (
-        <Step1Hotels
-          deckId={deck.id}
-          properties={deck.properties}
-          onPropertiesChange={loadDeck}
-          onNext={() => setCurrentStep(2)}
-        />
-      )}
-
-      {currentStep === 2 && (
-        <Step2Pricing
-          deckId={deck.id}
-          properties={deck.properties}
-          onBack={() => setCurrentStep(1)}
-          onNext={() => setCurrentStep(3)}
-        />
-      )}
-
-      {currentStep === 3 && (
-        <Step3Images
-          deckId={deck.id}
-          coverImage={deck.coverImage ?? null}
-          heroImage={deck.heroImage ?? null}
-          gallery={deck.gallery ?? []}
-          onBack={() => setCurrentStep(2)}
-          onNext={() => setCurrentStep(4)}
-        />
-      )}
-
-      {currentStep === 4 && (
-        <Step4Objectives
-          deckId={deck.id}
-          onBack={() => setCurrentStep(3)}
-          onNext={() => setCurrentStep(5)}
-        />
-      )}
-
-      {currentStep === 5 && (
-        <Step5CaseStudies
-          deckId={deck.id}
-          properties={deck.properties}
-          onBack={() => setCurrentStep(4)}
-          onNext={() => setCurrentStep(6)}
-        />
-      )}
-
-      {currentStep === 6 && (
-        <Step6Assets
-          deckId={deck.id}
-          properties={deck.properties}
-          onBack={() => setCurrentStep(5)}
-        />
-      )}
-    </div>
+    </AppShell>
   );
 }

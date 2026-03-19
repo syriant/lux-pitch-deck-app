@@ -93,7 +93,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
               onClick={() => setActiveProperty(p.id)}
               className={`rounded-md px-3 py-1.5 text-sm ${
                 activeProperty === p.id
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#01B18B] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -112,7 +112,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         placeholder="Search case studies..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="mb-4 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
       />
 
       {loading ? (
@@ -121,7 +121,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center mb-6">
           <p className="text-gray-500">No case studies in the library yet.</p>
           <p className="mt-1 text-sm text-gray-400">
-            Add case studies via the <a href="/case-studies" className="text-blue-600 hover:underline">Case Study Library</a>.
+            Add case studies via the <a href="/case-studies" className="text-[#01B18B] hover:underline">Case Study Library</a>.
           </p>
         </div>
       ) : (
@@ -133,7 +133,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
               <label
                 key={cs.id}
                 className={`flex items-start gap-3 rounded-md border px-4 py-3 cursor-pointer text-sm ${
-                  isSelected ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                  isSelected ? 'border-[#01B18B]/50 bg-[#E6F9F5]' : 'border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 <input
@@ -177,7 +177,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         <button
           onClick={handleSaveAndNext}
           disabled={saving}
-          className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Next: Marketing Assets'}
         </button>

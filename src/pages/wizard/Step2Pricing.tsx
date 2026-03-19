@@ -149,7 +149,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
                       type="file"
                       accept=".xlsx,.xlsm,.xls"
                       onChange={(e) => handleFileChange(prop.id, e)}
-                      className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-blue-700"
+                      className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-[#01B18B] file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-[#009977]"
                     />
                   </div>
 
@@ -178,7 +178,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
         <button
           onClick={onNext}
           disabled={!allParsed}
-          className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
           title={allParsed ? '' : 'Upload a pricing tool for each property'}
         >
           Next: Images

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
-  ready: 'bg-blue-100 text-blue-700',
+  ready: 'bg-[#E6F9F5] text-[#01B18B]',
   exported: 'bg-green-100 text-green-700',
 };
 
@@ -81,20 +81,18 @@ export function Dashboard() {
     });
   }
 
-  const isAdmin = user?.roles?.includes('admin');
-
   return (
     <div className="p-8 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl font-bold text-[#363A45]">Dashboard</h1>
+          <p className="mt-1 text-sm text-[#7E8188]">
             Welcome back{user?.name ? `, ${user.name}` : ''}
           </p>
         </div>
         <button
           onClick={handleShowCreate}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
         >
           Create New Deck
         </button>
@@ -104,7 +102,7 @@ export function Dashboard() {
 
       {showCreate && (
         <form onSubmit={handleCreate} className="mb-6 rounded-lg border border-gray-200 bg-white p-6 space-y-4">
-          <h2 className="text-lg font-semibold">New Deck</h2>
+          <h2 className="text-lg font-semibold text-[#363A45]">New Deck</h2>
           <div>
             <label className="block text-sm font-medium text-gray-700">Deck Name</label>
             <input
@@ -113,7 +111,7 @@ export function Dashboard() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Grand Hyatt Bali — March 2026"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
 
@@ -131,13 +129,13 @@ export function Dashboard() {
                     onClick={() => setSelectedTemplateId(t.id)}
                     className={`rounded-lg border-2 p-3 text-left transition-colors ${
                       selectedTemplateId === t.id
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-[#01B18B] bg-[#E6F9F5]'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="text-sm font-medium text-gray-900">{t.name}</div>
+                    <div className="text-sm font-medium text-[#363A45]">{t.name}</div>
                     {t.description && (
-                      <div className="mt-1 text-xs text-gray-500">{t.description}</div>
+                      <div className="mt-1 text-xs text-[#7E8188]">{t.description}</div>
                     )}
                     <div className="mt-1 text-xs text-gray-400">{t.slides.length} slides</div>
                   </button>
@@ -150,7 +148,7 @@ export function Dashboard() {
             <button
               type="submit"
               disabled={creating}
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
             >
               {creating ? 'Creating...' : 'Create'}
             </button>
@@ -165,62 +163,19 @@ export function Dashboard() {
         </form>
       )}
 
-      <div className="mb-6 flex gap-3 flex-wrap">
-        <button
-          onClick={() => navigate('/case-studies')}
-          className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Case Studies
-        </button>
-        {isAdmin && (
-          <>
-            <button
-              onClick={() => navigate('/admin/differentiators')}
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Differentiators
-            </button>
-            <button
-              onClick={() => navigate('/admin/objectives')}
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Objective Templates
-            </button>
-            <button
-              onClick={() => navigate('/admin/deal-tiers')}
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Deal Tiers
-            </button>
-            <button
-              onClick={() => navigate('/admin/templates')}
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Templates
-            </button>
-            <button
-              onClick={() => navigate('/admin/users')}
-              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Users
-            </button>
-          </>
-        )}
-      </div>
-
       {loading ? (
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-[#7E8188]">Loading...</div>
       ) : decks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-500">No decks yet.</p>
+          <p className="text-[#7E8188]">No decks yet.</p>
           <p className="mt-1 text-sm text-gray-400">Create your first pitch deck to get started.</p>
         </div>
       ) : (
         <>
-          <h2 className="text-sm font-medium text-gray-500 mb-3">Recent Decks</h2>
+          <h2 className="text-sm font-medium text-[#7E8188] mb-3">Recent Decks</h2>
           <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-500">
+              <tr className="border-b border-gray-200 text-left text-sm font-medium text-[#7E8188]">
                 <th className="pb-3 pr-4">Name</th>
                 <th className="pb-3 pr-4">Status</th>
                 <th className="pb-3 pr-4">Created By</th>
@@ -232,19 +187,19 @@ export function Dashboard() {
             <tbody>
               {decks.map((deck) => (
                 <tr key={deck.id} className="border-b border-gray-100 text-sm hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/decks/${deck.id}/edit`)}>
-                  <td className="py-3 pr-4 font-medium text-gray-900">{deck.name}</td>
+                  <td className="py-3 pr-4 font-medium text-[#363A45]">{deck.name}</td>
                   <td className="py-3 pr-4">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusColors[deck.status] ?? 'bg-gray-100 text-gray-700'}`}>
                       {deck.status}
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-gray-600">{deck.createdByName ?? '-'}</td>
-                  <td className="py-3 pr-4 text-gray-500">{formatDate(deck.createdAt)}</td>
-                  <td className="py-3 pr-4 text-gray-500">{formatDate(deck.updatedAt)}</td>
+                  <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.createdAt)}</td>
+                  <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.updatedAt)}</td>
                   <td className="py-3">
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/decks/${deck.id}/preview`); }}
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-[#01B18B] hover:underline"
                     >
                       Preview
                     </button>

@@ -20,7 +20,7 @@ export function SlideThumbnail({ slide, deck, index, isActive, onClick }: SlideT
     <button
       onClick={onClick}
       className={`group flex items-start gap-2 w-full text-left rounded-md p-1.5 transition-colors ${
-        isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
+        isActive ? 'bg-[#E6F9F5]' : 'hover:bg-gray-50'
       }`}
     >
       <span className="text-[10px] text-gray-400 font-mono mt-1 w-4 text-right shrink-0">
@@ -28,7 +28,7 @@ export function SlideThumbnail({ slide, deck, index, isActive, onClick }: SlideT
       </span>
       <div
         className={`rounded border-2 overflow-hidden shrink-0 ${
-          isActive ? 'border-blue-500 shadow-sm' : 'border-gray-200 group-hover:border-gray-300'
+          isActive ? 'border-[#01B18B] shadow-sm' : 'border-gray-200 group-hover:border-gray-300'
         }`}
         style={{ width: thumbWidth, height: thumbHeight }}
       >

@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Outlet } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Users } from './pages/admin/Users';
@@ -11,68 +11,50 @@ import { DeckWizard } from './pages/wizard/DeckWizard';
 import { DeckPreview } from './pages/DeckPreview';
 import { CaseStudies } from './pages/CaseStudies';
 import { RequireRole } from './components/common/RequireRole';
+import { AppShell } from './components/layout/AppShell';
+
+function ShellWithSidebar() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
 
 export const router = createBrowserRouter([
   {
     path: '/login',
     element: <Login />,
   },
+  // Pages with sidebar
   {
-    path: '/',
     element: (
       <RequireRole roles={['pcm', 'admin']}>
-        <Dashboard />
+        <ShellWithSidebar />
       </RequireRole>
     ),
+    children: [
+      { path: '/', element: <Dashboard /> },
+      { path: '/case-studies', element: <CaseStudies /> },
+    ],
   },
+  // Admin pages with sidebar
   {
-    path: '/admin/users',
     element: (
       <RequireRole roles={['admin']}>
-        <Users />
+        <ShellWithSidebar />
       </RequireRole>
     ),
+    children: [
+      { path: '/admin/users', element: <Users /> },
+      { path: '/admin/differentiators', element: <Differentiators /> },
+      { path: '/admin/objectives', element: <ObjectiveTemplates /> },
+      { path: '/admin/deal-tiers', element: <DealTiers /> },
+      { path: '/admin/templates', element: <Templates /> },
+      { path: '/admin/parser-test', element: <ParserTest /> },
+    ],
   },
-  {
-    path: '/admin/differentiators',
-    element: (
-      <RequireRole roles={['admin']}>
-        <Differentiators />
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/admin/objectives',
-    element: (
-      <RequireRole roles={['admin']}>
-        <ObjectiveTemplates />
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/admin/deal-tiers',
-    element: (
-      <RequireRole roles={['admin']}>
-        <DealTiers />
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/admin/templates',
-    element: (
-      <RequireRole roles={['admin']}>
-        <Templates />
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/case-studies',
-    element: (
-      <RequireRole roles={['pcm', 'admin']}>
-        <CaseStudies />
-      </RequireRole>
-    ),
-  },
+  // Full-width pages (no sidebar)
   {
     path: '/decks/:id/edit',
     element: (
@@ -86,14 +68,6 @@ export const router = createBrowserRouter([
     element: (
       <RequireRole roles={['pcm', 'admin']}>
         <DeckPreview />
-      </RequireRole>
-    ),
-  },
-  {
-    path: '/admin/parser-test',
-    element: (
-      <RequireRole roles={['admin']}>
-        <ParserTest />
       </RequireRole>
     ),
   },

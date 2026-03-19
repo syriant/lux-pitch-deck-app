@@ -138,7 +138,7 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
           <button
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-[#01B18B] px-3 py-1.5 text-xs text-white hover:bg-[#009977] disabled:opacity-50"
           >
             {uploading ? 'Uploading...' : '+ Add Images'}
           </button>
@@ -164,7 +164,7 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
                 </div>
                 {/* Badge for assigned images */}
                 {(cover === url || hero === url) && (
-                  <div className="absolute top-1 left-1 rounded bg-blue-600 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                  <div className="absolute top-1 left-1 rounded bg-[#01B18B] px-1.5 py-0.5 text-[9px] font-medium text-white">
                     {cover === url ? 'Cover' : 'Hero'}
                   </div>
                 )}
@@ -176,7 +176,7 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
 
       <div className="flex justify-between">
         <button onClick={onBack} className="rounded-md border border-gray-300 px-6 py-2 text-sm text-gray-700 hover:bg-gray-50">Back</button>
-        <button onClick={onNext} className="rounded-md bg-blue-600 px-6 py-2 text-sm text-white hover:bg-blue-700">Next: Objectives</button>
+        <button onClick={onNext} className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977]">Next: Objectives</button>
       </div>
     </div>
   );

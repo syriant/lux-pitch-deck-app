@@ -197,7 +197,7 @@ export function Templates() {
         <h1 className="text-2xl font-bold text-gray-900">Deck Templates</h1>
         <button
           onClick={openCreate}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
         >
           Add Template
         </button>
@@ -217,7 +217,7 @@ export function Templates() {
                 required
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
               />
             </div>
             <div className="w-24">
@@ -226,7 +226,7 @@ export function Templates() {
                 type="number"
                 value={form.sortOrder}
                 onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ export function Templates() {
               rows={2}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
 
@@ -280,7 +280,7 @@ export function Templates() {
                     key={s.type}
                     type="button"
                     onClick={() => toggleSlide(s.type)}
-                    className="rounded-md border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600"
+                    className="rounded-md border border-dashed border-gray-300 px-2 py-1 text-xs text-gray-500 hover:border-[#01B18B] hover:text-[#01B18B]"
                   >
                     + {s.label}
                   </button>
@@ -293,7 +293,7 @@ export function Templates() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">Default Text</label>
-              <button type="button" onClick={addDefault} className="text-xs text-blue-600 hover:underline">
+              <button type="button" onClick={addDefault} className="text-xs text-[#01B18B] hover:underline">
                 + Add default
               </button>
             </div>
@@ -308,14 +308,14 @@ export function Templates() {
                       value={d.key}
                       onChange={(e) => updateDefault(i, 'key', e.target.value)}
                       placeholder="Key (e.g. cover.tagline)"
-                      className="w-48 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                      className="w-48 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#01B18B] focus:outline-none"
                     />
                     <input
                       type="text"
                       value={d.value}
                       onChange={(e) => updateDefault(i, 'value', e.target.value)}
                       placeholder="Default value"
-                      className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                      className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#01B18B] focus:outline-none"
                     />
                     <button type="button" onClick={() => removeDefault(i)} className="text-red-400 hover:text-red-600 text-xs px-1">
                       &times;
@@ -327,7 +327,7 @@ export function Templates() {
           </div>
 
           <div className="flex gap-3">
-            <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+            <button type="submit" className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]">
               {editingId ? 'Save Changes' : 'Create'}
             </button>
             <button
@@ -377,7 +377,7 @@ export function Templates() {
               </td>
               <td className="py-3">
                 <div className="flex gap-2">
-                  <button onClick={() => openEdit(item)} className="text-blue-600 hover:underline text-xs">
+                  <button onClick={() => openEdit(item)} className="text-[#01B18B] hover:underline text-xs">
                     Edit
                   </button>
                   {item.active && (

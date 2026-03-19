@@ -107,7 +107,7 @@ export function Users() {
         <h1 className="text-2xl font-bold text-gray-900">Users</h1>
         <button
           onClick={openCreate}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
         >
           Add User
         </button>
@@ -129,7 +129,7 @@ export function Users() {
                 name="new-user-email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
               />
             </div>
           )}
@@ -141,7 +141,7 @@ export function Users() {
               required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
 
@@ -157,7 +157,7 @@ export function Users() {
               name="new-user-password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
 
@@ -185,14 +185,14 @@ export function Users() {
               placeholder="e.g. APAC, Europe, Americas"
               value={form.region}
               onChange={(e) => setForm({ ...form, region: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
 
           <div className="flex gap-3">
             <button
               type="submit"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+              className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
             >
               {editingId ? 'Save Changes' : 'Create User'}
             </button>
@@ -245,7 +245,7 @@ export function Users() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => openEdit(user)}
-                    className="text-blue-600 hover:underline text-xs"
+                    className="text-[#01B18B] hover:underline text-xs"
                   >
                     Edit
                   </button>

@@ -140,7 +140,7 @@ export function ObjectiveTemplates() {
         <h1 className="text-2xl font-bold text-gray-900">Objective Templates</h1>
         <button
           onClick={openCreate}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
         >
           Add Template
         </button>
@@ -160,7 +160,7 @@ export function ObjectiveTemplates() {
               value={form.text}
               onChange={(e) => setForm({ ...form, text: e.target.value })}
               placeholder="Use {placeholders} for variable values like {year} or {target}"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
             />
           </div>
 
@@ -170,7 +170,7 @@ export function ObjectiveTemplates() {
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
               >
                 <option value="">None</option>
                 <option value="revenue">Revenue</option>
@@ -187,13 +187,13 @@ export function ObjectiveTemplates() {
                 type="number"
                 value={form.sortOrder}
                 onChange={(e) => setForm({ ...form, sortOrder: parseInt(e.target.value) || 0 })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
               />
             </div>
           </div>
 
           <div className="flex gap-3">
-            <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+            <button type="submit" className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]">
               {editingId ? 'Save Changes' : 'Create'}
             </button>
             <button
@@ -234,7 +234,7 @@ export function ObjectiveTemplates() {
                     {item.differentiatorIds.map((dId) => {
                       const diff = allDifferentiators.find((d) => d.id === dId);
                       return (
-                        <span key={dId} className="inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                        <span key={dId} className="inline-block rounded-full bg-[#E6F9F5] px-2 py-0.5 text-xs text-[#009977]">
                           {diff?.title ?? 'Unknown'}
                         </span>
                       );
@@ -251,7 +251,7 @@ export function ObjectiveTemplates() {
               </td>
               <td className="py-3">
                 <div className="flex gap-2">
-                  <button onClick={() => openEdit(item)} className="text-blue-600 hover:underline text-xs">Edit</button>
+                  <button onClick={() => openEdit(item)} className="text-[#01B18B] hover:underline text-xs">Edit</button>
                   <button onClick={() => openMapping(item)} className="text-purple-600 hover:underline text-xs">Map</button>
                   {item.active && (
                     <button onClick={() => setDeactivateTarget(item)} className="text-red-600 hover:underline text-xs">Deactivate</button>
@@ -301,7 +301,7 @@ export function ObjectiveTemplates() {
             </div>
             <div className="mt-4 flex justify-end gap-3">
               <button onClick={() => setMappingTarget(null)} className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
-              <button onClick={handleSaveMappings} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">Save Mappings</button>
+              <button onClick={handleSaveMappings} className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]">Save Mappings</button>
             </div>
           </div>
         </div>

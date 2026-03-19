@@ -35,7 +35,7 @@ export function ParserTest() {
           type="file"
           accept=".xlsx,.xlsm,.xls"
           onChange={handleFileChange}
-          className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-blue-700"
+          className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-[#01B18B] file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-[#009977]"
         />
       </div>
 

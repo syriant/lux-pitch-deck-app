@@ -108,7 +108,7 @@ export function CaseStudies() {
         bookings: form.bookings ? parseInt(form.bookings) : undefined,
         narrative: form.narrative || undefined,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-        images: form.images.length > 0 ? form.images : undefined,
+        images: form.images,
       };
 
       if (editingId) {
@@ -151,7 +151,7 @@ export function CaseStudies() {
         <h1 className="text-2xl font-bold text-gray-900">Case Study Library</h1>
         <button
           onClick={openCreate}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
         >
           Add Case Study
         </button>
@@ -166,14 +166,14 @@ export function CaseStudies() {
           placeholder="Search by title or hotel..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
         />
         <input
           type="text"
           placeholder="Filter by region..."
           value={regionFilter}
           onChange={(e) => { setRegionFilter(e.target.value); setPage(1); }}
-          className="w-48 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-48 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
         />
       </div>
 
@@ -185,32 +185,32 @@ export function CaseStudies() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Title</label>
               <input type="text" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Hotel Name</label>
               <input type="text" required value={form.hotelName} onChange={(e) => setForm({ ...form, hotelName: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Destination</label>
               <input type="text" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Region</label>
               <input type="text" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Property Type</label>
               <input type="text" value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
               <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
           </div>
 
@@ -218,35 +218,35 @@ export function CaseStudies() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Room Nights</label>
               <input type="number" value={form.roomNights} onChange={(e) => setForm({ ...form, roomNights: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Revenue ($)</label>
               <input type="number" step="0.01" value={form.revenue} onChange={(e) => setForm({ ...form, revenue: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">ADR ($)</label>
               <input type="number" step="0.01" value={form.adr} onChange={(e) => setForm({ ...form, adr: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">ALOS (days)</label>
               <input type="number" step="0.1" max="99" value={form.alos} onChange={(e) => setForm({ ...form, alos: e.target.value })}
                 placeholder="e.g. 3.5"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Bookings</label>
               <input type="number" value={form.bookings} onChange={(e) => setForm({ ...form, bookings: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Narrative</label>
             <textarea rows={3} value={form.narrative} onChange={(e) => setForm({ ...form, narrative: e.target.value })}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
           </div>
 
           <div>
@@ -287,7 +287,7 @@ export function CaseStudies() {
           </div>
 
           <div className="flex gap-3">
-            <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
+            <button type="submit" className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]">
               {editingId ? 'Save Changes' : 'Create'}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
@@ -308,6 +308,7 @@ export function CaseStudies() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-500">
+                <th className="pb-3 pr-4 w-20"></th>
                 <th className="pb-3 pr-4">Hotel</th>
                 <th className="pb-3 pr-4">Destination</th>
                 <th className="pb-3 pr-4">Region</th>
@@ -320,6 +321,19 @@ export function CaseStudies() {
               {items.map((item) => (
                 <tr key={item.id} className="border-b border-gray-100 text-sm">
                   <td className="py-3 pr-4">
+                    {item.images?.[0] ? (
+                      <img
+                        src={uploadUrl(item.images[0]) ?? ''}
+                        alt={item.hotelName}
+                        className="w-16 h-10 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-10 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-xs">
+                        —
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 pr-4">
                     <div className="font-medium text-gray-900">{item.hotelName}</div>
                     <div className="text-xs text-gray-500">{item.title}</div>
                   </td>
@@ -329,7 +343,7 @@ export function CaseStudies() {
                   <td className="py-3 pr-4 text-right font-mono text-gray-700">{item.revenue ? `$${formatNum(item.revenue)}` : '-'}</td>
                   <td className="py-3">
                     <div className="flex gap-2">
-                      <button onClick={() => openEdit(item)} className="text-blue-600 hover:underline text-xs">Edit</button>
+                      <button onClick={() => openEdit(item)} className="text-[#01B18B] hover:underline text-xs">Edit</button>
                       <button onClick={() => setDeleteTarget(item)} className="text-red-600 hover:underline text-xs">Delete</button>
                     </div>
                   </td>
