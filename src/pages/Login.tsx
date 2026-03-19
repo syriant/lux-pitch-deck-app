@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 
 export function Login() {
+  const [searchParams] = useSearchParams();
+  const expired = searchParams.get('expired') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,6 +35,9 @@ export function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {expired && !error && (
+            <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-700">Your session has expired. Please sign in again.</div>
+          )}
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}

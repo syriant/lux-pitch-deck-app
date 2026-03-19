@@ -4,6 +4,7 @@ interface EditableTextProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  style?: React.CSSProperties;
   as?: 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'div';
   placeholder?: string;
   multiline?: boolean;
@@ -13,6 +14,7 @@ export function EditableText({
   value,
   onChange,
   className = '',
+  style,
   as: Tag = 'span',
   placeholder = 'Click to edit',
   multiline = false,
@@ -82,7 +84,8 @@ export function EditableText({
   return (
     <Tag
       onClick={() => setEditing(true)}
-      className={`${className} cursor-pointer hover:outline hover:outline-1 hover:outline-blue-300 hover:outline-offset-2 rounded transition-all ${!value ? 'text-gray-400 italic' : ''}`}
+      className={`${className} cursor-pointer hover:outline hover:outline-1 hover:outline-[#01B18B]/40 hover:outline-offset-2 rounded transition-all ${!value ? 'text-gray-400 italic' : ''}`}
+      style={style}
       title="Click to edit"
     >
       {value || placeholder}

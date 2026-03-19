@@ -7,6 +7,7 @@ interface SlideEditableTextProps {
   customFields?: Record<string, string>;
   onFieldChange?: FieldChangeHandler;
   className?: string;
+  style?: React.CSSProperties;
   as?: 'span' | 'p' | 'h1' | 'h2' | 'h3' | 'div';
   multiline?: boolean;
   placeholder?: string;
@@ -22,6 +23,7 @@ export function SlideEditableText({
   customFields,
   onFieldChange,
   className = '',
+  style,
   as = 'span',
   multiline = false,
   placeholder,
@@ -30,7 +32,7 @@ export function SlideEditableText({
   const Tag = as;
 
   if (!onFieldChange) {
-    return <Tag className={className}>{value}</Tag>;
+    return <Tag className={className} style={style}>{value}</Tag>;
   }
 
   return (
@@ -38,6 +40,7 @@ export function SlideEditableText({
       value={value}
       onChange={(v) => onFieldChange('custom', '', fieldKey, v)}
       className={className}
+      style={style}
       as={as}
       multiline={multiline}
       placeholder={placeholder}

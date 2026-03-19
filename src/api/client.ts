@@ -36,7 +36,10 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    // Don't intercept non-401s, retries, or auth endpoints
+    const url = originalRequest.url ?? '';
+    const isAuthUrl = url.includes('/auth/');
+    if (error.response?.status !== 401 || originalRequest._retry || isAuthUrl) {
       return Promise.reject(error);
     }
 
@@ -60,10 +63,13 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       }
       processQueue(new Error('Refresh failed'), null);
+      useAuthStore.getState().logout();
+      window.location.href = '/login?expired=1';
       return Promise.reject(error);
     } catch (refreshError) {
       processQueue(refreshError, null);
       useAuthStore.getState().logout();
+      window.location.href = '/login?expired=1';
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
