@@ -56,7 +56,7 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
     case 'differentiators':
       return <DifferentiatorsSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'reach':
-      return <ReachSlide deck={deck} onFieldChange={onFieldChange} />;
+      return <ReachSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'demographics':
       return <DemographicsSlide deck={deck} onFieldChange={onFieldChange} />;
     case 'region-stats':
