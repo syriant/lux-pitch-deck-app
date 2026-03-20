@@ -52,14 +52,8 @@ export function SlideImage({
           </div>
         )}
         {imageUrl && onFieldChange && (
-          <div className="h-full w-full flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-            <span className="text-white text-xs font-medium bg-black/50 rounded px-2 py-1">Change</span>
-            <button
-              onClick={(e) => { e.stopPropagation(); onFieldChange('custom', '', fieldKey, ''); }}
-              className="text-white text-xs font-medium bg-red-600/80 hover:bg-red-600 rounded px-2 py-1"
-            >
-              Remove
-            </button>
+          <div className="h-full w-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+            <span className="text-white text-xs font-medium bg-black/50 rounded px-2 py-1">Click to change</span>
           </div>
         )}
       </div>
@@ -70,6 +64,7 @@ export function SlideImage({
           currentImage={customFields?.[fieldKey] ?? null}
           onSelect={handleSelect}
           onUpload={onGalleryAdd}
+          onRemove={() => onFieldChange?.('custom', '', fieldKey, '')}
           onClose={() => setShowPicker(false)}
         />
       )}

@@ -132,21 +132,23 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
     <div className="h-full w-full flex flex-col overflow-hidden">
       <div className="flex-1 relative">
         {/* Background image */}
-        {bgImgUrl ? (
+        {bgImgUrl && (
           <div className="absolute inset-0" style={{ backgroundImage: `url(${bgImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-        ) : deck && onFieldChange ? (
-          <div className="absolute inset-0">
+        )}
+        {deck && onFieldChange && onGalleryAdd && (
+          <div className="absolute top-2 right-2 z-10">
             <SlideImage
               fieldKey="image.reach"
               customFields={cf}
               gallery={deck.gallery}
               onFieldChange={onFieldChange}
               onGalleryAdd={onGalleryAdd}
-              className="w-full h-full"
-              placeholderText="Select background image"
+              className="w-8 h-8 rounded"
+              placeholderText="+"
             />
           </div>
-        ) : (
+        )}
+        {!bgImgUrl && (
           <div className="absolute inset-0 bg-gradient-to-b from-[#8eb8b0] to-[#c8ddd8]" />
         )}
 

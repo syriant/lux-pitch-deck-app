@@ -2,8 +2,6 @@ import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
-import { AlignToggle, type Align } from '../AlignToggle';
-import { FontSizeControl } from '../FontSizeControl';
 
 const GREEN = '#00b2a0';
 
@@ -18,8 +16,6 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   const destination = property?.destination ?? '';
   const heroImgUrl = uploadUrl(deck.heroImage);
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-  const align = (deck.customFields?.['hotelIntro.valueAlign'] as Align) || 'left';
-  const fontSize = Number(deck.customFields?.['hotelIntro.valueSize']) || 34;
 
   const defaultIntro = destination
     ? `With budgets set to increase and demand in ${destination} projected to grow, now is the ideal time to diversify distribution channels and capture greater market share.`
@@ -28,33 +24,22 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
       <div className="flex-1 flex">
-        {/* Left half — green panel */}
-        <div
-          className="group w-[50%] flex flex-col p-[5%]"
-          style={{ backgroundColor: GREEN }}
-        >
+        <div className="w-[50%] flex flex-col p-[5%]" style={{ backgroundColor: GREEN }}>
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-5 w-auto self-start mb-6" />
 
           <div className="flex-1 flex items-center">
             <SlideRichText
               fieldKey="hotelIntro.valueProp"
               defaultValue={defaultIntro}
+              defaultSize={34}
               customFields={deck.customFields}
               onFieldChange={onFieldChange}
-              className="font-bold text-white leading-snug w-full"
-              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', fontSize: `${fontSize}px`, textAlign: align }}
+              className="font-bold text-white leading-snug"
+              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
             />
           </div>
-
-          {onFieldChange && (
-            <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <AlignToggle fieldKey="hotelIntro.valueAlign" align={align} onFieldChange={onFieldChange} />
-              <FontSizeControl fieldKey="hotelIntro.valueSize" size={fontSize} onFieldChange={onFieldChange} />
-            </div>
-          )}
         </div>
 
-        {/* Right half — hero image */}
         <div className="w-[50%]" style={
           heroImgUrl
             ? { backgroundImage: `url(${heroImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }

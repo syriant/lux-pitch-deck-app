@@ -5,11 +5,12 @@ interface ImagePickerProps {
   gallery: string[];
   currentImage: string | null;
   onSelect: (url: string) => void;
-  onUpload?: (url: string) => void;
+  onUpload?: (url: string) => void | Promise<void>;
+  onRemove?: () => void;
   onClose: () => void;
 }
 
-export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onClose }: ImagePickerProps) {
+export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemove, onClose }: ImagePickerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -17,11 +18,13 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onClose
     setUploading(true);
     try {
       const result = await uploadImage(file);
-      onUpload?.(result.url);
+      if (onUpload) {
+        await onUpload(result.url);
+      }
       onSelect(result.url);
       onClose();
-    } catch {
-      // Could show error, but keeping it simple
+    } catch (err) {
+      console.error('Upload failed:', err);
     } finally {
       setUploading(false);
     }
@@ -74,6 +77,15 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onClose
             </button>
           )}
         </div>
+
+        {onRemove && currentImage && (
+          <button
+            onClick={() => { onRemove(); onClose(); }}
+            className="mt-3 w-full rounded-md border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+          >
+            Remove image
+          </button>
+        )}
 
         {gallery.length === 0 && !onUpload && (
           <p className="text-sm text-gray-500 text-center py-4">No images in gallery. Upload images in the wizard (Step 3).</p>

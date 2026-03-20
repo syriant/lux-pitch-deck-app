@@ -58,7 +58,7 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
     case 'reach':
       return <ReachSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'demographics':
-      return <DemographicsSlide deck={deck} onFieldChange={onFieldChange} />;
+      return <DemographicsSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'region-stats':
       return <RegionStatsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'case-study':

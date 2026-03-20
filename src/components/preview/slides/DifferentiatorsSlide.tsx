@@ -1,10 +1,7 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
-import { SlideEditableText } from '../SlideEditableText';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
-import { AlignToggle, type Align } from '../AlignToggle';
-import { FontSizeControl } from '../FontSizeControl';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -33,53 +30,40 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
 
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-  const align = (deck.customFields?.['diff.headlineAlign'] as Align) || 'left';
-  const fontSize = Number(deck.customFields?.['diff.headlineSize']) || 28;
+
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
-      <div className="group flex-1 flex p-[5%] gap-[4%]">
+      <div className="flex-1 flex p-[5%] gap-[4%]">
         <div className="flex-1 flex flex-col">
           <SlideRichText
             fieldKey="diff.headline"
             defaultValue={`By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach ${hotelName} can attract premium travellers, generate incremental demand, and strengthen market share`}
+            defaultSize={28}
             customFields={deck.customFields}
             onFieldChange={onFieldChange}
             className="font-bold leading-snug mb-4"
-            style={{
-              fontFamily: 'Arial, "Helvetica Neue", sans-serif',
-              fontSize: `${fontSize}px`,
-              textAlign: align,
-              color: GREEN,
-            }}
+            style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', color: GREEN }}
           />
-
-          {onFieldChange && (
-            <div className="mb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <AlignToggle fieldKey="diff.headlineAlign" align={align} onFieldChange={onFieldChange} />
-              <FontSizeControl fieldKey="diff.headlineSize" size={fontSize} onFieldChange={onFieldChange} />
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-4 mt-auto">
             {items.map((item) => (
               <div key={item.key}>
                 <div className="w-8 border-t-2 mb-2" style={{ borderColor: GREEN }} />
-                <SlideEditableText
+                <SlideRichText
                   fieldKey={`diff.title.${item.key}`}
                   defaultValue={item.title}
+                  defaultSize={14}
                   customFields={deck.customFields}
                   onFieldChange={onFieldChange}
-                  className="text-sm font-bold mb-1"
-                  as="h3"
+                  className="font-bold mb-1"
                 />
-                <SlideEditableText
+                <SlideRichText
                   fieldKey={`diff.desc.${item.key}`}
                   defaultValue={item.description}
+                  defaultSize={10}
                   customFields={deck.customFields}
                   onFieldChange={onFieldChange}
-                  className="text-[10px] leading-relaxed"
-                  as="p"
-                  multiline
+                  className="leading-relaxed"
                 />
               </div>
             ))}

@@ -8,9 +8,7 @@ export interface UploadResult {
 export async function uploadImage(file: File): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await apiClient.post<UploadResult>('/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  const res = await apiClient.post<UploadResult>('/upload', formData);
   return res.data;
 }
 

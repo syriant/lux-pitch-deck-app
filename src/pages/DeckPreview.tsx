@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getFullDeck, updateDeck as updateDeckApi, updateProperty, setDeckObjectives, updateOption,
@@ -22,11 +22,15 @@ export function DeckPreview() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [deck, setDeck] = useState<FullDeck | null>(null);
+  const deckRef = useRef<FullDeck | null>(null);
   const [slides, setSlides] = useState<SlideDefinition[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+
+  // Keep ref in sync for use in callbacks
+  useEffect(() => { deckRef.current = deck; }, [deck]);
 
   useEffect(() => {
     if (!id) return;
@@ -122,11 +126,18 @@ export function DeckPreview() {
   );
 
   const handleGalleryAdd = useCallback(async (url: string) => {
-    if (!deck || !id) return;
-    const updated = [...(deck.gallery ?? []), url];
-    await updateDeckApi(id, { gallery: updated });
+    if (!id) return;
+    // Use ref to get latest gallery, not stale closure
+    const current = deckRef.current;
+    const gallery = (current?.gallery ?? []).filter((g): g is string => typeof g === 'string' && g.length > 0);
+    const updated = [...gallery, url];
     setDeck((prev) => prev ? { ...prev, gallery: updated } : prev);
-  }, [deck, id]);
+    try {
+      await updateDeckApi(id, { gallery: updated });
+    } catch {
+      console.error('Failed to update gallery');
+    }
+  }, [id]);
 
   const handleReorder = useCallback((fromIndex: number, toIndex: number) => {
     setSlides((prev) => {

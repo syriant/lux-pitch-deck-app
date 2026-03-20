@@ -36,7 +36,6 @@ export const useAuthStore = create<AuthState>()(
       refresh: async () => {
         const token = get().refreshToken;
         if (!token) {
-          get().logout();
           return null;
         }
         try {
@@ -47,7 +46,6 @@ export const useAuthStore = create<AuthState>()(
           });
           return res.accessToken;
         } catch {
-          get().logout();
           return null;
         }
       },
