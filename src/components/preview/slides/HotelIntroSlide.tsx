@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
-import { SlideEditableText } from '../SlideEditableText';
+import { SlideRichText } from '../SlideRichText';
 import { AlignToggle, type Align } from '../AlignToggle';
 import { FontSizeControl } from '../FontSizeControl';
 
@@ -21,7 +20,6 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   const align = (deck.customFields?.['hotelIntro.valueAlign'] as Align) || 'left';
   const fontSize = Number(deck.customFields?.['hotelIntro.valueSize']) || 34;
-  const [hovered, setHovered] = useState(false);
 
   const defaultIntro = destination
     ? `With budgets set to increase and demand in ${destination} projected to grow, now is the ideal time to diversify distribution channels and capture greater market share.`
@@ -32,28 +30,24 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
       <div className="flex-1 flex">
         {/* Left half — green panel */}
         <div
-          className="w-[50%] flex flex-col p-[5%]"
+          className="group w-[50%] flex flex-col p-[5%]"
           style={{ backgroundColor: GREEN }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
         >
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-5 w-auto self-start mb-6" />
 
           <div className="flex-1 flex items-center">
-            <SlideEditableText
+            <SlideRichText
               fieldKey="hotelIntro.valueProp"
               defaultValue={defaultIntro}
               customFields={deck.customFields}
               onFieldChange={onFieldChange}
               className="font-bold text-white leading-snug w-full"
               style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', fontSize: `${fontSize}px`, textAlign: align }}
-              as="p"
-              multiline
             />
           </div>
 
-          {onFieldChange && hovered && (
-            <div className="mt-2 flex gap-2">
+          {onFieldChange && (
+            <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <AlignToggle fieldKey="hotelIntro.valueAlign" align={align} onFieldChange={onFieldChange} />
               <FontSizeControl fieldKey="hotelIntro.valueSize" size={fontSize} onFieldChange={onFieldChange} />
             </div>

@@ -1,7 +1,10 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideEditableText } from '../SlideEditableText';
+import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { AlignToggle, type Align } from '../AlignToggle';
+import { FontSizeControl } from '../FontSizeControl';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -29,20 +32,33 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
     : defaultDifferentiators.map((d, i) => ({ ...d, key: `default-${i}` }));
 
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
-
+  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const align = (deck.customFields?.['diff.headlineAlign'] as Align) || 'left';
+  const fontSize = Number(deck.customFields?.['diff.headlineSize']) || 28;
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
-      <div className="flex-1 flex p-[5%] gap-[4%]">
+      <div className="group flex-1 flex p-[5%] gap-[4%]">
         <div className="flex-1 flex flex-col">
-          <SlideEditableText
+          <SlideRichText
             fieldKey="diff.headline"
             defaultValue={`By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach ${hotelName} can attract premium travellers, generate incremental demand, and strengthen market share`}
             customFields={deck.customFields}
             onFieldChange={onFieldChange}
-            className="text-xl font-light italic leading-snug mb-6"
-            as="p"
-            multiline
+            className="font-bold leading-snug mb-4"
+            style={{
+              fontFamily: 'Arial, "Helvetica Neue", sans-serif',
+              fontSize: `${fontSize}px`,
+              textAlign: align,
+              color: GREEN,
+            }}
           />
+
+          {onFieldChange && (
+            <div className="mb-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <AlignToggle fieldKey="diff.headlineAlign" align={align} onFieldChange={onFieldChange} />
+              <FontSizeControl fieldKey="diff.headlineSize" size={fontSize} onFieldChange={onFieldChange} />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4 mt-auto">
             {items.map((item) => (
@@ -81,12 +97,14 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
         />
       </div>
 
-      <div className="flex justify-end px-[5%] pb-[3%]">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: GREEN }} />
-          <span className="text-[10px] font-semibold tracking-wide" style={{ color: '#333' }}>
-            LUXURY<span className="font-normal">ESCAPES</span>
-          </span>
+      {/* Footer bar */}
+      <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-gray-900">{hotelName}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />
         </div>
       </div>
     </div>

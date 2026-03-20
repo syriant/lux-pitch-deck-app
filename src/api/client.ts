@@ -36,10 +36,11 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Don't intercept non-401s, retries, or auth endpoints
+    // Don't intercept non-401s, retries, auth endpoints, or if already on login page
     const url = originalRequest.url ?? '';
     const isAuthUrl = url.includes('/auth/');
-    if (error.response?.status !== 401 || originalRequest._retry || isAuthUrl) {
+    const isOnLogin = window.location.pathname === '/login';
+    if (error.response?.status !== 401 || originalRequest._retry || isAuthUrl || isOnLogin) {
       return Promise.reject(error);
     }
 
@@ -63,13 +64,17 @@ apiClient.interceptors.response.use(
         return apiClient(originalRequest);
       }
       processQueue(new Error('Refresh failed'), null);
-      useAuthStore.getState().logout();
-      window.location.href = '/login?expired=1';
+      if (useAuthStore.getState().isAuthenticated) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login?expired=1';
+      }
       return Promise.reject(error);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      useAuthStore.getState().logout();
-      window.location.href = '/login?expired=1';
+      if (useAuthStore.getState().isAuthenticated) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login?expired=1';
+      }
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

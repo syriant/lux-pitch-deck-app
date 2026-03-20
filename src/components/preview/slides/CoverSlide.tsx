@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { EditableText } from '../EditableText';
-import { SlideEditableText } from '../SlideEditableText';
+import { SlideRichText } from '../SlideRichText';
 import { AlignToggle, type Align } from '../AlignToggle';
 import { FontSizeControl } from '../FontSizeControl';
 
@@ -26,7 +25,6 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
   const quarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}${String(new Date().getFullYear()).slice(2)}`;
   const align = (deck.customFields?.['cover.hookAlign'] as Align) || 'center';
   const fontSize = Number(deck.customFields?.['cover.hookSize']) || 45;
-  const [hovered, setHovered] = useState(false);
 
   return (
     <div className="relative h-full w-full bg-gray-300 overflow-hidden">
@@ -38,12 +36,8 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
 
       <div className="relative h-full flex flex-col">
         {/* Hook text — upper portion */}
-        <div
-          className={`flex-1 flex flex-col ${alignToFlex[align]} justify-start pt-[6%] px-[12%]`}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          <SlideEditableText
+        <div className={`group flex-1 flex flex-col ${alignToFlex[align]} justify-start pt-[6%] px-[12%]`}>
+          <SlideRichText
             fieldKey="cover.hookText"
             defaultValue="There are more travelers than ever. And they've never been harder to reach."
             customFields={deck.customFields}
@@ -54,11 +48,9 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
               fontSize: `${fontSize}px`,
               textAlign: align,
             }}
-            as="h1"
-            multiline
           />
-          {onFieldChange && hovered && (
-            <div className="mt-3 flex gap-2">
+          {onFieldChange && (
+            <div className="mt-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <AlignToggle fieldKey="cover.hookAlign" align={align} onFieldChange={onFieldChange} />
               <FontSizeControl fieldKey="cover.hookSize" size={fontSize} onFieldChange={onFieldChange} />
             </div>

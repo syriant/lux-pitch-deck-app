@@ -4,6 +4,18 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* Rich text formatting in slide preview */
+.rich-text mark {
+  background-color: #00b2a0;
+  color: #ffffff;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.rich-text u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
 }
