@@ -1,7 +1,7 @@
 import { type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { EditableText } from '../EditableText';
-import { SlideEditableText } from '../SlideEditableText';
+import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 
 const GREEN = '#00b2a0';
@@ -14,90 +14,122 @@ interface RegionStatsSlideProps {
   onGalleryAdd?: (url: string) => void;
 }
 
+const metrics = [
+  { icon: '/icon-bed.svg', keySuffix: 'roomNights', def: '<b>80 - 250</b>', label: 'room nights per campaign' },
+  { icon: '/icon-hotel.svg', keySuffix: 'alos', def: '<b>3.35 days</b>', label: 'ALOS' },
+  { icon: '/icon-globe.svg', keySuffix: 'intl', def: '<b>68%</b>', label: 'bookings from international markets' },
+  { icon: '/icon-calendar.svg', keySuffix: 'window', def: '<b>95 days</b>', label: 'booking window' },
+  { icon: '/icon-customers.svg', keySuffix: 'demo', def: '<b>79%</b> couples<br><b>21%</b> families', label: '' },
+  { icon: '/icon-up-arrow.svg', keySuffix: 'upgrade', def: '<b>45%</b>', label: 'of members upgraded their packages' },
+];
+
 export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }: RegionStatsSlideProps) {
   const destination = property?.destination ?? property?.propertyName ?? 'Your Destination';
   const cf = deck?.customFields;
   const propKey = property?.id ?? 'empty';
-
-  const metrics = [
-    { icon: '🛏️', key: `region.${propKey}.roomNights`, def: '80 – 250', label: 'room nights per campaign' },
-    { icon: '📅', key: `region.${propKey}.alos`, def: '3.35 days', label: 'ALOS' },
-    { icon: '🌍', key: `region.${propKey}.intl`, def: '68%', label: 'bookings from international markets' },
-    { icon: '📆', key: `region.${propKey}.window`, def: '95 days', label: 'booking window' },
-    { icon: '👫', key: `region.${propKey}.demo`, def: '79% couples\n21% families', label: '' },
-    { icon: '⬆️', key: `region.${propKey}.upgrade`, def: '45%', label: 'of members upgraded their packages' },
-  ];
+  const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
+  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="h-full w-full flex" style={{ backgroundColor: MINT }}>
-      <div className="flex-1 p-[5%] flex flex-col">
-        <div className="mb-4">
-          {property && onFieldChange ? (
-            <EditableText
-              value={destination}
-              onChange={(v) => onFieldChange('property', property.id, 'destination', v)}
-              className="text-xl font-bold leading-snug"
-              as="h2"
-            />
-          ) : (
-            <h2 className="text-xl font-bold leading-snug" style={{ color: '#333' }}>{destination}</h2>
-          )}
-          <h2 className="text-xl italic font-light" style={{ color: '#333' }}>
-            & <span style={{ color: GREEN }}>Luxury Escapes</span>
-          </h2>
-        </div>
+    <div className="h-full w-full flex flex-col bg-white">
+      <div className="flex-1 flex min-h-0">
+        {/* Left content */}
+        <div className="w-[58%] flex flex-col">
+          {/* Title — white background */}
+          <div className="px-[8.5%] pt-[7%] pb-3">
+            {property && onFieldChange ? (
+              <EditableText
+                value={destination}
+                onChange={(v) => onFieldChange('property', property.id, 'destination', v)}
+                className="text-[33px] font-bold leading-tight"
+                style={{ color: '#000' }}
+                as="h2"
+              />
+            ) : (
+              <h2 className="text-[33px] font-bold leading-tight" style={{ color: '#000' }}>{destination}</h2>
+            )}
+            <p className="text-[33px] italic font-light" style={{ color: '#000' }}>
+              & <span style={{ color: GREEN }}>Luxury Escapes</span>
+            </p>
+          </div>
 
-        <SlideEditableText
-          fieldKey={`region.${propKey}.narrative`}
-          defaultValue={`Consistent campaigns drive significant increases in production, showing the impact of keeping the destination top of mind and inspiring travelers to choose ${destination} for their next getaway.`}
-          customFields={cf}
-          onFieldChange={onFieldChange}
-          className="text-[10px] leading-relaxed mb-5"
-          as="p"
-          multiline
-        />
+          {/* Body — mint background */}
+          <div className="flex-1 flex flex-col px-[8.5%] pt-3 pb-3 overflow-hidden" style={{ backgroundColor: MINT }}>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-4">
-          {metrics.map((m) => (
-            <div key={m.key} className="flex items-start gap-2">
-              <span className="text-lg">{m.icon}</span>
-              <div>
-                <SlideEditableText
-                  fieldKey={m.key}
-                  defaultValue={m.def}
-                  customFields={cf}
-                  onFieldChange={onFieldChange}
-                  className="text-xs font-bold whitespace-pre-line"
-                  as="div"
-                />
-                {m.label && <div className="text-[9px]" style={{ color: '#777' }}>{m.label}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto border-t pt-2" style={{ borderColor: GREEN }}>
-          <p className="text-[9px] font-semibold" style={{ color: GREEN }}>Market Coverage</p>
-          <SlideEditableText
-            fieldKey={`region.${propKey}.coverage`}
-            defaultValue={`Maximum two ${destination} hotels featured per month`}
+          {/* Narrative */}
+          <SlideRichText
+            fieldKey={`region.${propKey}.narrative`}
+            defaultValue={`Last year, ${destination} wasn't actively promoted. This year, consistent campaigns drove a 197% increase in production, showing the impact of keeping the destination top of mind and inspiring travelers to choose ${destination} for their next getaway`}
+            defaultSize={15}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="text-[9px]"
-            as="p"
+            className="leading-relaxed mb-3"
+            style={{ color: '#333' }}
           />
+
+          {/* Metrics grid */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3 mb-auto">
+            {metrics.map((m) => (
+              <div key={m.keySuffix} className="flex items-start gap-3">
+                <img src={m.icon} alt="" className="w-9 h-9 mt-0.5" />
+                <div>
+                  <SlideRichText
+                    fieldKey={`region.${propKey}.${m.keySuffix}`}
+                    defaultValue={m.def}
+                    defaultSize={17}
+                    customFields={cf}
+                    onFieldChange={onFieldChange}
+                    className="whitespace-pre-line leading-snug"
+                    style={{ color: '#000' }}
+                  />
+                  {m.label && (
+                    <div className="text-[14px] leading-snug mt-0.5" style={{ color: '#444' }}>{m.label}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Market Coverage */}
+          <div className="mt-3 pt-2">
+            <p className="text-[15px] font-semibold underline mb-1" style={{ color: '#000' }}>Market Coverage</p>
+            <div className="flex items-start gap-1.5">
+              <span className="text-[14px]" style={{ color: '#333' }}>•</span>
+              <SlideRichText
+                fieldKey={`region.${propKey}.coverage`}
+                defaultValue={`Maximum two ${destination} hotels featured per month`}
+                defaultSize={14}
+                customFields={cf}
+                onFieldChange={onFieldChange}
+                style={{ color: '#333' }}
+              />
+            </div>
+          </div>
+          </div>
         </div>
+
+        {/* Right image */}
+        <SlideImage
+          fieldKey={`image.regionStats.${propKey}`}
+          customFields={cf}
+          gallery={deck?.gallery}
+          onFieldChange={onFieldChange}
+          onGalleryAdd={onGalleryAdd}
+          className="w-[42%]"
+          placeholderText="Destination photo"
+        />
       </div>
 
-      <SlideImage
-        fieldKey={`image.regionStats.${propKey}`}
-        customFields={cf}
-        gallery={deck?.gallery}
-        onFieldChange={onFieldChange}
-        onGalleryAdd={onGalleryAdd}
-        className="w-[42%]"
-        placeholderText="Destination photo"
-      />
+      {/* Footer bar */}
+      <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-gray-900">{hotelName}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />
+        </div>
+      </div>
     </div>
   );
 }

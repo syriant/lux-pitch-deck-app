@@ -1,11 +1,14 @@
-import { type DeckPropertyFull, type DeckOption } from '@/api/decks.api';
+import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
+import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { SlideRichText } from '../SlideRichText';
 
-// Brand colours
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
 
 interface MarketingAssetsSlideProps {
   property?: DeckPropertyFull;
+  deck?: FullDeck;
+  onFieldChange?: FieldChangeHandler;
 }
 
 function getUniqueOptions(options: DeckOption[]): DeckOption[] {
@@ -17,15 +20,18 @@ function getUniqueOptions(options: DeckOption[]): DeckOption[] {
   });
 }
 
-export function MarketingAssetsSlide({ property }: MarketingAssetsSlideProps) {
+export function MarketingAssetsSlide({ property, deck, onFieldChange }: MarketingAssetsSlideProps) {
   const uniqueOptions = property ? getUniqueOptions(property.options) : [];
   const hasAssets = uniqueOptions.some((o) => o.marketingAssets && Object.values(o.marketingAssets).some(Boolean));
+  const cf = deck?.customFields;
+  const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
+  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const optionLabels = uniqueOptions.map((o) =>
     o.tierLabel ?? `Option ${o.optionNumber === 1 ? 'One' : o.optionNumber === 2 ? 'Two' : 'Three'}`
   );
 
-  // Build additional rows for the second table (Campaign period, Travel dates, Allocation, Payment)
+  // Build rows
   type Row = { label: string; cells: string[] };
   const rows: Row[] = [
     {
@@ -53,9 +59,15 @@ export function MarketingAssetsSlide({ property }: MarketingAssetsSlideProps) {
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       {/* Header */}
       <div className="px-[5%] pt-[4%] pb-3">
-        <h2 className="text-xl font-bold" style={{ color: GREEN }}>
-          Your tailored campaign options
-        </h2>
+        <SlideRichText
+          fieldKey="mktg.headline"
+          defaultValue="Your tailored campaign options"
+          defaultSize={20}
+          customFields={cf}
+          onFieldChange={onFieldChange}
+          className="font-bold"
+          style={{ color: GREEN }}
+        />
       </div>
 
       {!hasAssets && uniqueOptions.length === 0 ? (
@@ -96,16 +108,19 @@ export function MarketingAssetsSlide({ property }: MarketingAssetsSlideProps) {
         </div>
       )}
 
-      {/* Footer */}
-      <div className="flex items-end justify-between px-[5%] pb-[3%] mt-auto">
+      {/* Rates disclaimer + footer bar */}
+      <div className="px-[5%] pb-1 mt-auto">
         <p className="text-[9px] font-semibold" style={{ color: '#333' }}>
           Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.
         </p>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: GREEN }} />
-          <span className="text-[10px] font-semibold tracking-wide" style={{ color: '#333' }}>
-            LUXURY<span className="font-normal">ESCAPES</span>
-          </span>
+      </div>
+      <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-gray-900">{hotelName}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />
         </div>
       </div>
     </div>

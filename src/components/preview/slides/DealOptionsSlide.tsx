@@ -1,11 +1,13 @@
-import { type DeckPropertyFull, type DeckOption } from '@/api/decks.api';
+import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { SlideRichText } from '../SlideRichText';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
 
 interface DealOptionsSlideProps {
   property?: DeckPropertyFull;
+  deck?: FullDeck;
   onFieldChange?: FieldChangeHandler;
 }
 
@@ -19,16 +21,25 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
   return map;
 }
 
-export function DealOptionsSlide({ property }: DealOptionsSlideProps) {
+export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsSlideProps) {
   const hasOptions = property && property.options.length > 0;
+  const cf = deck?.customFields;
+  const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
+  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       {/* Header */}
       <div className="px-[5%] pt-[4%] pb-3">
-        <h2 className="text-xl font-bold" style={{ color: GREEN }}>
-          Your tailored campaign options
-        </h2>
+        <SlideRichText
+          fieldKey="deal.headline"
+          defaultValue="Your tailored campaign options"
+          defaultSize={20}
+          customFields={cf}
+          onFieldChange={onFieldChange}
+          className="font-bold"
+          style={{ color: GREEN }}
+        />
       </div>
 
       {!hasOptions ? (
@@ -42,16 +53,19 @@ export function DealOptionsSlide({ property }: DealOptionsSlideProps) {
         <OptionsTable property={property} />
       )}
 
-      {/* Footer */}
-      <div className="flex items-end justify-between px-[5%] pb-[3%]">
+      {/* Rates disclaimer + footer bar */}
+      <div className="px-[5%] pb-1">
         <p className="text-[9px] font-semibold" style={{ color: '#333' }}>
           Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.
         </p>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: GREEN }} />
-          <span className="text-[10px] font-semibold tracking-wide" style={{ color: '#333' }}>
-            LUXURY<span className="font-normal">ESCAPES</span>
-          </span>
+      </div>
+      <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-gray-900">{hotelName}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />
         </div>
       </div>
     </div>

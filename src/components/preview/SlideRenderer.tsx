@@ -66,9 +66,9 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
     case 'objectives':
       return <ObjectivesSlide objectives={deck.objectives} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'deal-options':
-      return <DealOptionsSlide property={slide.property} onFieldChange={onFieldChange} />;
+      return <DealOptionsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
     case 'marketing-assets':
-      return <MarketingAssetsSlide property={slide.property} />;
+      return <MarketingAssetsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
     case 'market-challenges':
       return <MarketChallengesSlide deck={deck} onFieldChange={onFieldChange} />;
     default:
