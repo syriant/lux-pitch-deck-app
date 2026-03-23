@@ -18,7 +18,8 @@ const ALL_SLIDE_TYPES: Array<{ type: string; label: string; defaultPerProperty?:
   { type: 'region-stats', label: 'Destination & LE', defaultPerProperty: true },
   { type: 'case-study', label: 'Case Studies', defaultPerProperty: true },
   { type: 'objectives', label: 'Campaign Objectives' },
-  { type: 'deal-options', label: 'Campaign Options', defaultPerProperty: true },
+  { type: 'campaign-options', label: 'Campaign Options Overview' },
+  { type: 'deal-options', label: 'Deal Options', defaultPerProperty: true },
   { type: 'marketing-assets', label: 'Campaign Details', defaultPerProperty: true },
 ];
 
