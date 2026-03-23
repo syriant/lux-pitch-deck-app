@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getCaseStudies, type CaseStudy } from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 
@@ -36,6 +36,26 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   }
 
   useEffect(() => { load(); }, [search]);
+
+  // Auto-save selections when they change
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    const timer = setTimeout(async () => {
+      for (const prop of properties) {
+        const ids = Array.from(selected[prop.id] ?? []);
+        await setPropertyCaseStudies(
+          deckId,
+          prop.id,
+          ids.map((caseStudyId, i) => ({ caseStudyId, sortOrder: i })),
+        );
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [selected]);
 
   function toggleCaseStudy(propertyId: string, csId: string) {
     setSelected((prev) => {

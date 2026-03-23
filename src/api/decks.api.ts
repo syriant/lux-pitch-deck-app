@@ -188,6 +188,7 @@ export interface DeckCaseStudyLink {
     leadTime: number | null;
     bookings: number | null;
     narrative: string | null;
+    images: string[] | null;
     tags: string[] | null;
   };
 }
