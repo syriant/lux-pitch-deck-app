@@ -20,45 +20,66 @@ function getUniqueOptions(options: DeckOption[]): DeckOption[] {
   });
 }
 
+function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
+  const map = new Map<number, DeckOption[]>();
+  for (const opt of options) {
+    const group = map.get(opt.optionNumber) ?? [];
+    group.push(opt);
+    map.set(opt.optionNumber, group);
+  }
+  return map;
+}
+
 export function MarketingAssetsSlide({ property, deck, onFieldChange }: MarketingAssetsSlideProps) {
   const uniqueOptions = property ? getUniqueOptions(property.options) : [];
+  const groups = property ? groupByOption(property.options) : new Map();
   const hasAssets = uniqueOptions.some((o) => o.marketingAssets && Object.values(o.marketingAssets).some(Boolean));
   const cf = deck?.customFields;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const propId = property?.id ?? 'empty';
 
   const optionLabels = uniqueOptions.map((o) =>
     o.tierLabel ?? `Option ${o.optionNumber === 1 ? 'One' : o.optionNumber === 2 ? 'Two' : 'Three'}`
   );
+  const optNums = uniqueOptions.map((o) => o.optionNumber);
 
   // Build rows
-  type Row = { label: string; cells: string[] };
+  type Row = { key: string; label: string; cells: string[] };
   const rows: Row[] = [
     {
+      key: 'period',
       label: 'Campaign period',
       cells: uniqueOptions.map(() => '8–10 weeks'),
     },
     {
+      key: 'travel',
       label: 'Travel dates',
       cells: uniqueOptions.map(() => '12 months – blackout dates apply'),
     },
     {
+      key: 'allocation',
       label: 'Allocation',
       cells: uniqueOptions.map((o) => {
-        if (!o.allocation) return '-';
-        return `${o.roomType ?? 'Room'} – ${o.allocation} rooms per night`;
+        const rooms = groups.get(o.optionNumber) ?? [o];
+        return rooms.map((r) =>
+          `${r.roomType ?? 'Room'} – ${r.allocation ?? '?'} rooms per night`
+        ).join('<br>');
       }),
     },
     {
+      key: 'payment',
       label: 'Payment',
       cells: uniqueOptions.map(() => 'VCC'),
     },
   ];
 
+  const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`));
+
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       {/* Header */}
-      <div className="px-[5%] pt-[4%] pb-3">
+      <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="mktg.headline"
           defaultValue="Your tailored campaign options"
@@ -68,6 +89,20 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
           className="font-bold"
           style={{ color: GREEN }}
         />
+        {onFieldChange && uniqueOptions.length > 0 && hasEdits && (
+          <button
+            onClick={async () => {
+              const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`));
+              for (const k of keysToRemove) {
+                await onFieldChange('custom', '', k, '');
+              }
+            }}
+            className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap ml-2"
+            title="Reset table text to match current deal options"
+          >
+            Refresh from options
+          </button>
+        )}
       </div>
 
       {!hasAssets && uniqueOptions.length === 0 ? (
@@ -78,7 +113,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
           </div>
         </div>
       ) : (
-        <div className="flex-1 px-[5%] pb-2 overflow-hidden">
+        <div className="flex-1 px-[5%] pb-2 overflow-visible">
           <table className="w-full text-[9px] border-collapse">
             <thead>
               <tr>
@@ -91,18 +126,28 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri} className="border-b border-gray-200">
-                  <td className="p-2 font-bold align-top" style={{ color: GREEN }}>
-                    {row.label}
-                  </td>
-                  {row.cells.map((cell, ci) => (
-                    <td key={ci} className="p-2 align-top bg-white" style={{ color: '#333' }}>
-                      {cell}
+              {rows.map((row, ri) => {
+                const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+                return (
+                  <tr key={row.key} className="border-b border-gray-200">
+                    <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
+                      {row.label}
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {row.cells.map((cell, ci) => (
+                      <td key={ci} className={`p-2 align-top ${rowBg}`}>
+                        <SlideRichText
+                          fieldKey={`mktg.${propId}.${row.key}.opt${optNums[ci]}`}
+                          defaultValue={cell}
+                          defaultSize={9}
+                          customFields={cf}
+                          onFieldChange={onFieldChange}
+                          style={{ color: '#1a1a1a' }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -110,9 +155,14 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
 
       {/* Rates disclaimer + footer bar */}
       <div className="px-[5%] pb-1 mt-auto">
-        <p className="text-[9px] font-semibold" style={{ color: '#333' }}>
-          Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.
-        </p>
+        <SlideRichText
+          fieldKey="mktg.disclaimer"
+          defaultValue="<strong>Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.</strong>"
+          defaultSize={9}
+          customFields={cf}
+          onFieldChange={onFieldChange}
+          style={{ color: '#333' }}
+        />
       </div>
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
