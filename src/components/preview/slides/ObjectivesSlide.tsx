@@ -58,7 +58,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
             <>
               {primary && (
                 <div className="mb-6">
-                  <div className="w-12 border-t-2 mb-3" style={{ borderColor: GREEN }} />
+                  <div className="w-full border-t-2 mb-3" style={{ borderColor: GREEN }} />
                   <SlideRichText
                     fieldKey={`obj.primary.title`}
                     defaultValue="Primary Objective"
@@ -82,7 +82,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
 
               {secondary.length > 0 && (
                 <div>
-                  <div className="w-12 border-t-2 mb-3" style={{ borderColor: GREEN }} />
+                  <div className="w-full border-t-2 mb-3" style={{ borderColor: GREEN }} />
                   <SlideRichText
                     fieldKey={`obj.secondary.title`}
                     defaultValue="Secondary Objectives"
