@@ -30,7 +30,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       {/* Header */}
-      <div className="px-[5%] pt-[4%] pb-3">
+      <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="deal.headline"
           defaultValue="Your tailored campaign options"
@@ -40,6 +40,20 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
           className="font-bold"
           style={{ color: GREEN }}
         />
+        {onFieldChange && hasOptions && cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`)) && (
+          <button
+            onClick={async () => {
+              const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`));
+              for (const k of keysToRemove) {
+                await onFieldChange('custom', '', k, '');
+              }
+            }}
+            className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap ml-2"
+            title="Reset table text to match current deal options"
+          >
+            Refresh from options
+          </button>
+        )}
       </div>
 
       {!hasOptions ? (
@@ -50,14 +64,19 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
           </div>
         </div>
       ) : (
-        <OptionsTable property={property} />
+        <OptionsTable property={property} customFields={cf} onFieldChange={onFieldChange} />
       )}
 
       {/* Rates disclaimer + footer bar */}
       <div className="px-[5%] pb-1">
-        <p className="text-[9px] font-semibold" style={{ color: '#333' }}>
-          Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.
-        </p>
+        <SlideRichText
+          fieldKey="deal.disclaimer"
+          defaultValue="<strong>Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.</strong>"
+          defaultSize={9}
+          customFields={cf}
+          onFieldChange={onFieldChange}
+          style={{ color: '#333' }}
+        />
       </div>
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
@@ -72,7 +91,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   );
 }
 
-function OptionsTable({ property }: { property: DeckPropertyFull }) {
+function OptionsTable({ property, customFields, onFieldChange }: { property: DeckPropertyFull; customFields?: Record<string, string>; onFieldChange?: FieldChangeHandler }) {
   const groups = groupByOption(property.options);
   const optNums = Array.from(groups.keys()).sort();
 
@@ -82,11 +101,12 @@ function OptionsTable({ property }: { property: DeckPropertyFull }) {
   });
 
   // Build rows
-  type Row = { label: string; cells: string[] };
+  type Row = { key: string; label: string; cells: string[] };
   const rows: Row[] = [];
 
   // Marketing Assets row
   rows.push({
+    key: 'assets',
     label: 'Marketing Assets',
     cells: optNums.map((num) => {
       const first = groups.get(num)![0];
@@ -100,6 +120,7 @@ function OptionsTable({ property }: { property: DeckPropertyFull }) {
 
   // Inclusions row
   rows.push({
+    key: 'inclusions',
     label: 'Inclusions Value Adds',
     cells: optNums.map((num) => {
       const first = groups.get(num)![0];
@@ -109,6 +130,7 @@ function OptionsTable({ property }: { property: DeckPropertyFull }) {
 
   // Rates row
   rows.push({
+    key: 'rates',
     label: 'Per night rate',
     cells: optNums.map((num) => {
       const rooms = groups.get(num)!;
@@ -121,6 +143,7 @@ function OptionsTable({ property }: { property: DeckPropertyFull }) {
   // Surcharges
   if (property.options.some((o) => o.surcharges && o.surcharges.length > 0)) {
     rows.push({
+      key: 'surcharge',
       label: 'Surcharge – Season',
       cells: optNums.map((num) => {
         const first = groups.get(num)![0];
@@ -132,7 +155,7 @@ function OptionsTable({ property }: { property: DeckPropertyFull }) {
   }
 
   return (
-    <div className="flex-1 px-[5%] pb-2 overflow-hidden">
+    <div className="flex-1 px-[5%] pb-2 overflow-visible">
       <table className="w-full text-[9px] border-collapse">
         <thead>
           <tr>
@@ -145,18 +168,28 @@ function OptionsTable({ property }: { property: DeckPropertyFull }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, ri) => (
-            <tr key={ri} className="border-b border-gray-200">
-              <td className="p-2 font-bold align-top" style={{ color: GREEN }}>
-                {row.label}
-              </td>
-              {row.cells.map((cell, ci) => (
-                <td key={ci} className="p-2 align-top bg-white whitespace-pre-line" style={{ color: '#333' }}>
-                  {cell}
+          {rows.map((row, ri) => {
+            const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+            return (
+              <tr key={ri} className="border-b border-gray-200">
+                <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
+                  {row.label}
                 </td>
-              ))}
-            </tr>
-          ))}
+                {row.cells.map((cell, ci) => (
+                  <td key={ci} className={`p-2 align-top ${rowBg}`}>
+                    <SlideRichText
+                      fieldKey={`deal.${property.id}.${row.key}.opt${optNums[ci]}`}
+                      defaultValue={cell.replace(/\n/g, '<br>')}
+                      defaultSize={9}
+                      customFields={customFields}
+                      onFieldChange={onFieldChange}
+                      style={{ color: '#1a1a1a' }}
+                    />
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

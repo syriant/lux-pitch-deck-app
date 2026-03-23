@@ -90,12 +90,14 @@ export function DeckPreview() {
             };
           });
         } else if (entityType === 'custom') {
-          const updated = { ...(deck.customFields ?? {}), [field]: value };
-          await updateDeckApi(id, { customFields: updated });
+          const current = deckRef.current?.customFields ?? {};
+          const updated = { ...current, [field]: value };
           setDeck((prev) => {
             if (!prev) return prev;
             return { ...prev, customFields: updated };
           });
+          deckRef.current = deckRef.current ? { ...deckRef.current, customFields: updated } : null;
+          await updateDeckApi(id, { customFields: updated });
         } else if (entityType === 'case-study') {
           await updateCaseStudy(entityId, { [field]: value });
           setDeck((prev) => {

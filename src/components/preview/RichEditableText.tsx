@@ -43,14 +43,23 @@ export function RichEditableText({
   placeholder = 'Click to edit',
 }: RichEditableTextProps) {
   const [editing, setEditing] = useState(false);
+  const [localValue, setLocalValue] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // Clear local override once props catch up
+  useEffect(() => {
+    if (localValue !== null && value === localValue) {
+      setLocalValue(null);
+    }
+  }, [value, localValue]);
+
   useEffect(() => {
     if (editing && editorRef.current) {
+      editorRef.current.innerHTML = value;
       editorRef.current.focus();
     }
-  }, [editing]);
+  }, [editing]); // intentionally exclude value — we set innerHTML only on edit start
 
   const handleFormat = useCallback((cmd: string) => {
     const sel = window.getSelection();
@@ -123,10 +132,11 @@ export function RichEditableText({
 
   function commit() {
     const html = readEditorHtml();
-    setEditing(false);
     if (html !== value) {
+      setLocalValue(html);
       onChange(html);
     }
+    setEditing(false);
   }
 
   function handleBlur(e: React.FocusEvent) {
@@ -172,13 +182,13 @@ export function RichEditableText({
           onKeyDown={handleKeyDown}
           className={`${className} bg-white/80 border border-[#01B18B] rounded px-2 py-1 outline-none ring-1 ring-[#01B18B]/40 min-h-[80px] w-full rich-text`}
           style={{ ...style, color: style?.color ?? '#333' }}
-          dangerouslySetInnerHTML={{ __html: value }}
         />
       </div>
     );
   }
 
-  const hasContent = value && value !== '<br>';
+  const displayValue = localValue ?? value;
+  const hasContent = displayValue && displayValue !== '<br>';
 
   return (
     <div
@@ -186,7 +196,7 @@ export function RichEditableText({
       className={`${className} rich-text cursor-pointer hover:outline hover:outline-1 hover:outline-[#01B18B]/40 hover:outline-offset-2 rounded transition-all ${!hasContent ? 'text-gray-400 italic' : ''}`}
       style={style}
       title="Click to edit"
-      dangerouslySetInnerHTML={{ __html: hasContent ? value : placeholder }}
+      dangerouslySetInnerHTML={{ __html: hasContent ? displayValue : placeholder }}
     />
   );
 }

@@ -9,7 +9,7 @@ interface FontSizeControlProps {
   onFieldChange: FieldChangeHandler;
 }
 
-export function FontSizeControl({ fieldKey, size, min = 14, max = 72, step = 2, onFieldChange }: FontSizeControlProps) {
+export function FontSizeControl({ fieldKey, size, min = 6, max = 72, step = 1, onFieldChange }: FontSizeControlProps) {
   return (
     <div className="flex items-center gap-0.5 rounded bg-black/50 p-0.5">
       <button
