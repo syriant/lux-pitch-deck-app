@@ -1,6 +1,5 @@
 import { type DeckObjective, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
-import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 
@@ -26,11 +25,11 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       <div className="flex-1 flex p-[5%] gap-[4%]">
         {/* Left column — heading + photo */}
-        <div className="w-[45%] flex flex-col">
+        <div className="w-[52%] flex flex-col">
           <SlideRichText
             fieldKey="obj.headline"
             defaultValue="We create <mark style='background-color:#00b2a0;color:#ffffff;padding:0 2px;border-radius:2px'>tailored tactical campaigns</mark><br>to achieve your specific key objectives"
-            defaultSize={20}
+            defaultSize={28}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-light italic leading-snug mb-4"
@@ -43,7 +42,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
             gallery={deck?.gallery}
             onFieldChange={onFieldChange}
             onGalleryAdd={onGalleryAdd}
-            className="flex-1 rounded-lg overflow-hidden"
+            className="flex-1 overflow-hidden"
             placeholderText="Hotel photo"
           />
         </div>
@@ -60,41 +59,50 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
               {primary && (
                 <div className="mb-6">
                   <div className="w-12 border-t-2 mb-3" style={{ borderColor: GREEN }} />
-                  <h3 className="text-sm font-bold mb-2" style={{ color: '#333' }}>Primary Objective</h3>
-                  {onFieldChange ? (
-                    <EditableText
-                      value={primary.objectiveText}
-                      onChange={(v) => onFieldChange('objective', primary.id, 'objectiveText', v)}
-                      className="text-[11px] leading-relaxed"
-                      as="p"
-                      multiline
-                    />
-                  ) : (
-                    <p className="text-[11px] leading-relaxed" style={{ color: '#444' }}>
-                      {primary.objectiveText}
-                    </p>
-                  )}
+                  <SlideRichText
+                    fieldKey={`obj.primary.title`}
+                    defaultValue="Primary Objective"
+                    defaultSize={18}
+                    customFields={cf}
+                    onFieldChange={onFieldChange}
+                    className="font-bold mb-2"
+                    style={{ color: '#333' }}
+                  />
+                  <SlideRichText
+                    fieldKey={`obj.primary.${primary.id}`}
+                    defaultValue={primary.objectiveText}
+                    defaultSize={15}
+                    customFields={cf}
+                    onFieldChange={onFieldChange}
+                    className="leading-relaxed"
+                    style={{ color: '#444' }}
+                  />
                 </div>
               )}
 
               {secondary.length > 0 && (
                 <div>
                   <div className="w-12 border-t-2 mb-3" style={{ borderColor: GREEN }} />
-                  <h3 className="text-sm font-bold mb-2" style={{ color: '#333' }}>Secondary Objectives</h3>
+                  <SlideRichText
+                    fieldKey={`obj.secondary.title`}
+                    defaultValue="Secondary Objectives"
+                    defaultSize={18}
+                    customFields={cf}
+                    onFieldChange={onFieldChange}
+                    className="font-bold mb-2"
+                    style={{ color: '#333' }}
+                  />
                   {secondary.map((obj) => (
-                    onFieldChange ? (
-                      <EditableText
-                        key={obj.id}
-                        value={obj.objectiveText}
-                        onChange={(v) => onFieldChange('objective', obj.id, 'objectiveText', v)}
-                        className="text-[11px] leading-relaxed mb-1"
-                        as="p"
-                      />
-                    ) : (
-                      <p key={obj.id} className="text-[11px] leading-relaxed mb-1" style={{ color: '#444' }}>
-                        {obj.objectiveText}
-                      </p>
-                    )
+                    <SlideRichText
+                      key={obj.id}
+                      fieldKey={`obj.secondary.${obj.id}`}
+                      defaultValue={obj.objectiveText}
+                      defaultSize={15}
+                      customFields={cf}
+                      onFieldChange={onFieldChange}
+                      className="leading-relaxed mb-1"
+                      style={{ color: '#444' }}
+                    />
                   ))}
                 </div>
               )}
