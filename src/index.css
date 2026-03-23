@@ -15,6 +15,11 @@ body {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.rich-text blockquote {
+  margin: 0 0 0 1em !important;
+  border: none !important;
+  padding: 0 !important;
+}
 
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;

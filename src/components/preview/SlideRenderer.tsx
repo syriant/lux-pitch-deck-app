@@ -9,6 +9,7 @@ import { DemographicsSlide } from './slides/DemographicsSlide';
 import { RegionStatsSlide } from './slides/RegionStatsSlide';
 import { CaseStudySlide } from './slides/CaseStudySlide';
 import { ObjectivesSlide } from './slides/ObjectivesSlide';
+import { CampaignOptionsSlide } from './slides/CampaignOptionsSlide';
 import { DealOptionsSlide } from './slides/DealOptionsSlide';
 import { MarketingAssetsSlide } from './slides/MarketingAssetsSlide';
 import { MarketChallengesSlide } from './slides/MarketChallengesSlide';
@@ -65,6 +66,8 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
       return <CaseStudySlide caseStudies={slide.caseStudies} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'objectives':
       return <ObjectivesSlide objectives={deck.objectives} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
+    case 'campaign-options':
+      return <CampaignOptionsSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'deal-options':
       return <DealOptionsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
     case 'marketing-assets':

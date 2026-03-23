@@ -9,6 +9,7 @@ export type SlideType =
   | 'region-stats'
   | 'case-study'
   | 'objectives'
+  | 'campaign-options'
   | 'deal-options'
   | 'marketing-assets'
   | 'market-challenges';
@@ -132,7 +133,10 @@ function buildHardcodedList(deck: FullDeck): SlideDefinition[] {
   // 8. Objectives — always
   slides.push({ id: 'objectives', type: 'objectives', label: 'Campaign Objectives' });
 
-  // 9. Deal Options — one per property (or one placeholder)
+  // 9. Campaign Options — always
+  slides.push({ id: 'campaign-options', type: 'campaign-options', label: 'Campaign Options' });
+
+  // 10. Deal Options — one per property (or one placeholder)
   if (deck.properties.length > 0) {
     for (const prop of deck.properties) {
       slides.push({

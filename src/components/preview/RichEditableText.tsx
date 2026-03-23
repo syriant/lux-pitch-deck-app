@@ -154,6 +154,9 @@ export function RichEditableText({
         editorRef.current.innerHTML = value;
       }
       setEditing(false);
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      document.execCommand(e.shiftKey ? 'outdent' : 'indent', false);
     }
   }
 
