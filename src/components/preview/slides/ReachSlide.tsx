@@ -3,6 +3,7 @@ import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideEditableText } from '../SlideEditableText';
+import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 
 interface ReachSlideProps {
@@ -154,22 +155,23 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
 
         {/* White card overlay */}
         <div className="absolute left-[8%] right-[8%] top-[4%] bottom-[4%] bg-white/92 rounded-lg flex flex-col items-center px-[3%] py-[2.5%] overflow-hidden">
-          <SlideEditableText
+          <SlideRichText
             fieldKey="reach.title"
             defaultValue="Our reach"
+            defaultSize={18}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="text-lg mb-0.5"
-            style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
-            as="h2"
+            className="mb-0.5"
+            style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
           />
-          <SlideEditableText
+          <SlideRichText
             fieldKey="reach.subtitle"
             defaultValue="9 million members globally trust Luxury Escapes"
+            defaultSize={11}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="text-[11px] text-gray-600 mb-3"
-            as="p"
+            className="text-gray-600 mb-3"
+            style={{ textAlign: 'center' }}
           />
 
           <canvas ref={canvasRef} className="flex-1 w-full" />
