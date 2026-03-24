@@ -76,7 +76,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
           gallery={deck.gallery}
           onFieldChange={onFieldChange}
           onGalleryAdd={onGalleryAdd}
-          className="w-[40%] rounded-lg overflow-hidden"
+          className="w-[40%] overflow-hidden"
           placeholderText="Hotel photo"
         />
       </div>
