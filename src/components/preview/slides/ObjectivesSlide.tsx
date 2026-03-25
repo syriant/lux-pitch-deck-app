@@ -92,18 +92,15 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
                     className="font-bold mb-2"
                     style={{ color: '#333' }}
                   />
-                  {secondary.map((obj) => (
-                    <SlideRichText
-                      key={obj.id}
-                      fieldKey={`obj.secondary.${obj.id}`}
-                      defaultValue={obj.objectiveText}
-                      defaultSize={15}
-                      customFields={cf}
-                      onFieldChange={onFieldChange}
-                      className="leading-relaxed mb-1"
-                      style={{ color: '#444' }}
-                    />
-                  ))}
+                  <SlideRichText
+                    fieldKey="obj.secondary.all"
+                    defaultValue={secondary.map((obj) => obj.objectiveText).join('\n')}
+                    defaultSize={15}
+                    customFields={cf}
+                    onFieldChange={onFieldChange}
+                    className="leading-relaxed"
+                    style={{ color: '#444' }}
+                  />
                 </div>
               )}
             </>
