@@ -45,7 +45,7 @@ export function SlideRichText({
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
-  const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
