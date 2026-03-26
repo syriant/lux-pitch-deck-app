@@ -11,6 +11,7 @@ export interface Deck {
   createdByName: string | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 }
 
 export interface DeckProperty {
@@ -87,6 +88,10 @@ export async function getDeck(id: string): Promise<DeckWithProperties> {
 export async function createDeck(data: CreateDeckRequest): Promise<Deck> {
   const res = await apiClient.post<Deck>('/decks', data);
   return res.data;
+}
+
+export async function deleteDeck(id: string): Promise<void> {
+  await apiClient.delete(`/decks/${id}`);
 }
 
 export async function getProperties(deckId: string): Promise<DeckProperty[]> {

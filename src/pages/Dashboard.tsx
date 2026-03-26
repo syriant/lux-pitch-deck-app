@@ -1,8 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDecks, createDeck, type Deck } from '@/api/decks.api';
+import { getDecks, createDeck, deleteDeck, type Deck } from '@/api/decks.api';
 import { getTemplates, type DeckTemplate } from '@/api/templates.api';
 import { useAuthStore } from '@/stores/auth.store';
+import { ConfirmModal } from '@/components/common/ConfirmModal';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -70,6 +71,21 @@ export function Dashboard() {
       setError('Failed to create deck');
     } finally {
       setCreating(false);
+    }
+  }
+
+  const isAdmin = user?.roles?.includes('admin') ?? false;
+  const [deleteTarget, setDeleteTarget] = useState<Deck | null>(null);
+
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return;
+    try {
+      await deleteDeck(deleteTarget.id);
+      setDeleteTarget(null);
+      await load();
+    } catch {
+      setError('Failed to delete deck');
+      setDeleteTarget(null);
     }
   }
 
@@ -185,31 +201,76 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {decks.map((deck) => (
-                <tr key={deck.id} className="border-b border-gray-100 text-sm hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/decks/${deck.id}/edit`)}>
-                  <td className="py-3 pr-4 font-medium text-[#363A45]">{deck.name}</td>
-                  <td className="py-3 pr-4">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusColors[deck.status] ?? 'bg-gray-100 text-gray-700'}`}>
-                      {deck.status}
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 text-gray-600">{deck.createdByName ?? '-'}</td>
-                  <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.createdAt)}</td>
-                  <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.updatedAt)}</td>
-                  <td className="py-3">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); navigate(`/decks/${deck.id}/preview`); }}
-                      className="text-xs text-[#01B18B] hover:underline"
-                    >
-                      Preview
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {decks.map((deck) => {
+                const isDeleted = !!deck.deletedAt;
+                return (
+                  <tr
+                    key={deck.id}
+                    className={`border-b border-gray-100 text-sm ${isDeleted ? 'opacity-50' : 'hover:bg-gray-50 cursor-pointer'}`}
+                    onClick={() => !isDeleted && navigate(`/decks/${deck.id}/edit`)}
+                  >
+                    <td className="py-3 pr-4 font-medium text-[#363A45]">
+                      {deck.name}
+                      {isDeleted && (
+                        <span className="ml-2 inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                          Deleted
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusColors[deck.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                        {deck.status}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4 text-gray-600">{deck.createdByName ?? '-'}</td>
+                    <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.createdAt)}</td>
+                    <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.updatedAt)}</td>
+                    <td className="py-3 flex items-center gap-2">
+                      {!isDeleted && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/decks/${deck.id}/edit`); }}
+                          className="text-xs text-[#01B18B] hover:underline"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {!isDeleted && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/decks/${deck.id}/preview`); }}
+                          className="text-xs text-[#01B18B] hover:underline"
+                        >
+                          Preview
+                        </button>
+                      )}
+                      {!isDeleted && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(deck); }}
+                          className="text-red-400 hover:text-red-600"
+                          title="Delete deck"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </>
       )}
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete deck"
+        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"?${isAdmin ? ' It will be hidden from PCMs but still visible to admins.' : ''}` : ''}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

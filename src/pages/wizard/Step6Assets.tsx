@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { lookupDealTier, type LookupResult } from '@/api/deal-tiers.api';
 import { type DeckPropertyFull, updateProperty, updateOption } from '@/api/decks.api';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,26 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
 
   // Track toggled assets per property: { propertyId: { "channel name": boolean } }
   const [assetToggles, setAssetToggles] = useState<Record<string, Record<string, boolean>>>({});
+  const propertiesRef = useRef(properties);
+  propertiesRef.current = properties;
+
+  // Persist marketing assets for a single property to all its options
+  const savePropertyAssets = useCallback(async (propertyId: string, assets: Record<string, boolean>) => {
+    const prop = propertiesRef.current.find((p) => p.id === propertyId);
+    if (!prop || prop.options.length === 0) return;
+    await Promise.all(
+      prop.options.map((opt) => updateOption(deckId, opt.id, { marketingAssets: assets })),
+    );
+  }, [deckId]);
+
+  // Persist all properties' assets (used after initial load)
+  const saveAllAssets = useCallback(async (toggles: Record<string, Record<string, boolean>>) => {
+    for (const prop of propertiesRef.current) {
+      const assets = toggles[prop.id];
+      if (!assets || prop.options.length === 0) continue;
+      await savePropertyAssets(prop.id, assets);
+    }
+  }, [savePropertyAssets]);
 
   useEffect(() => {
     async function load() {
@@ -70,36 +90,30 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
       setLookups(results);
       setAssetToggles(toggles);
       setLoading(false);
+
+      // Persist initial asset state so it's saved even if user navigates away
+      await saveAllAssets(toggles).catch(() => {});
     }
     load();
-  }, [properties, deckId]);
+  }, [properties, deckId, saveAllAssets]);
 
   function toggleAsset(propertyId: string, channel: string) {
-    setAssetToggles((prev) => ({
-      ...prev,
-      [propertyId]: {
+    setAssetToggles((prev) => {
+      const updated = {
         ...(prev[propertyId] ?? {}),
         [channel]: !(prev[propertyId]?.[channel] ?? true),
-      },
-    }));
+      };
+      // Fire-and-forget save on each toggle
+      savePropertyAssets(propertyId, updated).catch(() => {});
+      return { ...prev, [propertyId]: updated };
+    });
   }
 
   async function handleSaveAndPreview() {
     setSaving(true);
     setError('');
     try {
-      // Save marketing assets onto options for each property
-      for (const prop of properties) {
-        const toggles = assetToggles[prop.id];
-        if (!toggles || prop.options.length === 0) continue;
-
-        // Save all channels with their toggle state
-        const assets: Record<string, boolean> = { ...toggles };
-
-        for (const opt of prop.options) {
-          await updateOption(deckId, opt.id, { marketingAssets: assets });
-        }
-      }
+      await saveAllAssets(assetToggles);
       navigate(`/decks/${deckId}/preview`);
     } catch {
       setError('Failed to save marketing assets');
