@@ -2,7 +2,6 @@ import { useRef, useEffect, useCallback } from 'react';
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
-import { SlideEditableText } from '../SlideEditableText';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 

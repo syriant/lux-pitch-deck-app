@@ -62,7 +62,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       label: 'Allocation',
       cells: uniqueOptions.map((o) => {
         const rooms = groups.get(o.optionNumber) ?? [o];
-        return rooms.map((r) =>
+        return rooms.map((r: { roomType: any; allocation: any; }) =>
           `${r.roomType ?? 'Room'} – ${r.allocation ?? '?'} rooms per night`
         ).join('<br>');
       }),
