@@ -7,6 +7,7 @@ import {
   type CaseStudy,
 } from '@/api/case-studies.api';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { Spinner } from '@/components/common/Spinner';
 
 interface FormData {
   title: string;
@@ -264,25 +265,7 @@ export function CaseStudies() {
                   </button>
                 </div>
               ))}
-              <label className="w-20 h-20 rounded border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center text-gray-400 cursor-pointer text-lg">
-                +
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      const result = await uploadImage(file);
-                      setForm((prev) => ({ ...prev, images: [...prev.images, result.url] }));
-                    } catch {
-                      setError('Failed to upload image');
-                    }
-                    e.target.value = '';
-                  }}
-                />
-              </label>
+              <UploadTile onUploaded={(url) => setForm((prev) => ({ ...prev, images: [...prev.images, url] }))} onError={() => setError('Failed to upload image')} />
             </div>
           </div>
 
@@ -381,5 +364,35 @@ export function CaseStudies() {
         </div>
       )}
     </div>
+  );
+}
+
+function UploadTile({ onUploaded, onError }: { onUploaded: (url: string) => void; onError: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  return (
+    <label className={`w-20 h-20 rounded border-2 border-dashed flex items-center justify-center cursor-pointer text-lg ${
+      uploading ? 'border-[#01B18B] bg-[#E6F9F5]' : 'border-gray-300 hover:border-gray-400 text-gray-400'
+    }`}>
+      {uploading ? <Spinner size="sm" className="text-[#01B18B]" /> : '+'}
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setUploading(true);
+          try {
+            const result = await uploadImage(file);
+            onUploaded(result.url);
+          } catch {
+            onError();
+          } finally {
+            setUploading(false);
+          }
+          e.target.value = '';
+        }}
+      />
+    </label>
   );
 }

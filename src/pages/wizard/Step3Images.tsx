@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
 import { updateDeck } from '@/api/decks.api';
+import { Spinner } from '@/components/common/Spinner';
 
 interface Step3Props {
   deckId: string;
@@ -16,6 +17,8 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
   const [hero, setHero] = useState<string | null>(heroImage);
   const [gallery, setGallery] = useState<string[]>(initialGallery);
   const [uploading, setUploading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -43,6 +46,8 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
 
   async function handleSpecialUpload(type: 'cover' | 'hero', file: File) {
     setError('');
+    const setLoading = type === 'cover' ? setUploadingCover : setUploadingHero;
+    setLoading(true);
     try {
       const result = await uploadImage(file);
       // Also add to gallery
@@ -57,6 +62,8 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
       setGallery(updatedGallery);
     } catch {
       setError(`Failed to upload ${type} image`);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -95,7 +102,12 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
           <label className="block text-sm font-medium text-gray-700 mb-2">Cover Image (Slide 1 background)</label>
           <input ref={coverRef} type="file" accept="image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSpecialUpload('cover', f); if (coverRef.current) coverRef.current.value = ''; }} />
-          {cover ? (
+          {uploadingCover ? (
+            <div className="w-full h-32 rounded-lg border-2 border-dashed border-[#01B18B] bg-[#E6F9F5] flex flex-col items-center justify-center gap-2">
+              <Spinner className="text-[#01B18B]" />
+              <span className="text-xs text-[#01B18B]">Uploading cover...</span>
+            </div>
+          ) : cover ? (
             <div className="relative group h-32 rounded-lg overflow-hidden border border-gray-200">
               <img src={uploadUrl(cover) ?? ''} alt="Cover" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -112,7 +124,12 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
           <label className="block text-sm font-medium text-gray-700 mb-2">Hero / Hotel Image (Slide 2)</label>
           <input ref={heroRef} type="file" accept="image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSpecialUpload('hero', f); if (heroRef.current) heroRef.current.value = ''; }} />
-          {hero ? (
+          {uploadingHero ? (
+            <div className="w-full h-32 rounded-lg border-2 border-dashed border-[#01B18B] bg-[#E6F9F5] flex flex-col items-center justify-center gap-2">
+              <Spinner className="text-[#01B18B]" />
+              <span className="text-xs text-[#01B18B]">Uploading hero...</span>
+            </div>
+          ) : hero ? (
             <div className="relative group h-32 rounded-lg overflow-hidden border border-gray-200">
               <img src={uploadUrl(hero) ?? ''} alt="Hero" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -140,7 +157,7 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
             disabled={uploading}
             className="rounded-md bg-[#01B18B] px-3 py-1.5 text-xs text-white hover:bg-[#009977] disabled:opacity-50"
           >
-            {uploading ? 'Uploading...' : '+ Add Images'}
+            {uploading ? <><Spinner size="sm" className="text-white inline-block mr-1.5" /> Uploading...</> : '+ Add Images'}
           </button>
         </div>
 

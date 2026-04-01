@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { Spinner } from '@/components/common/Spinner';
 
 interface ImagePickerProps {
   gallery: string[];
@@ -67,7 +68,10 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
               className="h-32 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 flex flex-col items-center justify-center text-gray-400 hover:text-gray-500 transition-colors"
             >
               {uploading ? (
-                <span className="text-sm">Uploading...</span>
+                <div className="flex flex-col items-center gap-1">
+                  <Spinner className="text-[#01B18B]" />
+                  <span className="text-xs text-[#01B18B]">Uploading...</span>
+                </div>
               ) : (
                 <>
                   <span className="text-2xl mb-1">+</span>
