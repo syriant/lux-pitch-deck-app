@@ -20,6 +20,8 @@ export interface SlideDefinition {
   label: string;
   property?: DeckPropertyFull;
   caseStudies?: DeckCaseStudyLink[];
+  caseStudyChunkIndex?: number;
+  removable?: boolean;
 }
 
 export function buildSlideList(deck: FullDeck): SlideDefinition[] {
@@ -41,19 +43,36 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
     if (entry.perProperty) {
       if (deck.properties.length > 0) {
         for (const prop of deck.properties) {
-          slides.push({
-            id: `${slideType}-${prop.id}`,
-            type: slideType,
-            label: getPerPropertyLabel(slideType, entry.label, prop),
-            property: prop,
-            caseStudies: slideType === 'case-study' ? prop.caseStudies : undefined,
-          });
+          if (slideType === 'case-study') {
+            const chunks = chunkCaseStudies(prop.caseStudies ?? []);
+            for (let ci = 0; ci < chunks.length; ci++) {
+              const suffix = chunks.length > 1 ? ` (${ci * 2 + 1}-${ci * 2 + chunks[ci].length})` : '';
+              slides.push({
+                id: `case-study-${prop.id}-${ci}`,
+                type: slideType,
+                label: `Case Studies${suffix}`,
+                property: prop,
+                caseStudies: chunks[ci],
+                caseStudyChunkIndex: ci,
+                removable: entry.removable,
+              });
+            }
+          } else {
+            slides.push({
+              id: `${slideType}-${prop.id}`,
+              type: slideType,
+              label: getPerPropertyLabel(slideType, entry.label, prop),
+              property: prop,
+              removable: entry.removable,
+            });
+          }
         }
       } else {
         slides.push({
           id: `${slideType}-empty`,
           type: slideType,
           label: entry.label,
+          removable: entry.removable,
         });
       }
     } else {
@@ -61,6 +80,7 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
         id: slideType,
         type: slideType,
         label: entry.label,
+        removable: entry.removable,
       });
     }
   }
@@ -115,16 +135,21 @@ function buildHardcodedList(deck: FullDeck): SlideDefinition[] {
     slides.push({ id: 'region-stats-empty', type: 'region-stats', label: 'Destination & LE' });
   }
 
-  // 7. Case Studies — one per property (or one placeholder)
+  // 7. Case Studies — chunked into pairs, one slide per pair per property
   if (deck.properties.length > 0) {
     for (const prop of deck.properties) {
-      slides.push({
-        id: `case-study-${prop.id}`,
-        type: 'case-study',
-        label: 'Case Studies',
-        property: prop,
-        caseStudies: prop.caseStudies,
-      });
+      const chunks = chunkCaseStudies(prop.caseStudies ?? []);
+      for (let ci = 0; ci < chunks.length; ci++) {
+        const suffix = chunks.length > 1 ? ` (${ci * 2 + 1}-${ci * 2 + chunks[ci].length})` : '';
+        slides.push({
+          id: `case-study-${prop.id}-${ci}`,
+          type: 'case-study',
+          label: `Case Studies${suffix}`,
+          property: prop,
+          caseStudies: chunks[ci],
+          caseStudyChunkIndex: ci,
+        });
+      }
     }
   } else {
     slides.push({ id: 'case-study-empty', type: 'case-study', label: 'Case Studies' });
@@ -165,4 +190,13 @@ function buildHardcodedList(deck: FullDeck): SlideDefinition[] {
   }
 
   return slides;
+}
+
+function chunkCaseStudies(caseStudies: DeckCaseStudyLink[]): DeckCaseStudyLink[][] {
+  if (caseStudies.length === 0) return [[]];
+  const chunks: DeckCaseStudyLink[][] = [];
+  for (let i = 0; i < caseStudies.length; i += 2) {
+    chunks.push(caseStudies.slice(i, i + 2));
+  }
+  return chunks;
 }

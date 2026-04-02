@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { lookupDealTier, type LookupResult } from '@/api/deal-tiers.api';
-import { type DeckPropertyFull, updateProperty, updateOption } from '@/api/decks.api';
+import { getFullDeck, type DeckPropertyFull, type DeckOption, updateProperty, updateOption } from '@/api/decks.api';
 import { useNavigate } from 'react-router-dom';
 
 interface Step6Props {
@@ -9,46 +9,72 @@ interface Step6Props {
   onBack: () => void;
 }
 
+/** Group options by optionNumber, picking a representative for display */
+interface OptionGroup {
+  optionNumber: number;
+  tierLabel: string | null;
+  options: DeckOption[]; // all room-type rows sharing this optionNumber
+}
+
+function groupOptionsByNumber(options: DeckOption[]): OptionGroup[] {
+  const map = new Map<number, DeckOption[]>();
+  for (const opt of options) {
+    const group = map.get(opt.optionNumber) ?? [];
+    group.push(opt);
+    map.set(opt.optionNumber, group);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([optionNumber, opts]) => ({
+      optionNumber,
+      tierLabel: opts[0]?.tierLabel ?? null,
+      options: opts,
+    }));
+}
+
 export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
   const navigate = useNavigate();
+  const [localProperties, setLocalProperties] = useState<DeckPropertyFull[]>(properties);
   const [lookups, setLookups] = useState<Record<string, LookupResult | null>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Track toggled assets per property: { propertyId: { "channel name": boolean } }
-  const [assetToggles, setAssetToggles] = useState<Record<string, Record<string, boolean>>>({});
-  const propertiesRef = useRef(properties);
-  propertiesRef.current = properties;
+  // Track toggled assets per option group (keyed by "propertyId-optionNumber"):
+  // { "propId-1": { "channel name": boolean } }
+  const [groupToggles, setGroupToggles] = useState<Record<string, Record<string, boolean>>>({});
+  const propertiesRef = useRef(localProperties);
+  propertiesRef.current = localProperties;
 
-  // Persist marketing assets for a single property to all its options
-  const savePropertyAssets = useCallback(async (propertyId: string, assets: Record<string, boolean>) => {
-    const prop = propertiesRef.current.find((p) => p.id === propertyId);
-    if (!prop || prop.options.length === 0) return;
-    await Promise.all(
-      prop.options.map((opt) => updateOption(deckId, opt.id, { marketingAssets: assets })),
-    );
+  const groupKey = (propId: string, optNum: number) => `${propId}-${optNum}`;
+
+  // Persist marketing assets for all options in a group
+  const saveGroupAssets = useCallback(async (propId: string, optNum: number, assets: Record<string, boolean>) => {
+    const prop = propertiesRef.current.find((p) => p.id === propId);
+    if (!prop) return;
+    const opts = prop.options.filter((o) => o.optionNumber === optNum);
+    await Promise.all(opts.map((o) => updateOption(deckId, o.id, { marketingAssets: assets })));
   }, [deckId]);
-
-  // Persist all properties' assets (used after initial load)
-  const saveAllAssets = useCallback(async (toggles: Record<string, Record<string, boolean>>) => {
-    for (const prop of propertiesRef.current) {
-      const assets = toggles[prop.id];
-      if (!assets || prop.options.length === 0) continue;
-      await savePropertyAssets(prop.id, assets);
-    }
-  }, [savePropertyAssets]);
 
   useEffect(() => {
     async function load() {
+      // Fetch fresh deck data to get options saved in earlier steps
+      const freshDeck = await getFullDeck(deckId);
+      const freshProperties = freshDeck.properties;
+      setLocalProperties(freshProperties);
+      propertiesRef.current = freshProperties;
+
       const results: Record<string, LookupResult | null> = {};
       const toggles: Record<string, Record<string, boolean>> = {};
 
-      for (const prop of properties) {
-        // Check if property already has saved marketing assets on its options
-        const existingAssets = prop.options[0]?.marketingAssets;
-        if (existingAssets && Object.keys(existingAssets).length > 0) {
-          toggles[prop.id] = { ...existingAssets };
+      for (const prop of freshProperties) {
+        // Load existing per-option-group assets (read from first option in each group)
+        const groups = groupOptionsByNumber(prop.options);
+        for (const group of groups) {
+          const representative = group.options[0];
+          if (representative?.marketingAssets && Object.keys(representative.marketingAssets).length > 0) {
+            toggles[groupKey(prop.id, group.optionNumber)] = { ...representative.marketingAssets };
+          }
         }
 
         if (!prop.destination) {
@@ -70,14 +96,16 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
               tier: lookup.tier,
             }).catch(() => {});
 
-            // Merge lookup channels with any existing saved state
-            // Saved state takes precedence; new channels from lookup default to true
-            const existing = toggles[prop.id] ?? {};
-            const merged: Record<string, boolean> = {};
-            for (const channel of Object.keys(lookup.assetEntitlements)) {
-              merged[channel] = existing[channel] ?? true;
+            // Merge lookup channels with any existing saved state per option group
+            for (const group of groups) {
+              const key = groupKey(prop.id, group.optionNumber);
+              const existing = toggles[key] ?? {};
+              const merged: Record<string, boolean> = {};
+              for (const channel of Object.keys(lookup.assetEntitlements)) {
+                merged[channel] = existing[channel] ?? false;
+              }
+              toggles[key] = merged;
             }
-            toggles[prop.id] = merged;
 
             break;
           } catch {
@@ -88,24 +116,45 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
       }
 
       setLookups(results);
-      setAssetToggles(toggles);
+      setGroupToggles(toggles);
       setLoading(false);
 
-      // Persist initial asset state so it's saved even if user navigates away
-      await saveAllAssets(toggles).catch(() => {});
+      // Persist initial asset state to all options in each group
+      for (const prop of freshProperties) {
+        const groups = groupOptionsByNumber(prop.options);
+        for (const group of groups) {
+          const key = groupKey(prop.id, group.optionNumber);
+          const assets = toggles[key];
+          if (assets) {
+            await Promise.all(
+              group.options.map((o) => updateOption(deckId, o.id, { marketingAssets: assets }).catch(() => {})),
+            );
+          }
+        }
+      }
     }
     load();
-  }, [properties, deckId, saveAllAssets]);
+  }, [deckId]);
 
-  function toggleAsset(propertyId: string, channel: string) {
-    setAssetToggles((prev) => {
+  function toggleAsset(propId: string, optNum: number, channel: string) {
+    const key = groupKey(propId, optNum);
+    setGroupToggles((prev) => {
       const updated = {
-        ...(prev[propertyId] ?? {}),
-        [channel]: !(prev[propertyId]?.[channel] ?? true),
+        ...(prev[key] ?? {}),
+        [channel]: !(prev[key]?.[channel] ?? false),
       };
-      // Fire-and-forget save on each toggle
-      savePropertyAssets(propertyId, updated).catch(() => {});
-      return { ...prev, [propertyId]: updated };
+      saveGroupAssets(propId, optNum, updated).catch(() => {});
+      return { ...prev, [key]: updated };
+    });
+  }
+
+  function toggleAll(propId: string, optNum: number, channels: string[], value: boolean) {
+    const key = groupKey(propId, optNum);
+    setGroupToggles((prev) => {
+      const updated: Record<string, boolean> = {};
+      for (const ch of channels) updated[ch] = value;
+      saveGroupAssets(propId, optNum, updated).catch(() => {});
+      return { ...prev, [key]: updated };
     });
   }
 
@@ -113,7 +162,18 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
     setSaving(true);
     setError('');
     try {
-      await saveAllAssets(assetToggles);
+      for (const prop of propertiesRef.current) {
+        const groups = groupOptionsByNumber(prop.options);
+        for (const group of groups) {
+          const key = groupKey(prop.id, group.optionNumber);
+          const assets = groupToggles[key];
+          if (assets) {
+            await Promise.all(
+              group.options.map((o) => updateOption(deckId, o.id, { marketingAssets: assets })),
+            );
+          }
+        }
+      }
       navigate(`/decks/${deckId}/preview`);
     } catch {
       setError('Failed to save marketing assets');
@@ -127,15 +187,16 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-1">Marketing Assets</h2>
       <p className="text-sm text-gray-500 mb-6">
-        Auto-recommended based on deal tier rules. Toggle channels on/off per property.
+        Select marketing channels for each campaign option. Auto-recommended based on deal tier rules.
       </p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
       <div className="space-y-6 mb-6">
-        {properties.map((prop) => {
+        {localProperties.map((prop) => {
           const lookup = lookups[prop.id];
-          const toggles = assetToggles[prop.id] ?? {};
+          const channels = lookup ? Object.entries(lookup.assetEntitlements) : [];
+          const groups = groupOptionsByNumber(prop.options);
 
           return (
             <div key={prop.id} className="rounded-lg border border-gray-200 bg-white p-4">
@@ -161,36 +222,71 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
                     </div>
                   </div>
 
-                  {Object.keys(lookup.assetEntitlements).length > 0 ? (
-                    <div className="space-y-1.5">
-                      {Object.entries(lookup.assetEntitlements).map(([channel, value]) => {
-                        const enabled = toggles[channel] ?? true;
-                        return (
-                          <label
-                            key={channel}
-                            className={`flex items-start gap-3 rounded-md border px-3 py-2 cursor-pointer text-sm ${
-                              enabled ? 'border-[#01B18B]/30 bg-[#E6F9F5]' : 'border-gray-200 bg-gray-50 opacity-60'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={enabled}
-                              onChange={() => toggleAsset(prop.id, channel)}
-                              className="mt-0.5"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-gray-800">{channel}</div>
-                              <div className="text-xs text-gray-500">{value}</div>
-                            </div>
-                          </label>
-                        );
-                      })}
+                  {channels.length > 0 && groups.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-2 pr-3 font-medium text-gray-600 min-w-[180px]">Channel</th>
+                            {groups.map((group) => (
+                              <th key={group.optionNumber} className="text-center py-2 px-3 font-medium text-gray-600 min-w-[100px]">
+                                <div className="text-xs leading-tight">
+                                  <div>Opt {group.optionNumber}</div>
+                                  {group.tierLabel && <div className="text-gray-400">{group.tierLabel}</div>}
+                                  <div className="text-gray-300">{group.options.length} room {group.options.length === 1 ? 'type' : 'types'}</div>
+                                </div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {channels.map(([channel, description]) => (
+                            <tr key={channel} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-2 pr-3">
+                                <div className="font-medium text-gray-800">{channel}</div>
+                                <div className="text-xs text-gray-400">{description}</div>
+                              </td>
+                              {groups.map((group) => {
+                                const key = groupKey(prop.id, group.optionNumber);
+                                const enabled = groupToggles[key]?.[channel] ?? false;
+                                return (
+                                  <td key={group.optionNumber} className="text-center py-2 px-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={enabled}
+                                      onChange={() => toggleAsset(prop.id, group.optionNumber, channel)}
+                                      className="w-4 h-4 accent-[#01B18B] cursor-pointer"
+                                    />
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                          {/* Select all / none row */}
+                          <tr className="border-t border-gray-200">
+                            <td className="py-2 pr-3 text-xs text-gray-400">Toggle all</td>
+                            {groups.map((group) => {
+                              const key = groupKey(prop.id, group.optionNumber);
+                              const channelNames = channels.map(([ch]) => ch);
+                              const allOn = channelNames.every((ch) => groupToggles[key]?.[ch] !== false);
+                              return (
+                                <td key={group.optionNumber} className="text-center py-2 px-3">
+                                  <button
+                                    onClick={() => toggleAll(prop.id, group.optionNumber, channelNames, !allOn)}
+                                    className="text-xs text-[#01B18B] hover:underline"
+                                  >
+                                    {allOn ? 'None' : 'All'}
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
-                  ) : (
+                  ) : channels.length === 0 ? (
                     <p className="text-xs text-gray-400 italic">No asset entitlements for this tier</p>
-                  )}
-
-                  {prop.options.length === 0 && (
+                  ) : (
                     <p className="text-xs text-amber-600 mt-2">
                       No campaign options saved yet — upload a pricing tool in Step 2 first.
                     </p>

@@ -5,6 +5,7 @@ export interface TemplateSlide {
   label: string;
   required?: boolean;
   perProperty?: boolean;
+  removable?: boolean;
   config?: Record<string, unknown>;
 }
 

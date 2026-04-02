@@ -118,6 +118,15 @@ export function Templates() {
     }));
   }
 
+  function toggleRemovable(type: string) {
+    setForm((prev) => ({
+      ...prev,
+      slides: prev.slides.map((s) =>
+        s.type === type ? { ...s, removable: !s.removable } : s,
+      ),
+    }));
+  }
+
   function moveSlide(index: number, direction: -1 | 1) {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= form.slides.length) return;
@@ -265,6 +274,10 @@ export function Templates() {
                   <label className="flex items-center gap-1 text-xs text-gray-500">
                     <input type="checkbox" checked={!!slide.perProperty} onChange={() => togglePerProperty(slide.type)} className="rounded" />
                     Per-prop
+                  </label>
+                  <label className="flex items-center gap-1 text-xs text-gray-500">
+                    <input type="checkbox" checked={!!slide.removable} onChange={() => toggleRemovable(slide.type)} className="rounded" />
+                    Can remove
                   </label>
                   <button type="button" onClick={() => toggleSlide(slide.type)} className="text-red-400 hover:text-red-600 text-xs">
                     Remove

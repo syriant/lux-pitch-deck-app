@@ -8,7 +8,7 @@ import { updateCaseStudy } from '@/api/case-studies.api';
 import { buildSlideList, type SlideDefinition } from '@/components/preview/slide-types';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
-import { exportPptx } from '@/api/export.api';
+import { exportPptx, exportPdf } from '@/api/export.api';
 import { AppShell } from '@/components/layout/AppShell';
 
 export type FieldChangeHandler = (
@@ -28,6 +28,8 @@ export function DeckPreview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [hiddenSlides, setHiddenSlides] = useState<string[]>([]);
 
   // Keep ref in sync for use in callbacks
   useEffect(() => { deckRef.current = deck; }, [deck]);
@@ -36,9 +38,37 @@ export function DeckPreview() {
     if (!id) return;
     (async () => {
       try {
-        const d = await getFullDeck(id);
+        let d = await getFullDeck(id);
+
+        // Auto-assign gallery images on first load (when no image.* customFields exist)
+        const gallery = d.gallery?.filter((g): g is string => typeof g === 'string' && g.length > 0) ?? [];
+        const hasImageFields = Object.keys(d.customFields ?? {}).some((k) => k.startsWith('image.'));
+        if (!hasImageFields && gallery.length > 0) {
+          // Static image slots
+          const slots: string[] = [
+            'image.objectives', 'image.differentiators', 'image.reach',
+            'image.caseStudy', 'image.campaignOptions', 'image.demographics',
+          ];
+          // Per-property image slots
+          for (const prop of d.properties) {
+            slots.push(`image.regionStats.${prop.id}`);
+          }
+          const assignments: Record<string, string> = {};
+          for (let i = 0; i < slots.length; i++) {
+            assignments[slots[i]] = gallery[i % gallery.length];
+          }
+          const updated = { ...(d.customFields ?? {}), ...assignments };
+          d = { ...d, customFields: updated };
+          await updateDeckApi(id, { customFields: updated }).catch(() => {});
+        }
+
         setDeck(d);
         setSlides(buildSlideList(d));
+        // Restore hidden slides from customFields
+        const saved = d.customFields?.['hiddenSlides'];
+        if (saved) {
+          try { setHiddenSlides(JSON.parse(saved)); } catch { /* ignore */ }
+        }
       } catch {
         setError('Failed to load deck');
       } finally {
@@ -126,6 +156,24 @@ export function DeckPreview() {
     },
     [deck, id],
   );
+
+  const handleToggleHidden = useCallback(async (slideId: string) => {
+    if (!id) return;
+    setHiddenSlides((prev) => {
+      const next = prev.includes(slideId) ? prev.filter((s) => s !== slideId) : [...prev, slideId];
+      // Persist to customFields
+      const current = deckRef.current?.customFields ?? {};
+      const updated = { ...current, hiddenSlides: JSON.stringify(next) };
+      setDeck((d) => d ? { ...d, customFields: updated } : d);
+      if (deckRef.current) {
+        deckRef.current = { ...deckRef.current, customFields: updated };
+      }
+      updateDeckApi(id, { customFields: updated }).catch(() => {
+        console.error('Failed to persist hidden slides');
+      });
+      return next;
+    });
+  }, [id]);
 
   const handleGalleryAdd = useCallback(async (url: string) => {
     if (!id) return;
@@ -226,8 +274,10 @@ export function DeckPreview() {
             slides={slides}
             deck={deck}
             activeIndex={activeIndex}
+            hiddenSlides={hiddenSlides}
             onSelect={setActiveIndex}
             onReorder={handleReorder}
+            onToggleHidden={handleToggleHidden}
           />
 
           {/* Main slide view */}
@@ -254,6 +304,29 @@ export function DeckPreview() {
               className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50"
             >
               Back to Wizard
+            </button>
+            <button
+              onClick={async () => {
+                if (!id || exportingPdf) return;
+                setExportingPdf(true);
+                try {
+                  await exportPdf(id);
+                } catch {
+                  console.error('PDF export failed');
+                } finally {
+                  setExportingPdf(false);
+                }
+              }}
+              disabled={exportingPdf}
+              className="rounded-md border border-[#01B18B] px-4 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5"
+            >
+              {exportingPdf && (
+                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {exportingPdf ? 'Generating PDF...' : 'Export PDF'}
             </button>
             <button
               onClick={async () => {

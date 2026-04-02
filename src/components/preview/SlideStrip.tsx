@@ -6,11 +6,13 @@ interface SlideStripProps {
   slides: SlideDefinition[];
   deck: FullDeck;
   activeIndex: number;
+  hiddenSlides?: string[];
   onSelect: (index: number) => void;
   onReorder?: (fromIndex: number, toIndex: number) => void;
+  onToggleHidden?: (slideId: string) => void;
 }
 
-export function SlideStrip({ slides, deck, activeIndex, onSelect, onReorder }: SlideStripProps) {
+export function SlideStrip({ slides, deck, activeIndex, hiddenSlides = [], onSelect, onReorder, onToggleHidden }: SlideStripProps) {
   function handleDragStart(e: React.DragEvent, index: number) {
     e.dataTransfer.setData('text/plain', String(index));
     e.dataTransfer.effectAllowed = 'move';
@@ -47,7 +49,9 @@ export function SlideStrip({ slides, deck, activeIndex, onSelect, onReorder }: S
             deck={deck}
             index={i}
             isActive={i === activeIndex}
+            isHidden={hiddenSlides.includes(slide.id)}
             onClick={() => onSelect(i)}
+            onToggleHidden={onToggleHidden ? () => onToggleHidden(slide.id) : undefined}
           />
         </div>
       ))}

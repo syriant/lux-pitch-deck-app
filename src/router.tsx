@@ -9,6 +9,7 @@ import { ParserTest } from './pages/admin/ParserTest';
 import { Templates } from './pages/admin/Templates';
 import { DeckWizard } from './pages/wizard/DeckWizard';
 import { DeckPreview } from './pages/DeckPreview';
+import { DeckPrint } from './pages/DeckPrint';
 import { CaseStudies } from './pages/CaseStudies';
 import { RequireRole } from './components/common/RequireRole';
 import { AppShell } from './components/layout/AppShell';
@@ -70,5 +71,9 @@ export const router = createBrowserRouter([
         <DeckPreview />
       </RequireRole>
     ),
+  },
+  {
+    path: '/decks/:id/print',
+    element: <DeckPrint />,
   },
 ]);
