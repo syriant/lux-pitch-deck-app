@@ -63,7 +63,7 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
     case 'region-stats':
       return <RegionStatsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'case-study':
-      return <CaseStudySlide caseStudies={slide.caseStudies} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
+      return <CaseStudySlide slideId={slide.id} caseStudies={slide.caseStudies} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'objectives':
       return <ObjectivesSlide objectives={deck.objectives} deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'campaign-options':

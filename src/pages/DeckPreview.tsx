@@ -44,14 +44,21 @@ export function DeckPreview() {
         const gallery = d.gallery?.filter((g): g is string => typeof g === 'string' && g.length > 0) ?? [];
         const hasImageFields = Object.keys(d.customFields ?? {}).some((k) => k.startsWith('image.'));
         if (!hasImageFields && gallery.length > 0) {
+          const builtSlides = buildSlideList(d);
           // Static image slots
           const slots: string[] = [
             'image.objectives', 'image.differentiators', 'image.reach',
-            'image.caseStudy', 'image.campaignOptions', 'image.demographics',
+            'image.campaignOptions', 'image.demographics',
           ];
           // Per-property image slots
           for (const prop of d.properties) {
             slots.push(`image.regionStats.${prop.id}`);
+          }
+          // Per-slide case study image slots
+          for (const s of builtSlides) {
+            if (s.type === 'case-study') {
+              slots.push(`image.caseStudy.${s.id}`);
+            }
           }
           const assignments: Record<string, string> = {};
           for (let i = 0; i < slots.length; i++) {

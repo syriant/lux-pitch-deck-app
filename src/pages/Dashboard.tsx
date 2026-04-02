@@ -90,10 +90,14 @@ export function Dashboard() {
   }
 
   function formatDate(iso: string): string {
-    return new Date(iso).toLocaleDateString('en-AU', {
+    // Parse date parts directly to avoid timezone shifting
+    // (server stores local time in timestamp without timezone)
+    const d = new Date(iso.replace('Z', '').replace(/\+.*$/, ''));
+    return d.toLocaleDateString('en-AU', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      timeZone: 'UTC',
     });
   }
 

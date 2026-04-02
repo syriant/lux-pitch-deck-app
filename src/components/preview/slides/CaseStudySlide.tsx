@@ -7,6 +7,7 @@ import { uploadUrl } from '@/api/upload.api';
 const GREEN = '#00b2a0';
 
 interface CaseStudySlideProps {
+  slideId?: string;
   caseStudies?: DeckCaseStudyLink[];
   deck?: FullDeck;
   onFieldChange?: FieldChangeHandler;
@@ -70,11 +71,13 @@ function CaseStudyCard({
   );
 }
 
-export function CaseStudySlide({ caseStudies, deck, onFieldChange, onGalleryAdd }: CaseStudySlideProps) {
+export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGalleryAdd }: CaseStudySlideProps) {
   const hasCaseStudies = caseStudies && caseStudies.length > 0;
   const cf = deck?.customFields;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  // Per-slide image key so each case study slide can have its own background
+  const imageFieldKey = slideId ? `image.caseStudy.${slideId}` : 'image.caseStudy';
   const swapped = cf?.['caseStudy.swapped'] === 'true';
   const cards = hasCaseStudies ? caseStudies.slice(0, 2) : [];
   const leftCard = swapped ? cards[1] : cards[0];
@@ -84,7 +87,7 @@ export function CaseStudySlide({ caseStudies, deck, onFieldChange, onGalleryAdd 
     <div className="relative h-full w-full overflow-hidden flex flex-col">
       {/* Background image */}
       <SlideImage
-        fieldKey="image.caseStudy"
+        fieldKey={imageFieldKey}
         customFields={cf}
         gallery={deck?.gallery}
         onFieldChange={onFieldChange}
@@ -100,7 +103,7 @@ export function CaseStudySlide({ caseStudies, deck, onFieldChange, onGalleryAdd 
         {onFieldChange && onGalleryAdd && (
           <div className="absolute top-2 left-2 z-20">
             <SlideImage
-              fieldKey="image.caseStudy"
+              fieldKey={imageFieldKey}
               customFields={cf}
               gallery={deck?.gallery}
               onFieldChange={onFieldChange}

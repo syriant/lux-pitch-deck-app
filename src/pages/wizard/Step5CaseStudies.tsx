@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { getCaseStudies, type CaseStudy } from '@/api/case-studies.api';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { getCaseStudies, createCaseStudy, type CaseStudy } from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
+import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { Spinner } from '@/components/common/Spinner';
 
 interface Step5Props {
   deckId: string;
@@ -8,6 +10,38 @@ interface Step5Props {
   onBack: () => void;
   onNext: () => void;
 }
+
+interface InlineForm {
+  title: string;
+  hotelName: string;
+  destination: string;
+  region: string;
+  propertyType: string;
+  tags: string;
+  roomNights: string;
+  revenue: string;
+  adr: string;
+  alos: string;
+  leadTime: string;
+  bookings: string;
+  narrative: string;
+}
+
+const emptyForm: InlineForm = {
+  title: '',
+  hotelName: '',
+  destination: '',
+  region: '',
+  propertyType: '',
+  tags: '',
+  roomNights: '',
+  revenue: '',
+  adr: '',
+  alos: '',
+  leadTime: '',
+  bookings: '',
+  narrative: '',
+};
 
 export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Props) {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
@@ -23,6 +57,12 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     return init;
   });
   const [activeProperty, setActiveProperty] = useState(properties[0]?.id ?? '');
+
+  // Inline create form
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState<InlineForm>(emptyForm);
+  const [createImages, setCreateImages] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
 
   async function load() {
     try {
@@ -71,6 +111,46 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     });
   }
 
+  function openCreateForm() {
+    setCreateForm(emptyForm);
+    setCreateImages([]);
+    setShowCreateForm(true);
+  }
+
+  async function handleCreate(e: FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setError('');
+    try {
+      const tags = createForm.tags.split(',').map((t) => t.trim()).filter(Boolean);
+      const created = await createCaseStudy({
+        title: createForm.title,
+        hotelName: createForm.hotelName,
+        destination: createForm.destination || undefined,
+        region: createForm.region || undefined,
+        propertyType: createForm.propertyType || undefined,
+        tags: tags.length > 0 ? tags : undefined,
+        roomNights: createForm.roomNights ? Number(createForm.roomNights) : undefined,
+        revenue: createForm.revenue ? Number(createForm.revenue) : undefined,
+        adr: createForm.adr ? Number(createForm.adr) : undefined,
+        alos: createForm.alos ? Number(createForm.alos) : undefined,
+        leadTime: createForm.leadTime ? Number(createForm.leadTime) : undefined,
+        bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
+        narrative: createForm.narrative || undefined,
+        images: createImages.length > 0 ? createImages : undefined,
+      });
+      // Add to list and auto-select for the active property
+      setCaseStudies((prev) => [created, ...prev]);
+      toggleCaseStudy(activeProperty, created.id);
+      setShowCreateForm(false);
+      setCreateForm(emptyForm);
+    } catch {
+      setError('Failed to create case study');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   const [saving, setSaving] = useState(false);
 
   async function handleSaveAndNext() {
@@ -99,7 +179,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-1">Case Studies</h2>
       <p className="text-sm text-gray-500 mb-6">
-        Select case studies for each property from the library.
+        Select case studies for each property from the library, or create new ones.
       </p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -126,14 +206,189 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         </div>
       )}
 
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search case studies..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
-      />
+      {/* Search + Create button */}
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Search case studies..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+        />
+        <button
+          onClick={openCreateForm}
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] shrink-0"
+        >
+          + Create New
+        </button>
+      </div>
+
+      {/* Inline create form */}
+      {showCreateForm && (
+        <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-[#01B18B]/30 bg-[#E6F9F5] p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-900">New Case Study</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+              <input
+                type="text"
+                required
+                value={createForm.title}
+                onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                placeholder="e.g. 8-week campaign driving 250 room nights"
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Hotel Name *</label>
+              <input
+                type="text"
+                required
+                value={createForm.hotelName}
+                onChange={(e) => setCreateForm({ ...createForm, hotelName: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Destination</label>
+              <input
+                type="text"
+                value={createForm.destination}
+                onChange={(e) => setCreateForm({ ...createForm, destination: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Region</label>
+              <input
+                type="text"
+                value={createForm.region}
+                onChange={(e) => setCreateForm({ ...createForm, region: e.target.value })}
+                placeholder="e.g. Asia Pacific"
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
+              <input
+                type="text"
+                value={createForm.propertyType}
+                onChange={(e) => setCreateForm({ ...createForm, propertyType: e.target.value })}
+                placeholder="e.g. Resort, Boutique Hotel"
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Tags (comma-separated)</label>
+              <input
+                type="text"
+                value={createForm.tags}
+                onChange={(e) => setCreateForm({ ...createForm, tags: e.target.value })}
+                placeholder="e.g. beach, family, luxury"
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Room Nights</label>
+              <input
+                type="number"
+                value={createForm.roomNights}
+                onChange={(e) => setCreateForm({ ...createForm, roomNights: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Revenue ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={createForm.revenue}
+                onChange={(e) => setCreateForm({ ...createForm, revenue: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">ADR ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={createForm.adr}
+                onChange={(e) => setCreateForm({ ...createForm, adr: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">ALOS (days)</label>
+              <input
+                type="number"
+                step="0.1"
+                max="99"
+                value={createForm.alos}
+                onChange={(e) => setCreateForm({ ...createForm, alos: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Bookings</label>
+              <input
+                type="number"
+                value={createForm.bookings}
+                onChange={(e) => setCreateForm({ ...createForm, bookings: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Narrative</label>
+            <textarea
+              rows={2}
+              value={createForm.narrative}
+              onChange={(e) => setCreateForm({ ...createForm, narrative: e.target.value })}
+              placeholder="Brief summary of the campaign results..."
+              className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Images</label>
+            <div className="flex gap-2 flex-wrap">
+              {createImages.map((url) => (
+                <div key={url} className="relative group w-16 h-16 rounded border border-gray-200 overflow-hidden">
+                  <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setCreateImages((prev) => prev.filter((u) => u !== url))}
+                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+              <ImageUploadTile
+                onUploaded={(url) => setCreateImages((prev) => [...prev, url])}
+                onError={() => setError('Failed to upload image')}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={creating}
+              className="rounded-md bg-[#01B18B] px-4 py-1.5 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
+            >
+              {creating ? 'Creating...' : 'Create & Select'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="rounded-md border border-gray-300 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {loading ? (
         <div className="text-sm text-gray-500">Loading...</div>
@@ -141,7 +396,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center mb-6">
           <p className="text-gray-500">No case studies in the library yet.</p>
           <p className="mt-1 text-sm text-gray-400">
-            Add case studies via the <a href="/case-studies" className="text-[#01B18B] hover:underline">Case Study Library</a>.
+            Use the "Create New" button above to add one.
           </p>
         </div>
       ) : (
@@ -164,6 +419,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                 />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-gray-900">{cs.hotelName}</div>
+                  {cs.title && <div className="text-xs text-gray-600">{cs.title}</div>}
                   <div className="text-xs text-gray-500">
                     {[cs.destination, cs.region].filter(Boolean).join(' · ') || 'No location'}
                     {cs.roomNights != null && ` · ${cs.roomNights} RN`}
@@ -203,5 +459,35 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         </button>
       </div>
     </div>
+  );
+}
+
+function ImageUploadTile({ onUploaded, onError }: { onUploaded: (url: string) => void; onError: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  return (
+    <label className={`w-16 h-16 rounded border-2 border-dashed flex items-center justify-center cursor-pointer text-lg ${
+      uploading ? 'border-[#01B18B] bg-[#E6F9F5]' : 'border-gray-300 hover:border-gray-400 text-gray-400'
+    }`}>
+      {uploading ? <Spinner size="sm" className="text-[#01B18B]" /> : '+'}
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setUploading(true);
+          try {
+            const result = await uploadImage(file);
+            onUploaded(result.url);
+          } catch {
+            onError();
+          } finally {
+            setUploading(false);
+          }
+          e.target.value = '';
+        }}
+      />
+    </label>
   );
 }
