@@ -10,15 +10,10 @@ interface MarketChallengesSlideProps {
   onFieldChange?: FieldChangeHandler;
 }
 
-const DEFAULT_CHALLENGES = [
-  'Increasing competition from alternative accommodation platforms',
-  'Rising customer acquisition costs across traditional channels',
-  'Seasonal demand fluctuations impacting occupancy rates',
-  'Need for differentiated positioning in a crowded market',
-];
+const CHALLENGE_COUNT = 4;
 
 export function MarketChallengesSlide({ deck, onFieldChange }: MarketChallengesSlideProps) {
-  const cf = deck.customFields;
+  const cf = { ...deck.templateDefaults, ...deck.customFields };
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -30,16 +25,12 @@ export function MarketChallengesSlide({ deck, onFieldChange }: MarketChallengesS
           <div className="w-16 border-t-2 mb-4" style={{ borderColor: GREEN }} />
           <SlideRichText
             fieldKey="market-challenges.headline"
-            defaultValue="Market Challenges"
-            defaultSize={24}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold mb-2 text-gray-800"
           />
           <SlideRichText
             fieldKey="market-challenges.subheadline"
-            defaultValue="Key challenges facing your property in the current landscape"
-            defaultSize={14}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-light text-gray-500"
@@ -48,7 +39,7 @@ export function MarketChallengesSlide({ deck, onFieldChange }: MarketChallengesS
 
         {/* Challenge bullets */}
         <div className="flex-1 flex flex-col justify-center gap-4">
-          {DEFAULT_CHALLENGES.map((fallback, i) => (
+          {Array.from({ length: CHALLENGE_COUNT }, (_, i) => (
             <div key={i} className="flex items-start gap-3">
               <div
                 className="mt-1 w-2.5 h-2.5 rounded-full shrink-0"
@@ -56,8 +47,6 @@ export function MarketChallengesSlide({ deck, onFieldChange }: MarketChallengesS
               />
               <SlideRichText
                 fieldKey={`market-challenges.item.${i}`}
-                defaultValue={fallback}
-                defaultSize={13}
                 customFields={cf}
                 onFieldChange={onFieldChange}
                 className="leading-relaxed text-gray-700"

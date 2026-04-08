@@ -15,6 +15,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   const coverImgUrl = uploadUrl(deck.coverImage);
   const quarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}${String(new Date().getFullYear()).slice(2)}`;
+  const cf = { ...deck.templateDefaults, ...deck.customFields };
 
   return (
     <div className="relative h-full w-full bg-gray-300 overflow-hidden">
@@ -28,9 +29,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
         <div className="flex-1 flex flex-col items-center justify-start pt-[6%] px-[12%]">
           <SlideRichText
             fieldKey="cover.hookText"
-            defaultValue="There are more travelers than ever. And they've never been harder to reach."
-            defaultSize={45}
-            customFields={deck.customFields}
+            customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold text-white leading-snug max-w-2xl drop-shadow-md"
             style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}

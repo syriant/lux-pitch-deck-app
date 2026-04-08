@@ -11,6 +11,7 @@ interface RichEditableTextProps {
 function FormatButton({ label, cmd, className, onFormat }: { label: React.ReactNode; cmd: string; className?: string; onFormat: (cmd: string) => void }) {
   return (
     <button
+      type="button"
       onMouseDown={(e) => {
         e.preventDefault();
         e.stopPropagation();

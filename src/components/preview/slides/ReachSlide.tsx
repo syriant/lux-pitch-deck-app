@@ -4,6 +4,7 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { SLIDE_DEFAULTS } from '../slide-defaults';
 
 interface ReachSlideProps {
   deck?: FullDeck;
@@ -12,16 +13,17 @@ interface ReachSlideProps {
 }
 
 // Verified circle centers via pixel scan of lux-map.png (1936x937)
+// Member counts come from SLIDE_DEFAULTS (key: `reach.{key}`)
 // Africa has no circle in the image — it's a free-floating label
 const CIRCLE_LABELS = [
-  { name: 'North\nAmerica',  key: 'North America',  defaultMembers: '1.1M+', cx: 214, cy: 331 },
-  { name: 'United\nKingdom', key: 'United Kingdom', defaultMembers: '700k+', cx: 763, cy: 140 },
-  { name: 'Europe',          key: 'Europe',         defaultMembers: '180k+', cx: 733, cy: 390 },
-  { name: 'Middle\nEast',    key: 'Middle East',    defaultMembers: '50k+',  cx: 1086, cy: 397 },
-  { name: 'India',           key: 'India',          defaultMembers: '1M+',   cx: 1202, cy: 646 },
-  { name: 'Asia',            key: 'Asia',           defaultMembers: '400k',  cx: 1401, cy: 349 },
-  { name: 'Australia',       key: 'Australia',      defaultMembers: '5M+',   cx: 1574, cy: 598 },
-  { name: 'New\nZealand',    key: 'New Zealand',    defaultMembers: '400k+', cx: 1813, cy: 758 },
+  { name: 'North\nAmerica',  key: 'North America',  cx: 214,  cy: 331 },
+  { name: 'United\nKingdom', key: 'United Kingdom', cx: 763,  cy: 140 },
+  { name: 'Europe',          key: 'Europe',         cx: 733,  cy: 390 },
+  { name: 'Middle\nEast',    key: 'Middle East',    cx: 1086, cy: 397 },
+  { name: 'India',           key: 'India',          cx: 1202, cy: 646 },
+  { name: 'Asia',            key: 'Asia',           cx: 1401, cy: 349 },
+  { name: 'Australia',       key: 'Australia',      cx: 1574, cy: 598 },
+  { name: 'New\nZealand',    key: 'New Zealand',    cx: 1813, cy: 758 },
 ];
 
 const SRC_W = 1936;
@@ -64,10 +66,11 @@ function drawMapWithLabels(
   const sx = iw / SRC_W;
   const sy = ih / SRC_H;
 
-  function drawLabel(name: string, key: string, defaultMembers: string, cx: number, cy: number) {
+  function drawLabel(name: string, key: string, cx: number, cy: number) {
     const x = ix + cx * sx;
     const y = iy + cy * sy;
-    const members = customFields?.[`reach.${key}`] ?? defaultMembers;
+    const fullKey = `reach.${key}`;
+    const members = customFields?.[fullKey] ?? SLIDE_DEFAULTS[fullKey]?.value ?? '';
     const nameSize = Math.max(12, Math.round(20 * sx));
     const countSize = Math.max(16, Math.round(30 * sx));
 
@@ -94,14 +97,14 @@ function drawMapWithLabels(
 
   // Draw circle labels
   for (const label of CIRCLE_LABELS) {
-    drawLabel(label.name, label.key, label.defaultMembers, label.cx, label.cy);
+    drawLabel(label.name, label.key, label.cx, label.cy);
   }
 
   // Africa has no circle in the image — hidden for now
 }
 
 export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProps) {
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   const bgImgUrl = cf?.['image.reach'] ? uploadUrl(cf['image.reach']) : null;
@@ -156,8 +159,6 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
         <div className="absolute left-[8%] right-[8%] top-[4%] bottom-[4%] bg-white/92 rounded-lg flex flex-col items-center px-[3%] py-[2.5%] overflow-hidden">
           <SlideRichText
             fieldKey="reach.title"
-            defaultValue="Our reach"
-            defaultSize={18}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="mb-0.5"
@@ -165,8 +166,6 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
           />
           <SlideRichText
             fieldKey="reach.subtitle"
-            defaultValue="9 million members globally trust Luxury Escapes"
-            defaultSize={11}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="text-gray-600 mb-3"

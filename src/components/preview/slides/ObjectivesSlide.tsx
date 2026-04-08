@@ -17,7 +17,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
   const primary = objectives[0];
   const secondary = objectives.slice(1);
   const hasObjectives = objectives.length > 0;
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -28,8 +28,6 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
         <div className="w-[52%] flex flex-col">
           <SlideRichText
             fieldKey="obj.headline"
-            defaultValue="We create <mark style='background-color:#00b2a0;color:#ffffff;padding:0 2px;border-radius:2px'>tailored tactical campaigns</mark><br>to achieve your specific key objectives"
-            defaultSize={28}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-light italic leading-snug mb-4"
@@ -61,8 +59,6 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
                   <div className="w-full border-t-2 mb-3" style={{ borderColor: GREEN }} />
                   <SlideRichText
                     fieldKey={`obj.primary.title`}
-                    defaultValue="Primary Objective"
-                    defaultSize={18}
                     customFields={cf}
                     onFieldChange={onFieldChange}
                     className="font-bold mb-2"
@@ -85,8 +81,6 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
                   <div className="w-full border-t-2 mb-3" style={{ borderColor: GREEN }} />
                   <SlideRichText
                     fieldKey={`obj.secondary.title`}
-                    defaultValue="Secondary Objectives"
-                    defaultSize={18}
                     customFields={cf}
                     onFieldChange={onFieldChange}
                     className="font-bold mb-2"

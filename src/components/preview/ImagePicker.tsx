@@ -36,7 +36,7 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
       <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Choose Image</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -44,6 +44,7 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
             const isSelected = url === currentImage;
             return (
               <button
+                type="button"
                 key={url}
                 onClick={() => { onSelect(url); onClose(); }}
                 className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
@@ -63,6 +64,7 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
           {/* Upload new image button */}
           {onUpload && (
             <button
+              type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
               className="h-32 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 flex flex-col items-center justify-center text-gray-400 hover:text-gray-500 transition-colors"
@@ -84,6 +86,7 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
 
         {onRemove && currentImage && (
           <button
+            type="button"
             onClick={() => { onRemove(); onClose(); }}
             className="mt-3 w-full rounded-md border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >

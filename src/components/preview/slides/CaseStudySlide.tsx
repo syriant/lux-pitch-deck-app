@@ -73,7 +73,7 @@ function CaseStudyCard({
 
 export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGalleryAdd }: CaseStudySlideProps) {
   const hasCaseStudies = caseStudies && caseStudies.length > 0;
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   // Per-slide image key so each case study slide can have its own background
@@ -150,6 +150,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
             {/* Swap button */}
             {cards.length === 2 && onFieldChange && (
               <button
+                type="button"
                 onClick={() => onFieldChange('custom', '', 'caseStudy.swapped', swapped ? 'false' : 'true')}
                 className="absolute z-20 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md cursor-pointer"
                 style={{ left: '59%', top: '50%', transform: 'translate(-50%, -50%)' }}

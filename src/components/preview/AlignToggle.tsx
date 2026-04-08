@@ -49,6 +49,7 @@ export function AlignToggle({ fieldKey, align, onFieldChange }: AlignToggleProps
     <div className="flex gap-0.5 rounded bg-black/50 p-0.5">
       {alignItems.map((item) => (
         <button
+          type="button"
           key={item.value}
           onClick={() => onFieldChange('custom', '', fieldKey, item.value)}
           className={`p-1.5 rounded transition-colors ${

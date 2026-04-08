@@ -12,24 +12,25 @@ interface DifferentiatorsSlideProps {
   onGalleryAdd?: (url: string) => void;
 }
 
-const defaultDifferentiators = [
-  { title: 'High-Value Customers', description: 'Access more than 9 million engaged Luxury Escapes members: high-spending travellers looking for inspiration' },
-  { title: 'Reach New Customers', description: "More than 90% of Luxury Escapes members weren't planning to stay at the hotel they booked until they discovered it on Luxury Escapes" },
-  { title: 'Multi-Channel Marketing', description: 'Exclusive access to 360-degree media assets that amplify your brand across social, email, push, and web' },
-  { title: 'Tailored Campaigns', description: 'Our in-house team of world-class writers, editors, designers and videographers will create an incredible campaign' },
-];
+interface DiffItem {
+  key: string;
+  title?: string;
+  description?: string;
+}
 
 export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: DifferentiatorsSlideProps) {
-  const items = deck.differentiators.length > 0
+  // Real differentiators from the deck, or 4 fallback slots whose text comes from SLIDE_DEFAULTS
+  const items: DiffItem[] = deck.differentiators.length > 0
     ? deck.differentiators.map((d) => ({
+        key: d.id,
         title: d.differentiator.title,
         description: d.differentiator.description ?? '',
-        key: d.id,
       }))
-    : defaultDifferentiators.map((d, i) => ({ ...d, key: `default-${i}` }));
+    : [0, 1, 2, 3].map((i) => ({ key: `default-${i}` }));
 
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const cf = { ...deck.templateDefaults, ...deck.customFields };
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
@@ -39,7 +40,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
             fieldKey="diff.headline"
             defaultValue={`By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach ${hotelName} can attract premium travellers, generate incremental demand, and strengthen market share`}
             defaultSize={28}
-            customFields={deck.customFields}
+            customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold leading-snug mb-4"
             style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', color: GREEN }}
@@ -53,7 +54,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
                   fieldKey={`diff.title.${item.key}`}
                   defaultValue={item.title}
                   defaultSize={14}
-                  customFields={deck.customFields}
+                  customFields={cf}
                   onFieldChange={onFieldChange}
                   className="font-bold mb-1"
                 />
@@ -61,7 +62,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
                   fieldKey={`diff.desc.${item.key}`}
                   defaultValue={item.description}
                   defaultSize={10}
-                  customFields={deck.customFields}
+                  customFields={cf}
                   onFieldChange={onFieldChange}
                   className="leading-relaxed"
                 />
@@ -72,7 +73,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
 
         <SlideImage
           fieldKey="image.differentiators"
-          customFields={deck.customFields}
+          customFields={cf}
           gallery={deck.gallery}
           onFieldChange={onFieldChange}
           onGalleryAdd={onGalleryAdd}

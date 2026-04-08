@@ -51,10 +51,8 @@ const fallbackBody = `From reviewing your rates in market and applied learnings 
 <li><strong>Option Three:</strong> details to be confirmed</li>
 </ul>`;
 
-const defaultFooter = `<strong>Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.</strong>`;
-
 export function CampaignOptionsSlide({ deck, onFieldChange, onGalleryAdd }: CampaignOptionsSlideProps) {
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const allOptions = deck.properties.flatMap((p) => p.options);
   const bodyDefault = allOptions.length > 0 ? buildBodyFromOptions(allOptions) : fallbackBody;
@@ -67,6 +65,7 @@ export function CampaignOptionsSlide({ deck, onFieldChange, onGalleryAdd }: Camp
         <div className="flex-1 flex flex-col">
           {onFieldChange && cf?.['campOpt.body'] && allOptions.length > 0 && (
             <button
+              type="button"
               onClick={() => onFieldChange('custom', '', 'campOpt.body', bodyDefault)}
               className="mb-2 text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
               title="Reset body text to match current deal options"
@@ -77,8 +76,6 @@ export function CampaignOptionsSlide({ deck, onFieldChange, onGalleryAdd }: Camp
 
           <SlideRichText
             fieldKey="campOpt.headline"
-            defaultValue="Your tailored campaign options"
-            defaultSize={28}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold leading-snug mb-3"
@@ -97,8 +94,6 @@ export function CampaignOptionsSlide({ deck, onFieldChange, onGalleryAdd }: Camp
 
           <SlideRichText
             fieldKey="campOpt.footer"
-            defaultValue={defaultFooter}
-            defaultSize={14}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="leading-snug mt-3"

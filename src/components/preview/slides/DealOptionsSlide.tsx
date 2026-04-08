@@ -23,7 +23,7 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
 
 export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsSlideProps) {
   const hasOptions = property && property.options.length > 0;
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -33,8 +33,6 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
       <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="deal.headline"
-          defaultValue="Your tailored campaign options"
-          defaultSize={20}
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold"
@@ -42,6 +40,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
         />
         {onFieldChange && hasOptions && cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`)) && (
           <button
+            type="button"
             onClick={async () => {
               const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`));
               for (const k of keysToRemove) {
@@ -71,8 +70,6 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
       <div className="px-[5%] pb-1">
         <SlideRichText
           fieldKey="deal.disclaimer"
-          defaultValue="<strong>Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.</strong>"
-          defaultSize={9}
           customFields={cf}
           onFieldChange={onFieldChange}
           style={{ color: '#333' }}

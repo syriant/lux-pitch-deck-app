@@ -3,10 +3,16 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { RichEditableText } from './RichEditableText';
 import { AlignToggle, type Align } from './AlignToggle';
 import { FontSizeControl } from './FontSizeControl';
+import { SLIDE_DEFAULTS } from './slide-defaults';
+import { useSlideEditorContext } from './SlideEditorContext';
 
 interface SlideRichTextProps {
   fieldKey: string;
-  defaultValue: string;
+  /**
+   * Slide-component-level fallback (for interpolated/computed defaults like
+   * "...demand in ${destination}..."). When omitted, falls back to SLIDE_DEFAULTS[fieldKey].
+   */
+  defaultValue?: string;
   defaultSize?: number;
   customFields?: Record<string, string>;
   onFieldChange?: FieldChangeHandler;
@@ -17,21 +23,34 @@ interface SlideRichTextProps {
 export function SlideRichText({
   fieldKey,
   defaultValue,
-  defaultSize = 24,
+  defaultSize,
   customFields,
   onFieldChange,
   className = '',
   style,
 }: SlideRichTextProps) {
-  const value = customFields?.[fieldKey] || defaultValue;
+  // Resolution: customFields (already merged with templateDefaults) > explicit defaultValue > factory constants
+  const factory = SLIDE_DEFAULTS[fieldKey];
+  const resolvedDefault = defaultValue ?? factory?.value ?? '';
+  const resolvedDefaultSize = defaultSize ?? factory?.size ?? 24;
+
+  const value = customFields?.[fieldKey] || resolvedDefault;
   const align = (customFields?.[`${fieldKey}.align`] as Align) || (style?.textAlign as Align) || 'left';
-  const fontSize = Number(customFields?.[`${fieldKey}.size`]) || defaultSize;
+  const fontSize = Number(customFields?.[`${fieldKey}.size`]) || resolvedDefaultSize;
 
   const mergedStyle: React.CSSProperties = {
     ...style,
     textAlign: align,
     fontSize: `${fontSize}px`,
   };
+
+  // Template editor context — when present, show a reset button on overridden fields
+  const editorContext = useSlideEditorContext();
+  const isOverriddenInTemplate =
+    editorContext.templateDefaults?.[fieldKey] !== undefined ||
+    editorContext.templateDefaults?.[`${fieldKey}.size`] !== undefined ||
+    editorContext.templateDefaults?.[`${fieldKey}.align`] !== undefined;
+  const canReset = isOverriddenInTemplate && editorContext.onResetTemplateDefault;
 
   if (!onFieldChange) {
     return (
@@ -92,6 +111,16 @@ export function SlideRichText({
         >
           <AlignToggle fieldKey={`${fieldKey}.align`} align={align} onFieldChange={onFieldChange} />
           <FontSizeControl fieldKey={`${fieldKey}.size`} size={fontSize} onFieldChange={onFieldChange} />
+          {canReset && (
+            <button
+              type="button"
+              onClick={() => editorContext.onResetTemplateDefault?.(fieldKey)}
+              className="bg-white border border-gray-300 rounded shadow-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 hover:text-gray-900 cursor-pointer"
+              title="Reset to factory default"
+            >
+              ↺ Reset
+            </button>
+          )}
         </div>
       )}
     </div>

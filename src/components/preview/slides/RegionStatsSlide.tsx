@@ -25,7 +25,7 @@ const metrics = [
 
 export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }: RegionStatsSlideProps) {
   const destination = property?.destination ?? property?.propertyName ?? 'Your Destination';
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const propKey = property?.id ?? 'empty';
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });

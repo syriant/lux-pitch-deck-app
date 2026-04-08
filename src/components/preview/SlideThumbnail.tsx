@@ -20,6 +20,7 @@ export function SlideThumbnail({ slide, deck, index, isActive, isHidden, onClick
 
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`group flex items-start gap-2 w-full text-left rounded-md p-1.5 transition-colors ${
         isActive ? 'bg-[#E6F9F5]' : 'hover:bg-gray-50'
@@ -41,6 +42,7 @@ export function SlideThumbnail({ slide, deck, index, isActive, isHidden, onClick
         </div>
         {slide.removable && onToggleHidden && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onToggleHidden();

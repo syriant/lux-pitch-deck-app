@@ -34,7 +34,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const uniqueOptions = property ? getUniqueOptions(property.options) : [];
   const groups = property ? groupByOption(property.options) : new Map();
   const hasAssets = uniqueOptions.some((o) => o.marketingAssets && Object.values(o.marketingAssets).some(Boolean));
-  const cf = deck?.customFields;
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   const propId = property?.id ?? 'empty';
@@ -82,8 +82,6 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="mktg.headline"
-          defaultValue="Your tailored campaign options"
-          defaultSize={20}
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold"
@@ -91,6 +89,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
         />
         {onFieldChange && uniqueOptions.length > 0 && hasEdits && (
           <button
+            type="button"
             onClick={async () => {
               const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`));
               for (const k of keysToRemove) {
@@ -157,8 +156,6 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       <div className="px-[5%] pb-1 mt-auto">
         <SlideRichText
           fieldKey="mktg.disclaimer"
-          defaultValue="<strong>Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.</strong>"
-          defaultSize={9}
           customFields={cf}
           onFieldChange={onFieldChange}
           style={{ color: '#333' }}

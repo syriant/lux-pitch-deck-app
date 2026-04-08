@@ -16,6 +16,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   const destination = property?.destination ?? '';
   const heroImgUrl = uploadUrl(deck.heroImage);
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const cf = { ...deck.templateDefaults, ...deck.customFields };
 
   const defaultIntro = destination
     ? `With budgets set to increase and demand in ${destination} projected to grow, now is the ideal time to diversify distribution channels and capture greater market share.`
@@ -32,7 +33,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
               fieldKey="hotelIntro.valueProp"
               defaultValue={defaultIntro}
               defaultSize={34}
-              customFields={deck.customFields}
+              customFields={cf}
               onFieldChange={onFieldChange}
               className="font-bold text-white leading-snug"
               style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}

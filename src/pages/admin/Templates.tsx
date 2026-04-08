@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from 'react';
 import {
   getAllTemplates,
   createTemplate,
@@ -7,6 +7,7 @@ import {
   type DeckTemplate,
   type TemplateSlide,
 } from '@/api/templates.api';
+import { TemplateSlideEditor } from './TemplateSlideEditor';
 
 const ALL_SLIDE_TYPES: Array<{ type: string; label: string; defaultPerProperty?: boolean }> = [
   { type: 'cover', label: 'Cover' },
@@ -152,6 +153,28 @@ export function Templates() {
     }));
   }
 
+  // Derive a Record<string,string> from the array form state for the visual editor.
+  // The array remains the source of truth so the existing key/value editor can still
+  // display in-progress empty rows.
+  const defaultsRecord = useMemo<Record<string, string>>(() => {
+    return form.defaults.reduce<Record<string, string>>((acc, d) => {
+      if (d.key.trim()) acc[d.key.trim()] = d.value;
+      return acc;
+    }, {});
+  }, [form.defaults]);
+
+  // Visual editor writes here. Updates only entries with non-empty keys, preserving
+  // any in-progress empty rows in the array.
+  const setDefaultsRecord = useCallback((next: Record<string, string>) => {
+    setForm((prev) => {
+      // Keep any rows from the array whose key is empty (in-progress entries) or
+      // whose key is no longer in the new record (deleted by visual editor)
+      const emptyRows = prev.defaults.filter((d) => !d.key.trim());
+      const visualRows = Object.entries(next).map(([key, value]) => ({ key, value }));
+      return { ...prev, defaults: [...visualRows, ...emptyRows] };
+    });
+  }, []);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
@@ -202,7 +225,7 @@ export function Templates() {
   if (loading) return <div className="p-8 text-gray-500">Loading...</div>;
 
   return (
-    <div className="p-8 max-w-4xl">
+    <div className={`p-8 ${showForm ? 'max-w-6xl' : 'max-w-4xl'}`}>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Deck Templates</h1>
         <button
@@ -303,10 +326,20 @@ export function Templates() {
             )}
           </div>
 
-          {/* Defaults editor */}
+          {/* Visual slide editor — preview slides and inline-edit their default text */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Slide Defaults (preview & edit)</label>
+            <TemplateSlideEditor
+              slides={form.slides}
+              templateDefaults={defaultsRecord}
+              onTemplateDefaultsChange={setDefaultsRecord}
+            />
+          </div>
+
+          {/* Advanced raw key/value editor */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">Default Text</label>
+              <label className="block text-sm font-medium text-gray-700">Default Text (advanced)</label>
               <button type="button" onClick={addDefault} className="text-xs text-[#01B18B] hover:underline">
                 + Add default
               </button>
