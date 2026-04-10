@@ -38,8 +38,6 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
         <div className="flex-1 flex flex-col">
           <SlideRichText
             fieldKey="diff.headline"
-            defaultValue={`By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach ${hotelName} can attract premium travellers, generate incremental demand, and strengthen market share`}
-            defaultSize={28}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold leading-snug mb-4"

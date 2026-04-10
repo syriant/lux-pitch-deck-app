@@ -58,14 +58,15 @@ export function TemplateSlideEditor({
     }
   }, [safeActiveIndex]);
 
-  // Field change handler — only handles 'custom' edits, writes to local templateDefaults
+  // Field change handler — only handles 'custom' edits for whitelisted keys
   const handleFieldChange = useCallback<FieldChangeHandler>(
     (entityType, _entityId, field, value) => {
-      if (entityType !== 'custom') {
-        // Property/objective/option/case-study edits are no-ops in the template editor
-        // (they would only affect the placeholder data, not be saved anywhere)
-        return;
-      }
+      if (entityType !== 'custom') return;
+      // Defensive: only allow writes to keys that are in SLIDE_DEFAULTS, or their
+      // .size / .align sibling keys. Anything else is dynamic/computed and shouldn't
+      // persist to template defaults.
+      const baseKey = field.replace(/\.(size|align)$/, '');
+      if (!SLIDE_DEFAULTS[baseKey]) return;
       onTemplateDefaultsChange({ ...templateDefaults, [field]: value });
     },
     [templateDefaults, onTemplateDefaultsChange],
@@ -82,6 +83,15 @@ export function TemplateSlideEditor({
     },
     [templateDefaults, onTemplateDefaultsChange],
   );
+
+  // Whitelist of keys allowed to be edited at the template level.
+  // Only fields present in the factory defaults (SLIDE_DEFAULTS) are truly static
+  // and safe to template. Everything else is either:
+  //   - dynamic per-deck (e.g. obj.primary.{id}, caseStudy.{id}.*)
+  //   - computed from deck data (e.g. obj.secondary.all, campOpt.body)
+  //   - interpolated at render time (e.g. hotelIntro.valueProp with ${destination})
+  // Those fields render as read-only in the template editor.
+  const allowedKeys = useMemo(() => new Set(Object.keys(SLIDE_DEFAULTS)), []);
 
   // Belt-and-braces: prevent Enter keys inside contentEditables from bubbling up and
   // accidentally submitting the outer template form.
@@ -107,6 +117,7 @@ export function TemplateSlideEditor({
       value={{
         templateDefaults,
         onResetTemplateDefault: handleResetTemplateDefault,
+        allowedKeys,
       }}
     >
       <div onKeyDownCapture={handleKeyDownCapture}>
@@ -185,7 +196,10 @@ export function TemplateSlideEditor({
         {/* Helper text */}
         <p className="mt-3 text-xs text-gray-500">
           Click any text on the slide to edit it. Hover for font-size, alignment, and reset controls.
-          Edits are saved when you click <strong>Save Template</strong>.
+          Edits are saved when you click <strong>Save Template</strong>. Placeholders like{' '}
+          <code className="rounded bg-gray-200 px-1">{'{hotelName}'}</code> and{' '}
+          <code className="rounded bg-gray-200 px-1">{'{destination}'}</code> are replaced with the
+          actual deck values at render time.
         </p>
       </div>
     </SlideEditorContext.Provider>

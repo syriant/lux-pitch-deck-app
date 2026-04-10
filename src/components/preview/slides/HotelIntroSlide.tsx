@@ -2,8 +2,12 @@ import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
+import { useSlideEditorContext } from '../SlideEditorContext';
 
 const GREEN = '#00b2a0';
+
+const NO_DESTINATION_FALLBACK =
+  'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.';
 
 interface HotelIntroSlideProps {
   deck: FullDeck;
@@ -16,11 +20,17 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   const destination = property?.destination ?? '';
   const heroImgUrl = uploadUrl(deck.heroImage);
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-  const cf = { ...deck.templateDefaults, ...deck.customFields };
 
-  const defaultIntro = destination
-    ? `With budgets set to increase and demand in ${destination} projected to grow, now is the ideal time to diversify distribution channels and capture greater market share.`
-    : 'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.';
+  // SlideRichText handles {destination}/{hotelName} substitution automatically via DeckRenderContext.
+  // Special case: when destination is empty (real deck without one), substitute the
+  // entire field with a no-destination fallback message so the sentence reads naturally.
+  const editorContext = useSlideEditorContext();
+  const isTemplateEditor = editorContext.allowedKeys !== undefined;
+
+  const cf: Record<string, string> = { ...deck.templateDefaults, ...deck.customFields };
+  if (!isTemplateEditor && !destination) {
+    cf['hotelIntro.valueProp'] = NO_DESTINATION_FALLBACK;
+  }
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
@@ -31,8 +41,6 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
           <div className="flex-1 flex items-center">
             <SlideRichText
               fieldKey="hotelIntro.valueProp"
-              defaultValue={defaultIntro}
-              defaultSize={34}
               customFields={cf}
               onFieldChange={onFieldChange}
               className="font-bold text-white leading-snug"

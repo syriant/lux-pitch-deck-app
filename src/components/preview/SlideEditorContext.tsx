@@ -15,6 +15,15 @@ export interface SlideEditorContextValue {
   templateDefaults?: Record<string, string>;
   /** Called when the admin clicks the reset button on a templated field. */
   onResetTemplateDefault?: (fieldKey: string) => void;
+  /**
+   * Whitelist of fieldKeys that are allowed to be edited in the template editor.
+   * Fields not in this set render as read-only (no hover tooltip, no edit cursor,
+   * no persistence). Used to prevent edits to dynamic per-deck keys (like
+   * `obj.primary.{id}`, `caseStudy.{id}.title`, etc.) and computed defaults
+   * (like `obj.secondary.all`, `campOpt.body`) that can't meaningfully live in
+   * template defaults.
+   */
+  allowedKeys?: Set<string>;
 }
 
 export const SlideEditorContext = createContext<SlideEditorContextValue>({});

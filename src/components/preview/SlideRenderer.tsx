@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { type FullDeck } from '@/api/decks.api';
 import { type SlideDefinition } from './slide-types';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { DeckRenderContext } from './DeckRenderContext';
 import { CoverSlide } from './slides/CoverSlide';
 import { HotelIntroSlide } from './slides/HotelIntroSlide';
 import { DifferentiatorsSlide } from './slides/DifferentiatorsSlide';
@@ -25,6 +27,17 @@ interface SlideRendererProps {
 export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd }: SlideRendererProps) {
   const content = renderSlideContent(slide, deck, onFieldChange, onGalleryAdd);
 
+  // Resolve placeholder values from the slide's active property (for per-property
+  // slides) or the deck's first property (for global slides). Used by SlideRichText
+  // to substitute {hotelName} / {destination} etc. in templated text at render time.
+  const placeholders = useMemo<Record<string, string>>(() => {
+    const property = slide.property ?? deck.properties[0];
+    return {
+      hotelName: property?.propertyName ?? deck.name ?? '',
+      destination: property?.destination ?? '',
+    };
+  }, [slide.property, deck.properties, deck.name]);
+
   const style = scale
     ? {
         width: 1280,
@@ -35,15 +48,17 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd 
     : {};
 
   return (
-    <div
-      className="bg-white shadow-lg overflow-hidden"
-      style={{
-        aspectRatio: '16 / 9',
-        ...style,
-      }}
-    >
-      {content}
-    </div>
+    <DeckRenderContext.Provider value={{ placeholders }}>
+      <div
+        className="bg-white shadow-lg overflow-hidden"
+        style={{
+          aspectRatio: '16 / 9',
+          ...style,
+        }}
+      >
+        {content}
+      </div>
+    </DeckRenderContext.Provider>
   );
 }
 

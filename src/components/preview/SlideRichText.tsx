@@ -5,6 +5,7 @@ import { AlignToggle, type Align } from './AlignToggle';
 import { FontSizeControl } from './FontSizeControl';
 import { SLIDE_DEFAULTS } from './slide-defaults';
 import { useSlideEditorContext } from './SlideEditorContext';
+import { useDeckRenderContext, substitutePlaceholders } from './DeckRenderContext';
 
 interface SlideRichTextProps {
   fieldKey: string;
@@ -34,9 +35,20 @@ export function SlideRichText({
   const resolvedDefault = defaultValue ?? factory?.value ?? '';
   const resolvedDefaultSize = defaultSize ?? factory?.size ?? 24;
 
-  const value = customFields?.[fieldKey] || resolvedDefault;
+  const rawValue = customFields?.[fieldKey] || resolvedDefault;
   const align = (customFields?.[`${fieldKey}.align`] as Align) || (style?.textAlign as Align) || 'left';
   const fontSize = Number(customFields?.[`${fieldKey}.size`]) || resolvedDefaultSize;
+
+  // Template editor context — when present, show a reset button on overridden fields
+  // and skip placeholder substitution (so the admin sees the raw {key} syntax).
+  const editorContext = useSlideEditorContext();
+  const deckContext = useDeckRenderContext();
+  const isTemplateEditorMode = editorContext.allowedKeys !== undefined;
+
+  // Substitute {hotelName} / {destination} etc. placeholders for real deck rendering.
+  const value = isTemplateEditorMode
+    ? rawValue
+    : substitutePlaceholders(rawValue, deckContext.placeholders);
 
   const mergedStyle: React.CSSProperties = {
     ...style,
@@ -44,15 +56,19 @@ export function SlideRichText({
     fontSize: `${fontSize}px`,
   };
 
-  // Template editor context — when present, show a reset button on overridden fields
-  const editorContext = useSlideEditorContext();
   const isOverriddenInTemplate =
     editorContext.templateDefaults?.[fieldKey] !== undefined ||
     editorContext.templateDefaults?.[`${fieldKey}.size`] !== undefined ||
     editorContext.templateDefaults?.[`${fieldKey}.align`] !== undefined;
   const canReset = isOverriddenInTemplate && editorContext.onResetTemplateDefault;
 
-  if (!onFieldChange) {
+  // In template editor mode, only fields in the allowedKeys whitelist are editable.
+  // Fields outside the whitelist render as read-only (no onFieldChange wiring).
+  const isAllowedInTemplateEditor =
+    !editorContext.allowedKeys || editorContext.allowedKeys.has(fieldKey);
+  const effectiveOnFieldChange = isAllowedInTemplateEditor ? onFieldChange : undefined;
+
+  if (!effectiveOnFieldChange) {
     return (
       <div
         className={`${className} rich-text`}
@@ -98,7 +114,7 @@ export function SlideRichText({
     >
       <RichEditableText
         value={value}
-        onChange={(v) => onFieldChange('custom', '', fieldKey, v)}
+        onChange={(v) => effectiveOnFieldChange('custom', '', fieldKey, v)}
         className={className}
         style={mergedStyle}
       />
@@ -109,8 +125,8 @@ export function SlideRichText({
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
         >
-          <AlignToggle fieldKey={`${fieldKey}.align`} align={align} onFieldChange={onFieldChange} />
-          <FontSizeControl fieldKey={`${fieldKey}.size`} size={fontSize} onFieldChange={onFieldChange} />
+          <AlignToggle fieldKey={`${fieldKey}.align`} align={align} onFieldChange={effectiveOnFieldChange} />
+          <FontSizeControl fieldKey={`${fieldKey}.size`} size={fontSize} onFieldChange={effectiveOnFieldChange} />
           {canReset && (
             <button
               type="button"

@@ -24,7 +24,20 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
     size: 45,
   },
 
-  // ─── Differentiators (fallback items when deck has none) ─────────────
+  // ─── Hotel Intro ─────────────────────────────────────────────────────
+  // {destination} placeholder is replaced at render time with the property's destination.
+  'hotelIntro.valueProp': {
+    value: 'With budgets set to increase and demand in {destination} projected to grow, now is the ideal time to diversify distribution channels and capture greater market share.',
+    size: 34,
+  },
+
+  // ─── Differentiators ─────────────────────────────────────────────────
+  // {hotelName} placeholder is replaced at render time with the property's name.
+  'diff.headline': {
+    value: "By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach {hotelName} can attract premium travellers, generate incremental demand, and strengthen market share",
+    size: 28,
+  },
+  // Fallback items when deck has no linked differentiators
   'diff.title.default-0': { value: 'High-Value Customers', size: 14 },
   'diff.desc.default-0': {
     value: 'Access more than 9 million engaged Luxury Escapes members: high-spending travellers looking for inspiration',
