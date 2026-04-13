@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
+import { VersionInfo } from '@/components/common/VersionInfo';
 
 interface NavItem {
   label: string;
@@ -96,10 +97,13 @@ export function Sidebar() {
   const isAdmin = user?.roles?.includes('admin');
 
   return (
-    <aside className="w-[220px] shrink-0 bg-white border-r border-gray-200 overflow-y-auto py-4 hidden md:block">
-      <NavSection title="Decks" items={deckLinks} />
-      <NavSection title="Library" items={libraryLinks} />
-      {isAdmin && <NavSection title="Admin" items={adminLinks} />}
+    <aside className="w-[220px] shrink-0 bg-white border-r border-gray-200 overflow-y-auto py-4 hidden md:flex flex-col">
+      <div className="flex-1">
+        <NavSection title="Decks" items={deckLinks} />
+        <NavSection title="Library" items={libraryLinks} />
+        {isAdmin && <NavSection title="Admin" items={adminLinks} />}
+      </div>
+      <VersionInfo className="px-3 pb-2 mt-auto text-center" />
     </aside>
   );
 }

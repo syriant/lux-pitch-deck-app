@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
+import { VersionInfo } from '../components/common/VersionInfo';
 
 export function Login() {
   const [searchParams] = useSearchParams();
@@ -95,6 +96,8 @@ export function Login() {
         >
           Sign in with Microsoft (coming soon)
         </button>
+
+        <VersionInfo className="text-center pt-2" />
       </div>
     </div>
   );
