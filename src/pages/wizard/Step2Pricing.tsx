@@ -30,7 +30,20 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
   const [expandedProperty, setExpandedProperty] = useState<string | null>(
     properties.length === 1 ? properties[0].id : null,
   );
+  const [versionWarnings, setVersionWarnings] = useState<Set<string>>(new Set());
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  function setVersionWarning(propertyId: string) {
+    setVersionWarnings((prev) => new Set(prev).add(propertyId));
+  }
+
+  function dismissVersionWarning(propertyId: string) {
+    setVersionWarnings((prev) => {
+      const next = new Set(prev);
+      next.delete(propertyId);
+      return next;
+    });
+  }
 
   async function handleFileChange(propertyId: string, e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -93,6 +106,10 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
         [propertyId]: { loading: false, error: '', result },
       }));
       setExpandedProperty(propertyId);
+
+      if (!result.version.startsWith('5.1')) {
+        setVersionWarning(propertyId);
+      }
     } catch {
       setParseStates((prev) => ({
         ...prev,
@@ -152,6 +169,25 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
                       className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-[#01B18B] file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-[#009977]"
                     />
                   </div>
+
+                  {versionWarnings.has(prop.id) && state?.result && !state.result.version.startsWith('5.1') && (
+                    <div className="mb-3 rounded-md bg-amber-50 border border-amber-200 p-3 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-amber-800">
+                          Pricing Tool v{state.result.version} detected
+                        </p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          This tool is not version 5.1. Some features (e.g. tier detection, asset entitlements) may not work correctly. We recommend using a v5.1 pricing tool for full functionality.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => dismissVersionWarning(prop.id)}
+                        className="shrink-0 text-amber-600 hover:text-amber-800 text-sm"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
 
                   {state?.loading && <div className="text-sm text-gray-500">Parsing...</div>}
                   {state?.error && <div className="text-sm text-red-600">{state.error}</div>}

@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { getCaseStudies, createCaseStudy, type CaseStudy } from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
+import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 
 interface Step5Props {
@@ -15,7 +17,6 @@ interface InlineForm {
   title: string;
   hotelName: string;
   destination: string;
-  region: string;
   propertyType: string;
   tags: string;
   roomNights: string;
@@ -31,7 +32,6 @@ const emptyForm: InlineForm = {
   title: '',
   hotelName: '',
   destination: '',
-  region: '',
   propertyType: '',
   tags: '',
   roomNights: '',
@@ -63,6 +63,18 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   const [createForm, setCreateForm] = useState<InlineForm>(emptyForm);
   const [createImages, setCreateImages] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDestinations()
+      .then((opts) => {
+        const labels = opts.map((o: DestinationOption) =>
+          o.subDestination ? `${o.destination}, ${o.subDestination}` : o.destination,
+        ).sort((a: string, b: string) => a.localeCompare(b));
+        setDestinationOptions(labels);
+      })
+      .catch(() => {});
+  }, []);
 
   async function load() {
     try {
@@ -127,7 +139,6 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         title: createForm.title,
         hotelName: createForm.hotelName,
         destination: createForm.destination || undefined,
-        region: createForm.region || undefined,
         propertyType: createForm.propertyType || undefined,
         tags: tags.length > 0 ? tags : undefined,
         roomNights: createForm.roomNights ? Number(createForm.roomNights) : undefined,
@@ -251,21 +262,11 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Destination</label>
-              <input
-                type="text"
+              <DestinationCombobox
+                options={destinationOptions}
                 value={createForm.destination}
-                onChange={(e) => setCreateForm({ ...createForm, destination: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Region</label>
-              <input
-                type="text"
-                value={createForm.region}
-                onChange={(e) => setCreateForm({ ...createForm, region: e.target.value })}
-                placeholder="e.g. Asia Pacific"
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+                onChange={(sel) => setCreateForm({ ...createForm, destination: sel.label })}
+                placeholder="Search or type a destination..."
               />
             </div>
             <div>
@@ -421,7 +422,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                   <div className="font-medium text-gray-900">{cs.hotelName}</div>
                   {cs.title && <div className="text-xs text-gray-600">{cs.title}</div>}
                   <div className="text-xs text-gray-500">
-                    {[cs.destination, cs.region].filter(Boolean).join(' · ') || 'No location'}
+                    {cs.destination || 'No location'}
                     {cs.roomNights != null && ` · ${cs.roomNights} RN`}
                     {cs.revenue && ` · $${Number(cs.revenue).toLocaleString()}`}
                   </div>

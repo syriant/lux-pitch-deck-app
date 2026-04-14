@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import {
   createProperty,
   updateProperty,
   deleteProperty,
   type DeckProperty,
 } from '@/api/decks.api';
+import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
+import { DestinationCombobox, type DestinationSelection } from '@/components/common/DestinationCombobox';
 
 interface Step1Props {
   deckId: string;
@@ -16,9 +18,17 @@ interface Step1Props {
 interface PropertyForm {
   propertyName: string;
   destination: string;
+  isCustomDestination: boolean;
 }
 
-const emptyForm: PropertyForm = { propertyName: '', destination: '' };
+const emptyForm: PropertyForm = { propertyName: '', destination: '', isCustomDestination: false };
+
+function formatDestinationLabel(opt: DestinationOption): string {
+  if (opt.subDestination) {
+    return `${opt.destination}, ${opt.subDestination}`;
+  }
+  return opt.destination;
+}
 
 export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: Step1Props) {
   const [showForm, setShowForm] = useState(properties.length === 0);
@@ -26,6 +36,18 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
   const [form, setForm] = useState<PropertyForm>(emptyForm);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDestinations()
+      .then((opts) => {
+        const labels = opts.map(formatDestinationLabel).sort((a, b) => a.localeCompare(b));
+        setDestinationOptions(labels);
+      })
+      .catch(() => {
+        // Silently fail — user can still type manually
+      });
+  }, []);
 
   function openAdd() {
     setForm({ ...emptyForm });
@@ -37,9 +59,18 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
     setForm({
       propertyName: prop.propertyName,
       destination: prop.destination ?? '',
+      isCustomDestination: prop.isCustomDestination ?? false,
     });
     setEditingId(prop.id);
     setShowForm(true);
+  }
+
+  function handleDestinationChange(selection: DestinationSelection) {
+    setForm((prev) => ({
+      ...prev,
+      destination: selection.label,
+      isCustomDestination: selection.isCustom,
+    }));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -51,11 +82,13 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
         await updateProperty(deckId, editingId, {
           propertyName: form.propertyName,
           destination: form.destination || null,
+          isCustomDestination: form.isCustomDestination,
         });
       } else {
         await createProperty(deckId, {
           propertyName: form.propertyName,
           destination: form.destination || undefined,
+          isCustomDestination: form.isCustomDestination,
           sortOrder: properties.length,
         });
       }
@@ -95,7 +128,12 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
               <div>
                 <div className="font-medium text-gray-900">{prop.propertyName}</div>
                 {prop.destination && (
-                  <div className="text-sm text-gray-500">{prop.destination}</div>
+                  <div className="text-sm text-gray-500">
+                    {prop.destination}
+                    {prop.isCustomDestination && (
+                      <span className="ml-2 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700">Custom</span>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex gap-2">
@@ -125,13 +163,17 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Destination</label>
-            <input
-              type="text"
+            <DestinationCombobox
+              options={destinationOptions}
               value={form.destination}
-              onChange={(e) => setForm({ ...form, destination: e.target.value })}
-              placeholder="e.g. Gold Coast, Australia"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+              onChange={handleDestinationChange}
+              placeholder="Search or type a destination..."
             />
+            {form.isCustomDestination && form.destination && (
+              <p className="mt-1 text-xs text-amber-600">
+                This destination is not in the Deal Tiers list and will be flagged for admin review.
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             <button

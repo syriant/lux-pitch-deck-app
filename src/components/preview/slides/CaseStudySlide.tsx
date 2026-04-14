@@ -50,7 +50,7 @@ function CaseStudyCard({
       />
       <SlideRichText
         fieldKey={`caseStudy.${cs.id}.narrative`}
-        defaultValue={cs.narrative || [cs.destination, cs.region].filter(Boolean).join(' · ') + (cs.roomNights != null ? ` · ${cs.roomNights.toLocaleString()} room nights` : '')}
+        defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} room nights` : null].filter(Boolean).join(' · ')}
         defaultSize={15}
         customFields={customFields}
         onFieldChange={onFieldChange}

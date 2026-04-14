@@ -5,7 +5,6 @@ export interface CaseStudy {
   title: string;
   hotelName: string;
   destination: string | null;
-  region: string | null;
   propertyType: string | null;
   roomNights: number | null;
   revenue: string | null;
@@ -39,7 +38,6 @@ export interface CreateCaseStudyRequest {
   title: string;
   hotelName: string;
   destination?: string;
-  region?: string;
   propertyType?: string;
   roomNights?: number;
   revenue?: number;
@@ -59,7 +57,6 @@ export interface UpdateCaseStudyRequest {
   title?: string;
   hotelName?: string;
   destination?: string | null;
-  region?: string | null;
   propertyType?: string | null;
   roomNights?: number | null;
   revenue?: number | null;
@@ -76,7 +73,6 @@ export interface UpdateCaseStudyRequest {
 }
 
 export async function getCaseStudies(params?: {
-  region?: string;
   destination?: string;
   propertyType?: string;
   tag?: string;

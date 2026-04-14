@@ -145,7 +145,7 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
       cells: optNums.map((num) => {
         const first = groups.get(num)![0];
         return first.surcharges?.map((s) =>
-          `${s.period ?? s.name} - $${s.amount} per night`
+          `${s.period ?? s.name} - $${Number(s.amount).toFixed(2)} per night`
         ).join('\n') ?? '-';
       }),
     });

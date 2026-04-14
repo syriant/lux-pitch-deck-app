@@ -28,6 +28,16 @@ export interface UploadResult {
   rulesImported: number;
 }
 
+export interface DestinationOption {
+  destination: string;
+  subDestination: string | null;
+}
+
+export async function getDestinations(): Promise<DestinationOption[]> {
+  const res = await apiClient.get<DestinationOption[]>('/deal-tiers/destinations');
+  return res.data;
+}
+
 export async function getDealTierRules(): Promise<DealTierRule[]> {
   const res = await apiClient.get<DealTierRule[]>('/deal-tiers/rules');
   return res.data;

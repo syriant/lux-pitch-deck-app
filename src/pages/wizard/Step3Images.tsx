@@ -191,9 +191,25 @@ export function Step3Images({ deckId, coverImage, heroImage, gallery: initialGal
         )}
       </div>
 
+      {!cover && !hero && (
+        <p className="mb-2 text-xs text-amber-600">Please upload a cover and hero image before proceeding.</p>
+      )}
+      {(cover && !hero) && (
+        <p className="mb-2 text-xs text-amber-600">Please upload a hero image before proceeding.</p>
+      )}
+      {(!cover && hero) && (
+        <p className="mb-2 text-xs text-amber-600">Please upload a cover image before proceeding.</p>
+      )}
+
       <div className="flex justify-between">
         <button onClick={onBack} className="rounded-md border border-gray-300 px-6 py-2 text-sm text-gray-700 hover:bg-gray-50">Back</button>
-        <button onClick={onNext} className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977]">Next: Objectives</button>
+        <button
+          onClick={onNext}
+          disabled={!cover || !hero}
+          className="rounded-md bg-[#01B18B] px-6 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
+        >
+          Next: Objectives
+        </button>
       </div>
     </div>
   );

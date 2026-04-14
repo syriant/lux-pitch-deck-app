@@ -19,6 +19,7 @@ export interface DeckProperty {
   deckId: string;
   propertyName: string;
   destination: string | null;
+  isCustomDestination: boolean;
   grade: string | null;
   tier: number | null;
   gmPercentage: string | null;
@@ -60,12 +61,14 @@ export interface CreateDeckRequest {
 export interface CreatePropertyRequest {
   propertyName: string;
   destination?: string;
+  isCustomDestination?: boolean;
   sortOrder?: number;
 }
 
 export interface UpdatePropertyRequest {
   propertyName?: string;
   destination?: string | null;
+  isCustomDestination?: boolean;
   grade?: string | null;
   tier?: number | null;
   gmPercentage?: number | null;
@@ -185,7 +188,6 @@ export interface DeckCaseStudyLink {
     title: string;
     hotelName: string;
     destination: string | null;
-    region: string | null;
     propertyType: string | null;
     roomNights: number | null;
     revenue: string | null;

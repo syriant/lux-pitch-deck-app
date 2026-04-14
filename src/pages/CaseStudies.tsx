@@ -6,14 +6,15 @@ import {
   deleteCaseStudy,
   type CaseStudy,
 } from '@/api/case-studies.api';
+import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 
 interface FormData {
   title: string;
   hotelName: string;
   destination: string;
-  region: string;
   propertyType: string;
   roomNights: string;
   revenue: string;
@@ -27,7 +28,7 @@ interface FormData {
 }
 
 const emptyForm: FormData = {
-  title: '', hotelName: '', destination: '', region: '', propertyType: '',
+  title: '', hotelName: '', destination: '', propertyType: '',
   roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
   narrative: '', tags: '', images: [],
 };
@@ -39,17 +40,27 @@ export function CaseStudies() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
-  const [regionFilter, setRegionFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<CaseStudy | null>(null);
+  const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    getDestinations()
+      .then((opts) => {
+        const labels = opts.map((o: DestinationOption) =>
+          o.subDestination ? `${o.destination}, ${o.subDestination}` : o.destination,
+        ).sort((a: string, b: string) => a.localeCompare(b));
+        setDestinationOptions(labels);
+      })
+      .catch(() => {});
+  }, []);
 
   async function load() {
     try {
       const res = await getCaseStudies({
         search: search || undefined,
-        region: regionFilter || undefined,
         page,
         limit: 20,
       });
@@ -62,7 +73,7 @@ export function CaseStudies() {
     }
   }
 
-  useEffect(() => { setLoading(true); load(); }, [page, search, regionFilter]);
+  useEffect(() => { setLoading(true); load(); }, [page, search]);
 
   function openCreate() {
     setForm({ ...emptyForm });
@@ -75,7 +86,6 @@ export function CaseStudies() {
       title: item.title,
       hotelName: item.hotelName,
       destination: item.destination ?? '',
-      region: item.region ?? '',
       propertyType: item.propertyType ?? '',
       roomNights: item.roomNights?.toString() ?? '',
       revenue: item.revenue ?? '',
@@ -99,7 +109,6 @@ export function CaseStudies() {
         title: form.title,
         hotelName: form.hotelName,
         destination: form.destination || undefined,
-        region: form.region || undefined,
         propertyType: form.propertyType || undefined,
         roomNights: form.roomNights ? parseInt(form.roomNights) : undefined,
         revenue: form.revenue ? parseFloat(form.revenue) : undefined,
@@ -169,13 +178,6 @@ export function CaseStudies() {
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
         />
-        <input
-          type="text"
-          placeholder="Filter by region..."
-          value={regionFilter}
-          onChange={(e) => { setRegionFilter(e.target.value); setPage(1); }}
-          className="w-48 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
-        />
       </div>
 
       {showForm && (
@@ -195,13 +197,12 @@ export function CaseStudies() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Destination</label>
-              <input type="text" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Region</label>
-              <input type="text" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
+              <DestinationCombobox
+                options={destinationOptions}
+                value={form.destination}
+                onChange={(sel) => setForm({ ...form, destination: sel.label })}
+                placeholder="Search or type a destination..."
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Property Type</label>
@@ -294,7 +295,6 @@ export function CaseStudies() {
                 <th className="pb-3 pr-4 w-20"></th>
                 <th className="pb-3 pr-4">Hotel</th>
                 <th className="pb-3 pr-4">Destination</th>
-                <th className="pb-3 pr-4">Region</th>
                 <th className="pb-3 pr-4 text-right">Room Nights</th>
                 <th className="pb-3 pr-4 text-right">Revenue</th>
                 <th className="pb-3">Actions</th>
@@ -321,7 +321,6 @@ export function CaseStudies() {
                     <div className="text-xs text-gray-500">{item.title}</div>
                   </td>
                   <td className="py-3 pr-4 text-gray-600">{item.destination ?? '-'}</td>
-                  <td className="py-3 pr-4 text-gray-600">{item.region ?? '-'}</td>
                   <td className="py-3 pr-4 text-right font-mono text-gray-700">{formatNum(item.roomNights?.toString() ?? null)}</td>
                   <td className="py-3 pr-4 text-right font-mono text-gray-700">{item.revenue ? `$${formatNum(item.revenue)}` : '-'}</td>
                   <td className="py-3">
