@@ -46,3 +46,8 @@ export async function getMeApi(): Promise<AuthUser> {
   const res = await apiClient.get<AuthUser>('/auth/me');
   return res.data;
 }
+
+export async function microsoftLoginApi(idToken: string): Promise<LoginResponse> {
+  const res = await apiClient.post<LoginResponse>('/auth/microsoft', { idToken });
+  return res.data;
+}

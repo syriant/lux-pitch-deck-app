@@ -27,6 +27,10 @@ export const router = createBrowserRouter([
     path: '/login',
     element: <Login />,
   },
+  {
+    path: '/auth/callback',
+    element: <Login />,
+  },
   // Pages with sidebar
   {
     element: (

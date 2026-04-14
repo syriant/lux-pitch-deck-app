@@ -10,7 +10,10 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [msLoading, setMsLoading] = useState(false);
   const login = useAuthStore((s) => s.login);
+  const loginWithMicrosoft = useAuthStore((s) => s.loginWithMicrosoft);
+  const ssoConfigured = useAuthStore((s) => s.isSsoConfigured);
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
@@ -91,10 +94,29 @@ export function Login() {
 
         <button
           type="button"
-          disabled
-          className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-500 cursor-not-allowed"
+          disabled={!ssoConfigured || msLoading}
+          onClick={async () => {
+            setError('');
+            setMsLoading(true);
+            try {
+              await loginWithMicrosoft();
+              navigate('/');
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : 'Microsoft sign-in failed';
+              if (!msg.includes('user_cancelled')) {
+                setError(msg);
+              }
+            } finally {
+              setMsLoading(false);
+            }
+          }}
+          className={`w-full rounded-md border border-gray-300 bg-white px-4 py-2 ${
+            ssoConfigured
+              ? 'text-gray-700 hover:bg-gray-50 cursor-pointer'
+              : 'text-gray-400 cursor-not-allowed'
+          } disabled:opacity-50`}
         >
-          Sign in with Microsoft (coming soon)
+          {msLoading ? 'Signing in...' : ssoConfigured ? 'Sign in with Microsoft' : 'Sign in with Microsoft (coming soon)'}
         </button>
 
         <VersionInfo className="text-center pt-2" />

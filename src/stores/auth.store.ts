@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { loginApi, refreshApi, logoutApi, getMeApi, type AuthUser, type LoginRequest } from '../api/auth.api';
+import { loginApi, refreshApi, logoutApi, getMeApi, microsoftLoginApi, type AuthUser, type LoginRequest } from '../api/auth.api';
+import { getMsalInstance, loginRequest, isSsoConfigured } from '../config/msal';
 
 interface AuthState {
   user: AuthUser | null;
@@ -9,6 +10,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: LoginRequest) => Promise<void>;
+  loginWithMicrosoft: () => Promise<void>;
+  isSsoConfigured: boolean;
   refresh: () => Promise<string | null>;
   logout: () => void;
   loadUser: () => Promise<void>;
@@ -22,9 +25,30 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isSsoConfigured,
 
       login: async (data: LoginRequest) => {
         const res = await loginApi(data);
+        set({
+          user: res.user,
+          accessToken: res.accessToken,
+          refreshToken: res.refreshToken,
+          isAuthenticated: true,
+        });
+      },
+
+      loginWithMicrosoft: async () => {
+        const msalInstance = await getMsalInstance();
+        if (!msalInstance) {
+          throw new Error('Microsoft SSO is not configured');
+        }
+
+        const result = await msalInstance.loginPopup(loginRequest);
+        if (!result.idToken) {
+          throw new Error('No ID token received from Microsoft');
+        }
+
+        const res = await microsoftLoginApi(result.idToken);
         set({
           user: res.user,
           accessToken: res.accessToken,
