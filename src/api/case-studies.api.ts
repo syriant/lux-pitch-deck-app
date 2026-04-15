@@ -12,6 +12,12 @@ export interface CaseStudy {
   alos: string | null;
   leadTime: number | null;
   bookings: number | null;
+  packagesSold: number | null;
+  upgradePercentage: string | null;
+  roomTypeBreakdowns: { roomType: string; count: number; percentage: number }[] | null;
+  customerRegions: { region: string; percentage: number }[] | null;
+  metricsRefreshedAt: string | null;
+  metricsSource: string | null;
   narrative: string | null;
   pcmNotes: string | null;
   images: string[] | null;
@@ -45,6 +51,10 @@ export interface CreateCaseStudyRequest {
   alos?: number;
   leadTime?: number;
   bookings?: number;
+  packagesSold?: number;
+  upgradePercentage?: number;
+  roomTypeBreakdowns?: { roomType: string; count: number; percentage: number }[];
+  customerRegions?: { region: string; percentage: number }[];
   narrative?: string;
   pcmNotes?: string;
   images?: string[];
@@ -64,6 +74,10 @@ export interface UpdateCaseStudyRequest {
   alos?: number | null;
   leadTime?: number | null;
   bookings?: number | null;
+  packagesSold?: number | null;
+  upgradePercentage?: number | null;
+  roomTypeBreakdowns?: { roomType: string; count: number; percentage: number }[] | null;
+  customerRegions?: { region: string; percentage: number }[] | null;
   narrative?: string | null;
   pcmNotes?: string | null;
   images?: string[] | null;

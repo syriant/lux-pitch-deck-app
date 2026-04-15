@@ -6,6 +6,7 @@ import {
   deleteCaseStudy,
   type CaseStudy,
 } from '@/api/case-studies.api';
+import { fetchTableauMetrics } from '@/api/tableau.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
@@ -16,20 +17,24 @@ interface FormData {
   hotelName: string;
   destination: string;
   propertyType: string;
+  dealId: string;
   roomNights: string;
   revenue: string;
   adr: string;
   alos: string;
   leadTime: string;
   bookings: string;
+  packagesSold: string;
+  upgradePercentage: string;
   narrative: string;
   tags: string;
   images: string[];
 }
 
 const emptyForm: FormData = {
-  title: '', hotelName: '', destination: '', propertyType: '',
+  title: '', hotelName: '', destination: '', propertyType: '', dealId: '',
   roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
+  packagesSold: '', upgradePercentage: '',
   narrative: '', tags: '', images: [],
 };
 
@@ -45,6 +50,8 @@ export function CaseStudies() {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<CaseStudy | null>(null);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+  const [fetchingMetrics, setFetchingMetrics] = useState(false);
+  const [metricsMessage, setMetricsMessage] = useState('');
 
   useEffect(() => {
     getDestinations()
@@ -78,6 +85,7 @@ export function CaseStudies() {
   function openCreate() {
     setForm({ ...emptyForm });
     setEditingId(null);
+    setMetricsMessage('');
     setShowForm(true);
   }
 
@@ -87,18 +95,52 @@ export function CaseStudies() {
       hotelName: item.hotelName,
       destination: item.destination ?? '',
       propertyType: item.propertyType ?? '',
+      dealId: item.dealId ?? '',
       roomNights: item.roomNights?.toString() ?? '',
       revenue: item.revenue ?? '',
       adr: item.adr ?? '',
       alos: item.alos ?? '',
       leadTime: item.leadTime?.toString() ?? '',
       bookings: item.bookings?.toString() ?? '',
+      packagesSold: item.packagesSold?.toString() ?? '',
+      upgradePercentage: item.upgradePercentage ?? '',
       narrative: item.narrative ?? '',
       tags: item.tags?.join(', ') ?? '',
       images: item.images ?? [],
     });
     setEditingId(item.id);
+    setMetricsMessage('');
     setShowForm(true);
+  }
+
+  async function handleFetchMetrics() {
+    if (!form.dealId.trim()) return;
+    setFetchingMetrics(true);
+    setMetricsMessage('');
+    try {
+      const metrics = await fetchTableauMetrics(form.dealId.trim());
+      setForm((prev) => ({
+        ...prev,
+        roomNights: metrics.roomNights?.toString() ?? prev.roomNights,
+        revenue: metrics.revenue?.toString() ?? prev.revenue,
+        adr: metrics.adr?.toString() ?? prev.adr,
+        alos: metrics.alos?.toString() ?? prev.alos,
+        leadTime: metrics.leadTime?.toString() ?? prev.leadTime,
+        bookings: metrics.bookings?.toString() ?? prev.bookings,
+        packagesSold: metrics.packagesSold?.toString() ?? prev.packagesSold,
+        upgradePercentage: metrics.upgradePercentage?.toString() ?? prev.upgradePercentage,
+      }));
+      setMetricsMessage('Metrics populated from Tableau');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 503) {
+        setMetricsMessage('Tableau is not configured yet — enter metrics manually');
+      } else {
+        setMetricsMessage('Failed to fetch metrics from Tableau');
+      }
+    } finally {
+      setFetchingMetrics(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -110,12 +152,15 @@ export function CaseStudies() {
         hotelName: form.hotelName,
         destination: form.destination || undefined,
         propertyType: form.propertyType || undefined,
+        dealId: form.dealId || undefined,
         roomNights: form.roomNights ? parseInt(form.roomNights) : undefined,
         revenue: form.revenue ? parseFloat(form.revenue) : undefined,
         adr: form.adr ? parseFloat(form.adr) : undefined,
         alos: form.alos ? parseFloat(form.alos) : undefined,
         leadTime: form.leadTime ? parseInt(form.leadTime) : undefined,
         bookings: form.bookings ? parseInt(form.bookings) : undefined,
+        packagesSold: form.packagesSold ? parseInt(form.packagesSold) : undefined,
+        upgradePercentage: form.upgradePercentage ? parseFloat(form.upgradePercentage) : undefined,
         narrative: form.narrative || undefined,
         tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
         images: form.images,
@@ -214,6 +259,28 @@ export function CaseStudies() {
               <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Deal ID</label>
+              <div className="mt-1 flex gap-2">
+                <input type="text" value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}
+                  placeholder="e.g. 12345"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
+                <button
+                  type="button"
+                  disabled={!form.dealId.trim() || fetchingMetrics}
+                  onClick={handleFetchMetrics}
+                  className="shrink-0 rounded-md border border-[#01B18B] px-3 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {fetchingMetrics ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
+                  Fetch Metrics
+                </button>
+              </div>
+              {metricsMessage && (
+                <p className={`mt-1 text-xs ${metricsMessage.includes('populated') ? 'text-[#01B18B]' : 'text-amber-600'}`}>
+                  {metricsMessage}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-5 gap-4">
@@ -241,6 +308,25 @@ export function CaseStudies() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Bookings</label>
               <input type="number" value={form.bookings} onChange={(e) => setForm({ ...form, bookings: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Lead Time (days)</label>
+              <input type="number" value={form.leadTime} onChange={(e) => setForm({ ...form, leadTime: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Packages Sold</label>
+              <input type="number" value={form.packagesSold} onChange={(e) => setForm({ ...form, packagesSold: e.target.value })}
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Upgrade %</label>
+              <input type="number" step="0.01" value={form.upgradePercentage} onChange={(e) => setForm({ ...form, upgradePercentage: e.target.value })}
+                placeholder="e.g. 12.5"
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
           </div>
