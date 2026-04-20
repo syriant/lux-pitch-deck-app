@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getObjectiveTemplates, type ObjectiveTemplate } from '@/api/objectives.api';
 import { getDifferentiators, type Differentiator } from '@/api/differentiators.api';
-import { setDeckObjectives, setDeckDifferentiators, getDeckObjectives, getDeckDifferentiators } from '@/api/decks.api';
+import { setDeckObjectives, setDeckDifferentiators, getDeckObjectives, getDeckDifferentiators, type FullDeck, type DeckDifferentiatorFull } from '@/api/decks.api';
+import { SlideRenderer } from '@/components/preview/SlideRenderer';
 
 interface Step4Props {
   deckId: string;
+  deck: FullDeck;
   onBack: () => void;
   onNext: () => void;
 }
 
-export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
+export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
   const [templates, setTemplates] = useState<ObjectiveTemplate[]>([]);
   const [allDifferentiators, setAllDifferentiators] = useState<Differentiator[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
@@ -167,7 +169,7 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
-      <div className="grid grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         {/* Left: Objectives */}
         <div>
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Objective Templates</h3>
@@ -274,6 +276,19 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
             })}
           </div>
         </div>
+
+        {/* Right: Live DifferentiatorsSlide preview */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            Slide Preview
+            {selectedDiffIds.size > 0 && (
+              <span className="ml-2 font-normal text-gray-400 text-xs">
+                ({selectedDiffIds.size} on slide)
+              </span>
+            )}
+          </h3>
+          <DifferentiatorsPreview deck={deck} allDifferentiators={allDifferentiators} selectedDiffIds={selectedDiffIds} />
+        </div>
       </div>
 
       <div className="flex justify-between">
@@ -290,6 +305,86 @@ export function Step4Objectives({ deckId, onBack, onNext }: Step4Props) {
         >
           {saving ? 'Saving...' : 'Next: Case Studies'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+interface DifferentiatorsPreviewProps {
+  deck: FullDeck;
+  allDifferentiators: Differentiator[];
+  selectedDiffIds: Set<string>;
+}
+
+function DifferentiatorsPreview({ deck, allDifferentiators, selectedDiffIds }: DifferentiatorsPreviewProps) {
+  const thumbWidth = 300;
+  const scale = thumbWidth / 1280;
+  const thumbHeight = thumbWidth * (9 / 16);
+
+  const previewDeck = useMemo<FullDeck>(() => {
+    const selected: DeckDifferentiatorFull[] = allDifferentiators
+      .filter((d) => selectedDiffIds.has(d.id))
+      .map((d, idx) => ({
+        id: `preview-${d.id}`,
+        deckId: deck.id,
+        differentiatorId: d.id,
+        sortOrder: idx,
+        differentiator: {
+          id: d.id,
+          title: d.title,
+          description: d.description ?? null,
+          category: d.category ?? null,
+        },
+      }));
+    return { ...deck, differentiators: selected };
+  }, [deck, allDifferentiators, selectedDiffIds]);
+
+  if (selectedDiffIds.size === 0) {
+    return (
+      <div className="rounded-md border border-dashed border-gray-200 p-4 text-xs text-gray-400 text-center">
+        Select differentiators to preview how they will appear on the slide.
+      </div>
+    );
+  }
+
+  const selected = allDifferentiators.filter((d) => selectedDiffIds.has(d.id));
+
+  return (
+    <div className="space-y-3">
+      <div
+        className="rounded border border-gray-200 shadow-sm overflow-hidden"
+        style={{ width: thumbWidth, height: thumbHeight }}
+      >
+        <SlideRenderer
+          slide={{ id: 'differentiators', type: 'differentiators', label: 'Why Partner With Us' }}
+          deck={previewDeck}
+          scale={scale}
+        />
+      </div>
+      <div className="space-y-2" style={{ width: thumbWidth }}>
+        {selected.map((diff) => (
+          <div
+            key={diff.id}
+            className="rounded-md p-3"
+            style={{ backgroundColor: '#dff0ee' }}
+          >
+            <div
+              className="w-8 border-t-2 mb-2"
+              style={{ borderColor: '#00b2a0' }}
+            />
+            <div
+              className="text-sm font-bold mb-1"
+              style={{ color: '#00b2a0' }}
+            >
+              {diff.title}
+            </div>
+            {diff.description && (
+              <div className="text-xs text-gray-700 leading-relaxed">
+                {diff.description}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -104,6 +104,7 @@ export function DeckWizard() {
         {currentStep === 4 && (
           <Step4Objectives
             deckId={deck.id}
+            deck={deck}
             onBack={() => setCurrentStep(3)}
             onNext={() => setCurrentStep(5)}
           />
