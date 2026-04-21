@@ -8,6 +8,7 @@ import { DealTiers } from './pages/admin/DealTiers';
 import { ParserTest } from './pages/admin/ParserTest';
 import { Templates } from './pages/admin/Templates';
 import { ImageLibrary } from './pages/admin/ImageLibrary';
+import { LlmSettings } from './pages/admin/LlmSettings';
 import { DeckWizard } from './pages/wizard/DeckWizard';
 import { DeckPreview } from './pages/DeckPreview';
 import { DeckPrint } from './pages/DeckPrint';
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
       { path: '/admin/deal-tiers', element: <DealTiers /> },
       { path: '/admin/templates', element: <Templates /> },
       { path: '/admin/image-library', element: <ImageLibrary /> },
+      { path: '/admin/llm', element: <LlmSettings /> },
       { path: '/admin/parser-test', element: <ParserTest /> },
     ],
   },

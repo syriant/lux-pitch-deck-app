@@ -4,13 +4,17 @@ import {
   createCaseStudy,
   updateCaseStudy,
   deleteCaseStudy,
+  parseCaseStudyPdf,
   type CaseStudy,
+  type CaseStudyDraft,
+  type DuplicateCandidate,
 } from '@/api/case-studies.api';
 import { fetchTableauMetrics } from '@/api/tableau.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
-import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { uploadUrl } from '@/api/upload.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
+import { ImagePicker } from '@/components/case-studies/ImagePicker';
 
 interface FormData {
   title: string;
@@ -52,13 +56,21 @@ export function CaseStudies() {
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
   const [metricsMessage, setMetricsMessage] = useState('');
+  const [parsingPdf, setParsingPdf] = useState(false);
+  const [pdfMessage, setPdfMessage] = useState('');
+  const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   useEffect(() => {
     getDestinations()
       .then((opts) => {
-        const labels = opts.map((o: DestinationOption) =>
-          o.subDestination ? `${o.destination}, ${o.subDestination}` : o.destination,
-        ).sort((a: string, b: string) => a.localeCompare(b));
+        const labelSet = new Set<string>();
+        for (const o of opts as DestinationOption[]) {
+          if (o.subDestination) labelSet.add(`${o.destination}, ${o.subDestination}`);
+          labelSet.add(o.destination);
+        }
+        const labels = [...labelSet].sort((a, b) => a.localeCompare(b));
         setDestinationOptions(labels);
       })
       .catch(() => {});
@@ -143,29 +155,33 @@ export function CaseStudies() {
     }
   }
 
+  function buildPayload() {
+    return {
+      title: form.title,
+      hotelName: form.hotelName,
+      destination: form.destination || undefined,
+      propertyType: form.propertyType || undefined,
+      dealId: form.dealId || undefined,
+      roomNights: form.roomNights ? parseInt(form.roomNights) : undefined,
+      revenue: form.revenue ? parseFloat(form.revenue) : undefined,
+      adr: form.adr ? parseFloat(form.adr) : undefined,
+      alos: form.alos ? parseFloat(form.alos) : undefined,
+      leadTime: form.leadTime ? parseInt(form.leadTime) : undefined,
+      bookings: form.bookings ? parseInt(form.bookings) : undefined,
+      packagesSold: form.packagesSold ? parseInt(form.packagesSold) : undefined,
+      upgradePercentage: form.upgradePercentage ? parseFloat(form.upgradePercentage) : undefined,
+      narrative: form.narrative || undefined,
+      tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+      images: form.images,
+    };
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    try {
-      const payload = {
-        title: form.title,
-        hotelName: form.hotelName,
-        destination: form.destination || undefined,
-        propertyType: form.propertyType || undefined,
-        dealId: form.dealId || undefined,
-        roomNights: form.roomNights ? parseInt(form.roomNights) : undefined,
-        revenue: form.revenue ? parseFloat(form.revenue) : undefined,
-        adr: form.adr ? parseFloat(form.adr) : undefined,
-        alos: form.alos ? parseFloat(form.alos) : undefined,
-        leadTime: form.leadTime ? parseInt(form.leadTime) : undefined,
-        bookings: form.bookings ? parseInt(form.bookings) : undefined,
-        packagesSold: form.packagesSold ? parseInt(form.packagesSold) : undefined,
-        upgradePercentage: form.upgradePercentage ? parseFloat(form.upgradePercentage) : undefined,
-        narrative: form.narrative || undefined,
-        tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-        images: form.images,
-      };
+    const payload = buildPayload();
 
+    try {
       if (editingId) {
         await updateCaseStudy(editingId, payload);
       } else {
@@ -174,8 +190,70 @@ export function CaseStudies() {
       setShowForm(false);
       setLoading(true);
       await load();
-    } catch {
+    } catch (err: unknown) {
+      const resp = (err as { response?: { status?: number; data?: { candidates?: DuplicateCandidate[] } } })?.response;
+      if (!editingId && resp?.status === 409 && resp.data?.candidates) {
+        setPendingDuplicates(resp.data.candidates);
+        setPendingPayload(payload);
+        return;
+      }
       setError(editingId ? 'Failed to update' : 'Failed to create');
+    }
+  }
+
+  async function confirmDuplicateCreate() {
+    if (!pendingPayload) return;
+    try {
+      await createCaseStudy(pendingPayload, true);
+      setPendingDuplicates(null);
+      setPendingPayload(null);
+      setShowForm(false);
+      setLoading(true);
+      await load();
+    } catch {
+      setError('Failed to create');
+    }
+  }
+
+  async function handlePdfUpload(file: File) {
+    setParsingPdf(true);
+    setPdfMessage('');
+    setError('');
+    try {
+      const draft: CaseStudyDraft = await parseCaseStudyPdf(file);
+      setForm({
+        title: draft.title ?? '',
+        hotelName: draft.hotelName ?? '',
+        destination: draft.destination ?? '',
+        propertyType: draft.propertyType ?? '',
+        dealId: '',
+        roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
+        packagesSold: '', upgradePercentage: '',
+        narrative: draft.narrative ?? '',
+        tags: draft.tags?.join(', ') ?? '',
+        images: draft.images,
+      });
+      setEditingId(null);
+      setShowForm(true);
+      setMetricsMessage('');
+      const parts: string[] = [];
+      parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
+      if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
+      if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
+      if (draft.duplicateCandidates.length > 0) {
+        parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
+      }
+      if (!draft.destinationMatched && draft.destination) {
+        parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
+      }
+      setPdfMessage(parts.join(' · '));
+    } catch (err: unknown) {
+      const resp = (err as { response?: { status?: number; data?: { message?: string | string[] } } })?.response;
+      const raw = resp?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join('; ') : (raw ?? (err as Error)?.message ?? 'Unknown error');
+      setError(`Failed to parse PDF: ${msg}`);
+    } finally {
+      setParsingPdf(false);
     }
   }
 
@@ -204,15 +282,32 @@ export function CaseStudies() {
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Case Study Library</h1>
-        <button
-          onClick={openCreate}
-          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
-        >
-          Add Case Study
-        </button>
+        <div className="flex gap-2">
+          <label className={`rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] cursor-pointer inline-flex items-center gap-2 ${parsingPdf ? 'opacity-50 pointer-events-none' : ''}`}>
+            {parsingPdf ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
+            {parsingPdf ? 'Parsing…' : 'Upload Pitch Deck PDF'}
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) handlePdfUpload(file);
+              }}
+            />
+          </label>
+          <button
+            onClick={openCreate}
+            className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
+          >
+            Add Case Study
+          </button>
+        </div>
       </div>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {pdfMessage && <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">{pdfMessage}</div>}
 
       {/* Filters */}
       <div className="flex gap-3 mb-4">
@@ -342,7 +437,14 @@ export function CaseStudies() {
             <div className="flex gap-2 flex-wrap mb-2">
               {form.images.map((url) => (
                 <div key={url} className="relative group w-20 h-20 rounded border border-gray-200 overflow-hidden">
-                  <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setViewingImage(url)}
+                    className="block w-full h-full"
+                    aria-label="Preview image"
+                  >
+                    <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, images: form.images.filter((u) => u !== url) })}
@@ -352,7 +454,13 @@ export function CaseStudies() {
                   </button>
                 </div>
               ))}
-              <UploadTile onUploaded={(url) => setForm((prev) => ({ ...prev, images: [...prev.images, url] }))} onError={() => setError('Failed to upload image')} />
+              <ImagePicker
+                hotelName={form.hotelName}
+                destination={form.destination}
+                existingUrls={form.images}
+                onPicked={(url) => setForm((prev) => ({ ...prev, images: [...prev.images, url] }))}
+                onError={(msg) => setError(msg)}
+              />
             </div>
           </div>
 
@@ -448,36 +556,65 @@ export function CaseStudies() {
           </div>
         </div>
       )}
+
+      {viewingImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setViewingImage(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
+            className="absolute top-4 right-4 text-white text-3xl leading-none hover:text-gray-300"
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <img
+            src={uploadUrl(viewingImage) ?? ''}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[90vh] object-contain rounded"
+          />
+        </div>
+      )}
+
+      {pendingDuplicates && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Possible Duplicate</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              A case study with a similar hotel name already exists:
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {pendingDuplicates.map((c) => (
+                <li key={c.id} className="flex justify-between rounded-md bg-gray-50 px-3 py-2 text-sm">
+                  <span>
+                    <span className="font-medium text-gray-900">{c.hotelName}</span>
+                    {c.destination && <span className="text-gray-500"> · {c.destination}</span>}
+                  </span>
+                  <span className="text-xs text-gray-500">{Math.round(c.similarity * 100)}% match</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => { setPendingDuplicates(null); setPendingPayload(null); }}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDuplicateCreate}
+                className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
+              >
+                Create anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function UploadTile({ onUploaded, onError }: { onUploaded: (url: string) => void; onError: () => void }) {
-  const [uploading, setUploading] = useState(false);
-  return (
-    <label className={`w-20 h-20 rounded border-2 border-dashed flex items-center justify-center cursor-pointer text-lg ${
-      uploading ? 'border-[#01B18B] bg-[#E6F9F5]' : 'border-gray-300 hover:border-gray-400 text-gray-400'
-    }`}>
-      {uploading ? <Spinner size="sm" className="text-[#01B18B]" /> : '+'}
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          setUploading(true);
-          try {
-            const result = await uploadImage(file);
-            onUploaded(result.url);
-          } catch {
-            onError();
-          } finally {
-            setUploading(false);
-          }
-          e.target.value = '';
-        }}
-      />
-    </label>
-  );
-}

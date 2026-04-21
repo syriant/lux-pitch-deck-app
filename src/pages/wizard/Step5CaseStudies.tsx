@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
-import { getCaseStudies, createCaseStudy, type CaseStudy } from '@/api/case-studies.api';
+import {
+  getCaseStudies,
+  createCaseStudy,
+  parseCaseStudyPdf,
+  type CaseStudy,
+  type CaseStudyDraft,
+  type DuplicateCandidate,
+} from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
-import { uploadImage, uploadUrl } from '@/api/upload.api';
+import { uploadUrl } from '@/api/upload.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
+import { ImagePicker } from '@/components/case-studies/ImagePicker';
 
 interface Step5Props {
   deckId: string;
@@ -64,13 +72,21 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   const [createImages, setCreateImages] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+  const [parsingPdf, setParsingPdf] = useState(false);
+  const [pdfMessage, setPdfMessage] = useState('');
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
 
   useEffect(() => {
     getDestinations()
       .then((opts) => {
-        const labels = opts.map((o: DestinationOption) =>
-          o.subDestination ? `${o.destination}, ${o.subDestination}` : o.destination,
-        ).sort((a: string, b: string) => a.localeCompare(b));
+        const labelSet = new Set<string>();
+        for (const o of opts as DestinationOption[]) {
+          if (o.subDestination) labelSet.add(`${o.destination}, ${o.subDestination}`);
+          labelSet.add(o.destination);
+        }
+        const labels = [...labelSet].sort((a, b) => a.localeCompare(b));
         setDestinationOptions(labels);
       })
       .catch(() => {});
@@ -126,39 +142,110 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   function openCreateForm() {
     setCreateForm(emptyForm);
     setCreateImages([]);
+    setPdfMessage('');
     setShowCreateForm(true);
+  }
+
+  function buildCreatePayload() {
+    const tags = createForm.tags.split(',').map((t) => t.trim()).filter(Boolean);
+    return {
+      title: createForm.title,
+      hotelName: createForm.hotelName,
+      destination: createForm.destination || undefined,
+      propertyType: createForm.propertyType || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      roomNights: createForm.roomNights ? Number(createForm.roomNights) : undefined,
+      revenue: createForm.revenue ? Number(createForm.revenue) : undefined,
+      adr: createForm.adr ? Number(createForm.adr) : undefined,
+      alos: createForm.alos ? Number(createForm.alos) : undefined,
+      leadTime: createForm.leadTime ? Number(createForm.leadTime) : undefined,
+      bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
+      narrative: createForm.narrative || undefined,
+      images: createImages.length > 0 ? createImages : undefined,
+    };
   }
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setCreating(true);
     setError('');
+    const payload = buildCreatePayload();
     try {
-      const tags = createForm.tags.split(',').map((t) => t.trim()).filter(Boolean);
-      const created = await createCaseStudy({
-        title: createForm.title,
-        hotelName: createForm.hotelName,
-        destination: createForm.destination || undefined,
-        propertyType: createForm.propertyType || undefined,
-        tags: tags.length > 0 ? tags : undefined,
-        roomNights: createForm.roomNights ? Number(createForm.roomNights) : undefined,
-        revenue: createForm.revenue ? Number(createForm.revenue) : undefined,
-        adr: createForm.adr ? Number(createForm.adr) : undefined,
-        alos: createForm.alos ? Number(createForm.alos) : undefined,
-        leadTime: createForm.leadTime ? Number(createForm.leadTime) : undefined,
-        bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
-        narrative: createForm.narrative || undefined,
-        images: createImages.length > 0 ? createImages : undefined,
-      });
-      // Add to list and auto-select for the active property
+      const created = await createCaseStudy(payload);
       setCaseStudies((prev) => [created, ...prev]);
       toggleCaseStudy(activeProperty, created.id);
       setShowCreateForm(false);
       setCreateForm(emptyForm);
+      setCreateImages([]);
+      setPdfMessage('');
+    } catch (err: unknown) {
+      const resp = (err as { response?: { status?: number; data?: { candidates?: DuplicateCandidate[] } } })?.response;
+      if (resp?.status === 409 && resp.data?.candidates) {
+        setPendingDuplicates(resp.data.candidates);
+        setPendingPayload(payload);
+      } else {
+        setError('Failed to create case study');
+      }
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function confirmDuplicateCreate() {
+    if (!pendingPayload) return;
+    setCreating(true);
+    try {
+      const created = await createCaseStudy(pendingPayload, true);
+      setCaseStudies((prev) => [created, ...prev]);
+      toggleCaseStudy(activeProperty, created.id);
+      setPendingDuplicates(null);
+      setPendingPayload(null);
+      setShowCreateForm(false);
+      setCreateForm(emptyForm);
+      setCreateImages([]);
+      setPdfMessage('');
     } catch {
       setError('Failed to create case study');
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handlePdfUpload(file: File) {
+    setParsingPdf(true);
+    setPdfMessage('');
+    setError('');
+    try {
+      const draft: CaseStudyDraft = await parseCaseStudyPdf(file);
+      setCreateForm({
+        ...emptyForm,
+        title: draft.title ?? '',
+        hotelName: draft.hotelName ?? '',
+        destination: draft.destination ?? '',
+        propertyType: draft.propertyType ?? '',
+        narrative: draft.narrative ?? '',
+        tags: draft.tags?.join(', ') ?? '',
+      });
+      setCreateImages(draft.images);
+      setShowCreateForm(true);
+      const parts: string[] = [];
+      parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
+      if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
+      if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
+      if (draft.duplicateCandidates.length > 0) {
+        parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
+      }
+      if (!draft.destinationMatched && draft.destination) {
+        parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
+      }
+      setPdfMessage(parts.join(' · '));
+    } catch (err: unknown) {
+      const resp = (err as { response?: { status?: number; data?: { message?: string | string[] } } })?.response;
+      const raw = resp?.data?.message;
+      const msg = Array.isArray(raw) ? raw.join('; ') : (raw ?? (err as Error)?.message ?? 'Unknown error');
+      setError(`Failed to parse PDF: ${msg}`);
+    } finally {
+      setParsingPdf(false);
     }
   }
 
@@ -217,7 +304,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         </div>
       )}
 
-      {/* Search + Create button */}
+      {/* Search + Upload PDF + Create button */}
       <div className="flex gap-2 mb-4">
         <input
           type="text"
@@ -226,6 +313,20 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
         />
+        <label className={`rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] shrink-0 cursor-pointer inline-flex items-center gap-2 ${parsingPdf ? 'opacity-50 pointer-events-none' : ''}`}>
+          {parsingPdf ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
+          {parsingPdf ? 'Parsing…' : 'Upload PDF'}
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) handlePdfUpload(file);
+            }}
+          />
+        </label>
         <button
           onClick={openCreateForm}
           className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] shrink-0"
@@ -233,6 +334,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           + Create New
         </button>
       </div>
+
+      {pdfMessage && <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">{pdfMessage}</div>}
 
       {/* Inline create form */}
       {showCreateForm && (
@@ -356,7 +459,14 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
             <div className="flex gap-2 flex-wrap">
               {createImages.map((url) => (
                 <div key={url} className="relative group w-16 h-16 rounded border border-gray-200 overflow-hidden">
-                  <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setViewingImage(url)}
+                    className="block w-full h-full"
+                    aria-label="Preview image"
+                  >
+                    <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setCreateImages((prev) => prev.filter((u) => u !== url))}
@@ -366,9 +476,13 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                   </button>
                 </div>
               ))}
-              <ImageUploadTile
-                onUploaded={(url) => setCreateImages((prev) => [...prev, url])}
-                onError={() => setError('Failed to upload image')}
+              <ImagePicker
+                hotelName={createForm.hotelName}
+                destination={createForm.destination}
+                existingUrls={createImages}
+                onPicked={(url) => setCreateImages((prev) => [...prev, url])}
+                onError={(msg) => setError(msg)}
+                size="sm"
               />
             </div>
           </div>
@@ -459,36 +573,66 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           {saving ? 'Saving...' : 'Next: Marketing Assets'}
         </button>
       </div>
+
+      {viewingImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setViewingImage(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
+            className="absolute top-4 right-4 text-white text-3xl leading-none hover:text-gray-300"
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <img
+            src={uploadUrl(viewingImage) ?? ''}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-[90vh] object-contain rounded"
+          />
+        </div>
+      )}
+
+      {pendingDuplicates && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">Possible Duplicate</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              A case study with a similar hotel name already exists:
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {pendingDuplicates.map((c) => (
+                <li key={c.id} className="flex justify-between rounded-md bg-gray-50 px-3 py-2 text-sm">
+                  <span>
+                    <span className="font-medium text-gray-900">{c.hotelName}</span>
+                    {c.destination && <span className="text-gray-500"> · {c.destination}</span>}
+                  </span>
+                  <span className="text-xs text-gray-500">{Math.round(c.similarity * 100)}% match</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                onClick={() => { setPendingDuplicates(null); setPendingPayload(null); }}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDuplicateCreate}
+                disabled={creating}
+                className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
+              >
+                Create anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ImageUploadTile({ onUploaded, onError }: { onUploaded: (url: string) => void; onError: () => void }) {
-  const [uploading, setUploading] = useState(false);
-  return (
-    <label className={`w-16 h-16 rounded border-2 border-dashed flex items-center justify-center cursor-pointer text-lg ${
-      uploading ? 'border-[#01B18B] bg-[#E6F9F5]' : 'border-gray-300 hover:border-gray-400 text-gray-400'
-    }`}>
-      {uploading ? <Spinner size="sm" className="text-[#01B18B]" /> : '+'}
-      <input
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          setUploading(true);
-          try {
-            const result = await uploadImage(file);
-            onUploaded(result.url);
-          } catch {
-            onError();
-          } finally {
-            setUploading(false);
-          }
-          e.target.value = '';
-        }}
-      />
-    </label>
-  );
-}

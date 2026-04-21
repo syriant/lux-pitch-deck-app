@@ -76,3 +76,18 @@ export async function bulkDeleteLibraryImages(ids: string[]): Promise<{ deleted:
   const res = await apiClient.post<{ deleted: number }>('/image-library/bulk-delete', { ids });
   return res.data;
 }
+
+export async function uploadToLibrary(args: {
+  file: File;
+  hotelName?: string;
+  destination?: string;
+  source?: string;
+}): Promise<LibraryImage> {
+  const form = new FormData();
+  form.append('file', args.file);
+  if (args.hotelName) form.append('hotelName', args.hotelName);
+  if (args.destination) form.append('destination', args.destination);
+  if (args.source) form.append('source', args.source);
+  const res = await apiClient.post<LibraryImage>('/image-library/upload', form);
+  return res.data;
+}

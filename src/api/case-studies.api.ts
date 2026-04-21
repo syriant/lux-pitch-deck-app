@@ -103,8 +103,61 @@ export async function getCaseStudy(id: string): Promise<CaseStudy> {
   return res.data;
 }
 
-export async function createCaseStudy(data: CreateCaseStudyRequest): Promise<CaseStudy> {
-  const res = await apiClient.post<CaseStudy>('/case-studies', data);
+export interface DuplicateCandidate {
+  id: string;
+  hotelName: string;
+  destination: string | null;
+  similarity: number;
+}
+
+export interface DuplicateConflict {
+  candidates: DuplicateCandidate[];
+}
+
+export async function createCaseStudy(data: CreateCaseStudyRequest, force = false): Promise<CaseStudy> {
+  const res = await apiClient.post<CaseStudy>(
+    '/case-studies',
+    data,
+    { params: force ? { force: 'true' } : undefined },
+  );
+  return res.data;
+}
+
+export async function checkDuplicate(hotelName: string): Promise<DuplicateCandidate[]> {
+  const res = await apiClient.post<{ candidates: DuplicateCandidate[] }>(
+    '/case-studies/check-duplicate',
+    { hotelName },
+  );
+  return res.data.candidates;
+}
+
+export interface CaseStudyDraft {
+  title: string | null;
+  hotelName: string | null;
+  destination: string | null;
+  propertyType: string | null;
+  narrative: string | null;
+  tags: string[] | null;
+  images: string[];
+  destinationMatched: boolean;
+  duplicateCandidates: DuplicateCandidate[];
+  llm: {
+    provider: string;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number | null;
+    latencyMs: number;
+  };
+  warnings: string[];
+}
+
+export async function parseCaseStudyPdf(file: File): Promise<CaseStudyDraft> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await apiClient.post<CaseStudyDraft>('/case-studies/from-pdf', form, {
+    timeout: 180000,
+  });
   return res.data;
 }
 
