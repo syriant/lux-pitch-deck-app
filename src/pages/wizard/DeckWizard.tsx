@@ -96,6 +96,8 @@ export function DeckWizard() {
             coverImage={deck.coverImage ?? null}
             heroImage={deck.heroImage ?? null}
             gallery={deck.gallery ?? []}
+            hotelName={deck.properties[0]?.propertyName ?? null}
+            destination={deck.properties[0]?.destination ?? null}
             onBack={() => setCurrentStep(2)}
             onNext={() => setCurrentStep(4)}
           />

@@ -21,6 +21,7 @@ const adminLinks: NavItem[] = [
   { label: 'Objectives', path: '/admin/objectives', icon: 'target' },
   { label: 'Deal Tiers', path: '/admin/deal-tiers', icon: 'layers' },
   { label: 'Templates', path: '/admin/templates', icon: 'layout' },
+  { label: 'Image Library', path: '/admin/image-library', icon: 'image' },
   { label: 'Users', path: '/admin/users', icon: 'users' },
 ];
 
@@ -58,6 +59,11 @@ const iconMap: Record<string, React.ReactNode> = {
   users: (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+    </svg>
+  ),
+  image: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
 };

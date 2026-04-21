@@ -1,7 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { lookupDealTier, type LookupResult } from '@/api/deal-tiers.api';
+import { lookupDealTier, getDealTierRules, type LookupResult, type DealTierRule } from '@/api/deal-tiers.api';
 import { getFullDeck, type DeckPropertyFull, type DeckOption, updateProperty, updateOption } from '@/api/decks.api';
 import { useNavigate } from 'react-router-dom';
+
+const GRADES = ['A', 'B'] as const;
+const TIERS = [1, 2, 3] as const;
+
+function buildLookupFromRule(rule: DealTierRule): LookupResult {
+  return {
+    destination: rule.destination,
+    subDestination: rule.subDestination,
+    grade: rule.grade,
+    tier: rule.tier,
+    examples: rule.examples,
+    assetEntitlements: rule.assetEntitlements,
+  };
+}
+
+function findRule(rules: DealTierRule[], grade: string, tier: number): DealTierRule | undefined {
+  return rules.find((r) => r.grade === grade && r.tier === tier);
+}
 
 interface Step6Props {
   deckId: string;
@@ -36,6 +54,9 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
   const navigate = useNavigate();
   const [localProperties, setLocalProperties] = useState<DeckPropertyFull[]>(properties);
   const [lookups, setLookups] = useState<Record<string, LookupResult | null>>({});
+  const [manualProps, setManualProps] = useState<Record<string, boolean>>({});
+  const [allRules, setAllRules] = useState<DealTierRule[]>([]);
+  const [pending, setPending] = useState<Record<string, { grade?: string; tier?: number }>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -59,13 +80,18 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
   useEffect(() => {
     async function load() {
       // Fetch fresh deck data to get options saved in earlier steps
-      const freshDeck = await getFullDeck(deckId);
+      const [freshDeck, rules] = await Promise.all([
+        getFullDeck(deckId),
+        getDealTierRules().catch(() => [] as DealTierRule[]),
+      ]);
       const freshProperties = freshDeck.properties;
       setLocalProperties(freshProperties);
+      setAllRules(rules);
       propertiesRef.current = freshProperties;
 
       const results: Record<string, LookupResult | null> = {};
       const toggles: Record<string, Record<string, boolean>> = {};
+      const manual: Record<string, boolean> = {};
 
       for (const prop of freshProperties) {
         // Load existing per-option-group assets (read from first option in each group)
@@ -112,10 +138,33 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
             // try next part
           }
         }
-        if (!found) results[prop.id] = null;
+        if (!found) {
+          // Fall back to previously saved manual pick (if any)
+          if (prop.grade && prop.tier) {
+            const rule = findRule(rules, prop.grade, prop.tier);
+            if (rule) {
+              results[prop.id] = buildLookupFromRule(rule);
+              manual[prop.id] = true;
+              for (const group of groups) {
+                const key = groupKey(prop.id, group.optionNumber);
+                const existing = toggles[key] ?? {};
+                const merged: Record<string, boolean> = {};
+                for (const channel of Object.keys(rule.assetEntitlements)) {
+                  merged[channel] = existing[channel] ?? false;
+                }
+                toggles[key] = merged;
+              }
+            } else {
+              results[prop.id] = null;
+            }
+          } else {
+            results[prop.id] = null;
+          }
+        }
       }
 
       setLookups(results);
+      setManualProps(manual);
       setGroupToggles(toggles);
       setLoading(false);
 
@@ -135,6 +184,56 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
     }
     load();
   }, [deckId]);
+
+  async function applyManualGradeTier(propId: string, grade: string, tier: number) {
+    const rule = findRule(allRules, grade, tier);
+    if (!rule) {
+      setError(`No deal tier rule defined for Grade ${grade}, Tier ${tier}`);
+      return;
+    }
+    setError('');
+    const lookup = buildLookupFromRule(rule);
+
+    const prop = propertiesRef.current.find((p) => p.id === propId);
+    const groups = prop ? groupOptionsByNumber(prop.options) : [];
+
+    setLookups((prev) => ({ ...prev, [propId]: lookup }));
+    setManualProps((prev) => ({ ...prev, [propId]: true }));
+    setGroupToggles((prev) => {
+      const next = { ...prev };
+      for (const group of groups) {
+        const key = groupKey(propId, group.optionNumber);
+        const existing = next[key] ?? {};
+        const merged: Record<string, boolean> = {};
+        for (const channel of Object.keys(rule.assetEntitlements)) {
+          merged[channel] = existing[channel] ?? false;
+        }
+        next[key] = merged;
+      }
+      return next;
+    });
+
+    await updateProperty(deckId, propId, { grade, tier }).catch(() => {});
+    for (const group of groups) {
+      const assets: Record<string, boolean> = {};
+      for (const channel of Object.keys(rule.assetEntitlements)) assets[channel] = false;
+      await saveGroupAssets(propId, group.optionNumber, assets).catch(() => {});
+    }
+  }
+
+  function clearManualSelection(propId: string) {
+    setManualProps((prev) => {
+      const next = { ...prev };
+      delete next[propId];
+      return next;
+    });
+    setLookups((prev) => ({ ...prev, [propId]: null }));
+    setPending((prev) => {
+      const next = { ...prev };
+      delete next[propId];
+      return next;
+    });
+  }
 
   function toggleAsset(propId: string, optNum: number, channel: string) {
     const key = groupKey(propId, optNum);
@@ -207,11 +306,63 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
 
               {!lookup ? (
                 <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-700">
-                  No deal tier match found for this destination.
+                  <div className="mb-2">No deal tier match found for this destination.</div>
+                  <div className="flex flex-wrap items-center gap-3 text-gray-700">
+                    <span className="text-xs text-gray-500">Choose a grade and tier manually:</span>
+                    <label className="text-xs flex items-center gap-1">
+                      Grade
+                      <select
+                        value={pending[prop.id]?.grade ?? ''}
+                        onChange={(e) =>
+                          setPending((prev) => ({
+                            ...prev,
+                            [prop.id]: { ...prev[prop.id], grade: e.target.value || undefined },
+                          }))
+                        }
+                        className="rounded border border-amber-300 bg-white px-2 py-1 text-xs"
+                      >
+                        <option value="">—</option>
+                        {GRADES.map((g) => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-xs flex items-center gap-1">
+                      Tier
+                      <select
+                        value={pending[prop.id]?.tier?.toString() ?? ''}
+                        onChange={(e) =>
+                          setPending((prev) => ({
+                            ...prev,
+                            [prop.id]: {
+                              ...prev[prop.id],
+                              tier: e.target.value ? Number(e.target.value) : undefined,
+                            },
+                          }))
+                        }
+                        className="rounded border border-amber-300 bg-white px-2 py-1 text-xs"
+                      >
+                        <option value="">—</option>
+                        {TIERS.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      disabled={!pending[prop.id]?.grade || !pending[prop.id]?.tier}
+                      onClick={() => {
+                        const p = pending[prop.id];
+                        if (p?.grade && p.tier) applyManualGradeTier(prop.id, p.grade, p.tier);
+                      }}
+                      className="rounded bg-[#01B18B] px-3 py-1 text-xs text-white hover:bg-[#019a78] disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <div className="flex gap-4 mb-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-4 mb-3 text-sm">
                     <div>
                       <span className="text-gray-500">Grade:</span>{' '}
                       <span className="font-medium">{lookup.grade}</span>
@@ -220,6 +371,19 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
                       <span className="text-gray-500">Tier:</span>{' '}
                       <span className="font-medium">{lookup.tier}</span>
                     </div>
+                    {manualProps[prop.id] && (
+                      <>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                          Manually chosen
+                        </span>
+                        <button
+                          onClick={() => clearManualSelection(prop.id)}
+                          className="text-xs text-[#01B18B] hover:underline"
+                        >
+                          Change
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {channels.length > 0 && groups.length > 0 ? (

@@ -7,6 +7,7 @@ import { ObjectiveTemplates } from './pages/admin/ObjectiveTemplates';
 import { DealTiers } from './pages/admin/DealTiers';
 import { ParserTest } from './pages/admin/ParserTest';
 import { Templates } from './pages/admin/Templates';
+import { ImageLibrary } from './pages/admin/ImageLibrary';
 import { DeckWizard } from './pages/wizard/DeckWizard';
 import { DeckPreview } from './pages/DeckPreview';
 import { DeckPrint } from './pages/DeckPrint';
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { path: '/admin/objectives', element: <ObjectiveTemplates /> },
       { path: '/admin/deal-tiers', element: <DealTiers /> },
       { path: '/admin/templates', element: <Templates /> },
+      { path: '/admin/image-library', element: <ImageLibrary /> },
       { path: '/admin/parser-test', element: <ParserTest /> },
     ],
   },
