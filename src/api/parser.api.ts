@@ -26,7 +26,7 @@ export interface ParsedPricingTool {
       nightlyCostPrice: number;
       nightlySellPrice: number;
       maxExtraNights: number;
-      allocationPerDay: number;
+      allocationPerDay: string | null;
     }>;
   }>;
   inclusions: Array<{

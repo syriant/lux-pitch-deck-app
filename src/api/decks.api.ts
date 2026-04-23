@@ -170,7 +170,7 @@ export interface DeckOption {
   sellPrice: string | null;
   costPrice: string | null;
   nights: number | null;
-  allocation: number | null;
+  allocation: string | null;
   surcharges: Array<{ name: string; amount: number; period?: string }> | null;
   blackoutDates: Array<{ from: string; to: string }> | null;
   inclusions: string[] | null;
@@ -253,7 +253,7 @@ export interface SetOptionRequest {
   sellPrice?: string | null;
   costPrice?: string | null;
   nights?: number | null;
-  allocation?: number | null;
+  allocation?: string | null;
   surcharges?: Array<{ name: string; amount: number; period?: string }> | null;
   blackoutDates?: Array<{ from: string; to: string }> | null;
   inclusions?: string[] | null;

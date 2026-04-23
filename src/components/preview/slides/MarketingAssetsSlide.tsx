@@ -62,9 +62,13 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       label: 'Allocation',
       cells: uniqueOptions.map((o) => {
         const rooms = groups.get(o.optionNumber) ?? [o];
-        return rooms.map((r: { roomType: any; allocation: any; }) =>
-          `${r.roomType ?? 'Room'} – ${r.allocation ?? '?'} rooms per night`
-        ).join('<br>');
+        return rooms.map((r: { roomType: string | null; allocation: string | null }) => {
+          const room = r.roomType ?? 'Room';
+          if (!r.allocation) return `${room} – ? rooms per night`;
+          return /^\d+$/.test(r.allocation)
+            ? `${room} – ${r.allocation} rooms per night`
+            : `${room} – ${r.allocation}`;
+        }).join('<br>');
       }),
     },
     {

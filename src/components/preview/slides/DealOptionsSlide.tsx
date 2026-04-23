@@ -125,15 +125,20 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
     }),
   });
 
-  // Rates row
+  // Rates row — show nett (cost) price. If nights > 1, show as package (e.g. "Standard Room 2N – $290");
+  // otherwise show per-night (e.g. "Standard Room – $290 per night").
   rows.push({
     key: 'rates',
-    label: 'Per night rate',
+    label: 'Rate',
     cells: optNums.map((num) => {
       const rooms = groups.get(num)!;
-      return rooms.map((r) =>
-        `${r.roomType ?? 'Room'} – $${r.sellPrice ? Number(r.sellPrice).toLocaleString() : '?'} per night`
-      ).join('\n');
+      return rooms.map((r) => {
+        const price = r.costPrice ? `$${Number(r.costPrice).toLocaleString()}` : '?';
+        const roomLabel = r.roomType ?? 'Room';
+        return r.nights && r.nights > 1
+          ? `${roomLabel} ${r.nights}N – ${price}`
+          : `${roomLabel} – ${price} per night`;
+      }).join('\n');
     }),
   });
 
