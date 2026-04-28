@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type FormEvent, type DragEvent } from 'react';
 import {
   adminListLibrary,
   updateLibraryImage,
   deleteLibraryImage,
   bulkDeleteLibraryImages,
+  uploadToLibrary,
   type LibraryImage,
 } from '@/api/image-library.api';
 import { uploadUrl } from '@/api/upload.api';
+import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
+import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 
 const PAGE_SIZE = 60;
@@ -40,6 +43,7 @@ export function ImageLibrary() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [viewing, setViewing] = useState<LibraryImage | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,6 +125,12 @@ export function ImageLibrary() {
             Cached hotel images. Library results are reused across decks to save on Google Places costs.
           </p>
         </div>
+        <button
+          onClick={() => setUploadOpen(true)}
+          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
+        >
+          Upload images
+        </button>
       </div>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -154,7 +164,8 @@ export function ImageLibrary() {
         >
           <option value="">All sources</option>
           <option value="google_places">Google Places</option>
-          <option value="upload">Manual upload</option>
+          <option value="manual_upload">Manual upload</option>
+          <option value="pitch_deck">Pitch deck</option>
         </select>
       </div>
 
@@ -226,7 +237,7 @@ export function ImageLibrary() {
                 </label>
                 <div className="absolute top-2 right-2 flex gap-1">
                   <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                    {img.source === 'google_places' ? 'Google' : img.source === 'upload' ? 'Upload' : img.source}
+                    {sourceLabel(img.source)}
                   </span>
                   <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
                     {relativeTime(img.createdAt)}
@@ -331,7 +342,7 @@ export function ImageLibrary() {
               {viewing.destination && <div>{viewing.destination}</div>}
               {viewing.attribution && <div className="mt-1 text-white/60">{viewing.attribution}</div>}
               <div className="mt-1 text-white/60">
-                {viewing.source === 'google_places' ? 'Google Places' : viewing.source} · {relativeTime(viewing.createdAt)}
+                {sourceLabel(viewing.source)} · {relativeTime(viewing.createdAt)}
               </div>
             </div>
           </div>
@@ -364,6 +375,13 @@ export function ImageLibrary() {
             </div>
           </div>
         </div>
+      )}
+
+      {uploadOpen && (
+        <UploadImagesModal
+          onClose={() => setUploadOpen(false)}
+          onUploaded={async () => { await load(); }}
+        />
       )}
 
       {deleteTarget && (
@@ -463,6 +481,219 @@ function EditTagsModal({ image, onClose, onSave }: EditTagsModalProps) {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function sourceLabel(source: string): string {
+  switch (source) {
+    case 'google_places': return 'Google';
+    case 'manual_upload': return 'Upload';
+    case 'pitch_deck': return 'Pitch deck';
+    case 'upload': return 'Upload';
+    default: return source;
+  }
+}
+
+interface UploadRow {
+  file: File;
+  status: 'pending' | 'uploading' | 'done' | 'error';
+  message?: string;
+}
+
+interface UploadImagesModalProps {
+  onClose: () => void;
+  onUploaded: () => Promise<void>;
+}
+
+function UploadImagesModal({ onClose, onUploaded }: UploadImagesModalProps) {
+  const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+  const [destination, setDestination] = useState('');
+  const [hotelName, setHotelName] = useState('');
+  const [rows, setRows] = useState<UploadRow[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getDestinations()
+      .then((opts) => {
+        const labelSet = new Set<string>();
+        for (const o of opts as DestinationOption[]) {
+          if (o.subDestination) labelSet.add(`${o.destination}, ${o.subDestination}`);
+          labelSet.add(o.destination);
+        }
+        setDestinationOptions([...labelSet].sort((a, b) => a.localeCompare(b)));
+      })
+      .catch(() => {});
+  }, []);
+
+  function addFiles(files: FileList | File[] | null) {
+    if (!files) return;
+    const incoming = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (incoming.length === 0) return;
+    setRows((prev) => [...prev, ...incoming.map((file): UploadRow => ({ file, status: 'pending' }))]);
+  }
+
+  function removeRow(index: number) {
+    setRows((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function onDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragging(false);
+    addFiles(e.dataTransfer.files);
+  }
+
+  async function startUpload() {
+    if (rows.length === 0 || uploading) return;
+    setUploading(true);
+    const trimmedHotel = hotelName.trim();
+    const trimmedDest = destination.trim();
+    let anySucceeded = false;
+
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].status === 'done') continue;
+      setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: 'uploading', message: undefined } : r)));
+      try {
+        await uploadToLibrary({
+          file: rows[i].file,
+          hotelName: trimmedHotel || undefined,
+          destination: trimmedDest || undefined,
+          source: 'manual_upload',
+        });
+        setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: 'done' } : r)));
+        anySucceeded = true;
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+          ?? (err as Error)?.message
+          ?? 'Upload failed';
+        setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: 'error', message: String(msg) } : r)));
+      }
+    }
+
+    setUploading(false);
+    if (anySucceeded) await onUploaded();
+  }
+
+  const allDone = rows.length > 0 && rows.every((r) => r.status === 'done');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl max-h-[90vh] rounded-lg bg-white shadow-xl flex flex-col">
+        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Upload images</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={uploading}
+            className="text-gray-400 hover:text-gray-700 text-2xl leading-none disabled:opacity-50"
+            aria-label="Close"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Destination</label>
+              <DestinationCombobox
+                options={destinationOptions}
+                value={destination}
+                onChange={(sel) => setDestination(sel.label)}
+                placeholder="Search or type a destination..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Hotel / property name (optional)</label>
+              <input
+                type="text"
+                value={hotelName}
+                onChange={(e) => setHotelName(e.target.value)}
+                placeholder="e.g. Charlesworth Bay Beach Resort"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+              />
+            </div>
+          </div>
+
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+              dragging ? 'border-[#01B18B] bg-[#E6F9F5]' : 'border-gray-300 hover:border-gray-400'
+            }`}
+          >
+            <p className="text-sm text-gray-700 font-medium">Drop images here or click to choose</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Multiple files supported. Tip: your OneDrive folder is browsable from the file dialog.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                addFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </div>
+
+          {rows.length > 0 && (
+            <ul className="space-y-1.5">
+              {rows.map((row, i) => (
+                <li key={i} className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-gray-900">{row.file.name}</div>
+                    <div className="text-[11px] text-gray-500">{(row.file.size / 1024).toFixed(0)} KB</div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {row.status === 'pending' && <span className="text-xs text-gray-500">Pending</span>}
+                    {row.status === 'uploading' && <Spinner size="sm" className="text-[#01B18B]" />}
+                    {row.status === 'done' && <span className="text-xs text-[#01B18B]">Uploaded</span>}
+                    {row.status === 'error' && (
+                      <span className="text-xs text-red-600 truncate max-w-[180px]" title={row.message}>{row.message ?? 'Failed'}</span>
+                    )}
+                    {!uploading && row.status !== 'done' && (
+                      <button
+                        type="button"
+                        onClick={() => removeRow(i)}
+                        className="text-gray-400 hover:text-red-600 text-lg leading-none"
+                        aria-label="Remove"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={uploading}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {allDone ? 'Close' : 'Cancel'}
+          </button>
+          <button
+            type="button"
+            onClick={startUpload}
+            disabled={uploading || rows.length === 0 || allDone}
+            className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
+          >
+            {uploading ? 'Uploading…' : `Upload ${rows.filter((r) => r.status !== 'done').length || ''}`.trim()}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
