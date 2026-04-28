@@ -125,6 +125,7 @@ export interface DeckObjective {
   objectiveText: string;
   source: string;
   sortOrder: number;
+  isPrimary: boolean;
 }
 
 export async function getDeckObjectives(deckId: string): Promise<DeckObjective[]> {
@@ -134,7 +135,7 @@ export async function getDeckObjectives(deckId: string): Promise<DeckObjective[]
 
 export async function setDeckObjectives(
   deckId: string,
-  objectives: Array<{ text: string; source?: string }>,
+  objectives: Array<{ text: string; source?: string; isPrimary?: boolean }>,
 ): Promise<DeckObjective[]> {
   const res = await apiClient.put<DeckObjective[]>(`/decks/${deckId}/objectives`, { objectives });
   return res.data;

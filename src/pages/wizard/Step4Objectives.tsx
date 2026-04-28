@@ -7,16 +7,19 @@ import { SlideRenderer } from '@/components/preview/SlideRenderer';
 interface Step4Props {
   deckId: string;
   deck: FullDeck;
+  registerSave?: (fn: (() => Promise<void>) | null) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
+export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: Step4Props) {
   const [templates, setTemplates] = useState<ObjectiveTemplate[]>([]);
   const [allDifferentiators, setAllDifferentiators] = useState<Differentiator[]>([]);
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<Set<string>>(new Set());
   const [freeText, setFreeText] = useState('');
   const [freeTexts, setFreeTexts] = useState<string[]>([]);
+  // primaryKey identifies the user-chosen primary: `tmpl:{id}` or `free:{index}`.
+  const [primaryKey, setPrimaryKey] = useState<string | null>(null);
   const [suggestedDiffIds, setSuggestedDiffIds] = useState<Set<string>>(new Set());
   const [selectedDiffIds, setSelectedDiffIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -39,17 +42,22 @@ export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
         if (savedObjs.length > 0) {
           const selectedIds = new Set<string>();
           const freeItems: string[] = [];
+          let savedPrimary: string | null = null;
 
           for (const obj of savedObjs) {
             const matchingTemplate = tmpl.find((t) => t.text === obj.objectiveText);
             if (matchingTemplate) {
               selectedIds.add(matchingTemplate.id);
+              if (obj.isPrimary) savedPrimary = `tmpl:${matchingTemplate.id}`;
             } else {
+              const idx = freeItems.length;
               freeItems.push(obj.objectiveText);
+              if (obj.isPrimary) savedPrimary = `free:${idx}`;
             }
           }
           setSelectedTemplateIds(selectedIds);
           setFreeTexts(freeItems);
+          setPrimaryKey(savedPrimary);
         }
 
         if (savedDiffs.length > 0) {
@@ -92,6 +100,7 @@ export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
+        if (primaryKey === `tmpl:${id}`) setPrimaryKey(null);
       } else {
         next.add(id);
       }
@@ -120,24 +129,41 @@ export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
 
   function removeFreeText(index: number) {
     setFreeTexts((prev) => prev.filter((_, i) => i !== index));
+    if (primaryKey === `free:${index}`) setPrimaryKey(null);
+    else if (primaryKey?.startsWith('free:')) {
+      const removedIdx = Number(primaryKey.slice(5));
+      if (removedIdx > index) setPrimaryKey(`free:${removedIdx - 1}`);
+    }
   }
+
+  async function persist() {
+    if (loading) return;
+    const objectives = [
+      ...Array.from(selectedTemplateIds).map((id) => {
+        const tmpl = templates.find((t) => t.id === id);
+        return { text: tmpl?.text ?? '', source: 'template', isPrimary: primaryKey === `tmpl:${id}` };
+      }),
+      ...freeTexts.map((text, i) => ({ text, source: 'freetext', isPrimary: primaryKey === `free:${i}` })),
+    ];
+    await Promise.all([
+      setDeckObjectives(deckId, objectives),
+      setDeckDifferentiators(deckId, Array.from(selectedDiffIds)),
+    ]);
+  }
+
+  // Register save with the wizard so Save & Exit / Preview / step-jump persist
+  // the current selection. Re-register when state changes so the closure captures
+  // the latest values.
+  useEffect(() => {
+    registerSave?.(persist);
+    return () => registerSave?.(null);
+  }, [registerSave, loading, selectedTemplateIds, freeTexts, primaryKey, selectedDiffIds, templates]);
 
   async function handleSaveAndNext() {
     setSaving(true);
     setError('');
     try {
-      const objectives = [
-        ...Array.from(selectedTemplateIds).map((id) => {
-          const tmpl = templates.find((t) => t.id === id);
-          return { text: tmpl?.text ?? '', source: 'template' };
-        }),
-        ...freeTexts.map((text) => ({ text, source: 'freetext' })),
-      ];
-
-      await Promise.all([
-        setDeckObjectives(deckId, objectives),
-        setDeckDifferentiators(deckId, Array.from(selectedDiffIds)),
-      ]);
+      await persist();
       onNext();
     } catch {
       setError('Failed to save');
@@ -164,7 +190,8 @@ export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-1">Campaign Objectives</h2>
       <p className="text-sm text-gray-500 mb-6">
-        Select objectives from templates or add your own. Differentiators are auto-suggested based on your selections.
+        Select objectives from templates or add your own. Tap the star next to a selection to mark it as the Primary
+        objective on the slide. Differentiators are auto-suggested based on your selections.
       </p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -182,24 +209,36 @@ export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
                 <div className="space-y-1">
                   {templates
                     .filter((t) => (t.category ?? 'other') === cat)
-                    .map((tmpl) => (
-                      <label
-                        key={tmpl.id}
-                        className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm ${
-                          selectedTemplateIds.has(tmpl.id)
-                            ? 'border-[#01B18B]/50 bg-[#E6F9F5]'
-                            : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedTemplateIds.has(tmpl.id)}
-                          onChange={() => toggleTemplate(tmpl.id)}
-                          className="mt-0.5"
-                        />
-                        <span>{tmpl.text}</span>
-                      </label>
-                    ))}
+                    .map((tmpl) => {
+                      const isSelected = selectedTemplateIds.has(tmpl.id);
+                      const isPrimary = primaryKey === `tmpl:${tmpl.id}`;
+                      return (
+                        <label
+                          key={tmpl.id}
+                          className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm ${
+                            isSelected ? 'border-[#01B18B]/50 bg-[#E6F9F5]' : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleTemplate(tmpl.id)}
+                            className="mt-0.5"
+                          />
+                          <span className="flex-1">{tmpl.text}</span>
+                          {isSelected && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); setPrimaryKey(isPrimary ? null : `tmpl:${tmpl.id}`); }}
+                              title={isPrimary ? 'Primary objective' : 'Mark as primary'}
+                              className={`shrink-0 text-base leading-none ${isPrimary ? 'text-[#01B18B]' : 'text-gray-300 hover:text-[#01B18B]'}`}
+                            >
+                              {isPrimary ? '★' : '☆'}
+                            </button>
+                          )}
+                        </label>
+                      );
+                    })}
                 </div>
               </div>
             ))}
@@ -208,12 +247,23 @@ export function Step4Objectives({ deckId, deck, onBack, onNext }: Step4Props) {
           {/* Free text */}
           <div className="mt-4">
             <div className="text-xs font-medium text-gray-500 uppercase mb-1.5">Custom Objectives</div>
-            {freeTexts.map((text, i) => (
-              <div key={i} className="flex items-center gap-2 mb-1 rounded-md border border-gray-200 px-3 py-2 text-sm">
-                <span className="flex-1">{text}</span>
-                <button onClick={() => removeFreeText(i)} className="text-red-500 text-xs hover:underline">Remove</button>
-              </div>
-            ))}
+            {freeTexts.map((text, i) => {
+              const isPrimary = primaryKey === `free:${i}`;
+              return (
+                <div key={i} className="flex items-center gap-2 mb-1 rounded-md border border-gray-200 px-3 py-2 text-sm">
+                  <span className="flex-1">{text}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPrimaryKey(isPrimary ? null : `free:${i}`)}
+                    title={isPrimary ? 'Primary objective' : 'Mark as primary'}
+                    className={`text-base leading-none ${isPrimary ? 'text-[#01B18B]' : 'text-gray-300 hover:text-[#01B18B]'}`}
+                  >
+                    {isPrimary ? '★' : '☆'}
+                  </button>
+                  <button onClick={() => removeFreeText(i)} className="text-red-500 text-xs hover:underline">Remove</button>
+                </div>
+              );
+            })}
             <div className="flex gap-2 mt-1">
               <input
                 type="text"

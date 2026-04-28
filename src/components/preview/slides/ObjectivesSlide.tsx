@@ -14,8 +14,9 @@ interface ObjectivesSlideProps {
 }
 
 export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd }: ObjectivesSlideProps) {
-  const primary = objectives[0];
-  const secondary = objectives.slice(1);
+  const primaryIdx = Math.max(0, objectives.findIndex((o) => o.isPrimary));
+  const primary = objectives[primaryIdx];
+  const secondary = objectives.filter((_, i) => i !== primaryIdx);
   const hasObjectives = objectives.length > 0;
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
@@ -88,7 +89,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
                   />
                   <SlideRichText
                     fieldKey="obj.secondary.all"
-                    defaultValue={secondary.map((obj) => obj.objectiveText).join('\n')}
+                    defaultValue={secondary.map((obj) => obj.objectiveText).join('<br><br>')}
                     defaultSize={15}
                     customFields={cf}
                     onFieldChange={onFieldChange}

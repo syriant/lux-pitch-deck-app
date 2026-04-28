@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getFullDeck, type FullDeck } from '@/api/decks.api';
 import { AppShell } from '@/components/layout/AppShell';
@@ -17,6 +17,23 @@ export function DeckWizard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
+  // Active step registers a save() function here. Save & Exit, Preview, and
+  // step-indicator clicks invoke it before navigating so in-progress edits
+  // (e.g. an objective ticked but Next not pressed) aren't lost.
+  const saveCurrentStepRef = useRef<(() => Promise<void>) | null>(null);
+
+  function registerStepSave(fn: (() => Promise<void>) | null) {
+    saveCurrentStepRef.current = fn;
+  }
+
+  async function flushAndNavigate(action: () => void) {
+    try { await saveCurrentStepRef.current?.(); } catch { /* swallow — the step shows its own error */ }
+    action();
+  }
+
+  async function changeStep(step: number) {
+    await flushAndNavigate(() => setCurrentStep(step));
+  }
 
   async function loadDeck() {
     if (!id) return;
@@ -56,13 +73,13 @@ export function DeckWizard() {
           <h1 className="text-2xl font-bold text-[#363A45]">{deck.name}</h1>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(`/decks/${deck.id}/preview`)}
+              onClick={() => flushAndNavigate(() => navigate(`/decks/${deck.id}/preview`))}
               className="text-sm text-[#01B18B] hover:text-[#009977]"
             >
               Preview
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => flushAndNavigate(() => navigate('/'))}
               className="text-sm text-[#7E8188] hover:text-[#363A45]"
             >
               Save & Exit
@@ -70,7 +87,7 @@ export function DeckWizard() {
           </div>
         </div>
 
-        <StepIndicator currentStep={currentStep} onStepClick={setCurrentStep} />
+        <StepIndicator currentStep={currentStep} onStepClick={changeStep} />
 
         {currentStep === 1 && (
           <Step1Hotels
@@ -107,6 +124,7 @@ export function DeckWizard() {
           <Step4Objectives
             deckId={deck.id}
             deck={deck}
+            registerSave={registerStepSave}
             onBack={() => setCurrentStep(3)}
             onNext={() => setCurrentStep(5)}
           />
