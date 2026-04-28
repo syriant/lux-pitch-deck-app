@@ -15,7 +15,7 @@ export async function uploadImage(file: File): Promise<UploadResult> {
 /** Build a full URL for an uploaded file path (e.g. /uploads/abc.jpg) */
 export function uploadUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  if (path.startsWith('http')) return path;
+  if (path.startsWith('http') || path.startsWith('data:')) return path;
   const base = import.meta.env.VITE_API_URL?.replace(/\/api\/v1$/, '') ?? '';
   return `${base}${path}`;
 }

@@ -12,6 +12,7 @@ import {
 import { fetchTableauMetrics } from '@/api/tableau.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadUrl } from '@/api/upload.api';
+import { ingestBase64Images } from '@/api/image-library.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
@@ -155,7 +156,23 @@ export function CaseStudies() {
     }
   }
 
-  function buildPayload() {
+  async function resolveImagesForSubmit(): Promise<string[]> {
+    const dataUrls = form.images.filter((u) => u.startsWith('data:'));
+    if (dataUrls.length === 0) return form.images;
+
+    const ingested = await ingestBase64Images({
+      items: dataUrls.map((dataUrl) => ({ dataUrl })),
+      hotelName: form.hotelName.trim() || null,
+      destination: form.destination.trim() || null,
+      source: 'pitch_deck',
+    });
+
+    let i = 0;
+    return form.images.map((u) => (u.startsWith('data:') ? ingested[i++]?.url ?? u : u));
+  }
+
+  async function buildPayload() {
+    const images = await resolveImagesForSubmit();
     return {
       title: form.title,
       hotelName: form.hotelName,
@@ -172,14 +189,20 @@ export function CaseStudies() {
       upgradePercentage: form.upgradePercentage ? parseFloat(form.upgradePercentage) : undefined,
       narrative: form.narrative || undefined,
       tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-      images: form.images,
+      images,
     };
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    const payload = buildPayload();
+    let payload: Awaited<ReturnType<typeof buildPayload>>;
+    try {
+      payload = await buildPayload();
+    } catch {
+      setError('Failed to ingest extracted images');
+      return;
+    }
 
     try {
       if (editingId) {

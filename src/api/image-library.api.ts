@@ -77,6 +77,21 @@ export async function bulkDeleteLibraryImages(ids: string[]): Promise<{ deleted:
   return res.data;
 }
 
+export async function ingestBase64Images(args: {
+  items: Array<{ dataUrl: string; width?: number | null; height?: number | null }>;
+  hotelName?: string | null;
+  destination?: string | null;
+  source?: string;
+}): Promise<LibraryImage[]> {
+  const res = await apiClient.post<LibraryImage[]>('/image-library/ingest-base64', {
+    items: args.items,
+    hotelName: args.hotelName ?? null,
+    destination: args.destination ?? null,
+    source: args.source ?? 'pitch_deck',
+  });
+  return res.data;
+}
+
 export async function uploadToLibrary(args: {
   file: File;
   hotelName?: string;

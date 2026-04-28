@@ -10,6 +10,7 @@ import {
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadUrl } from '@/api/upload.api';
+import { ingestBase64Images } from '@/api/image-library.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
@@ -146,8 +147,26 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     setShowCreateForm(true);
   }
 
-  function buildCreatePayload() {
+  async function resolveImagesForSubmit(): Promise<string[]> {
+    const dataUrls = createImages.filter((u) => u.startsWith('data:'));
+    const httpUrls = createImages.filter((u) => !u.startsWith('data:'));
+    if (dataUrls.length === 0) return httpUrls;
+
+    const ingested = await ingestBase64Images({
+      items: dataUrls.map((dataUrl) => ({ dataUrl })),
+      hotelName: createForm.hotelName.trim() || null,
+      destination: createForm.destination.trim() || null,
+      source: 'pitch_deck',
+    });
+
+    // Preserve original order by walking createImages and substituting.
+    let i = 0;
+    return createImages.map((u) => (u.startsWith('data:') ? ingested[i++]?.url ?? u : u));
+  }
+
+  async function buildCreatePayload() {
     const tags = createForm.tags.split(',').map((t) => t.trim()).filter(Boolean);
+    const images = await resolveImagesForSubmit();
     return {
       title: createForm.title,
       hotelName: createForm.hotelName,
@@ -161,7 +180,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       leadTime: createForm.leadTime ? Number(createForm.leadTime) : undefined,
       bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
       narrative: createForm.narrative || undefined,
-      images: createImages.length > 0 ? createImages : undefined,
+      images: images.length > 0 ? images : undefined,
     };
   }
 
@@ -169,7 +188,14 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     e.preventDefault();
     setCreating(true);
     setError('');
-    const payload = buildCreatePayload();
+    let payload: Awaited<ReturnType<typeof buildCreatePayload>>;
+    try {
+      payload = await buildCreatePayload();
+    } catch {
+      setError('Failed to ingest extracted images');
+      setCreating(false);
+      return;
+    }
     try {
       const created = await createCaseStudy(payload);
       setCaseStudies((prev) => [created, ...prev]);

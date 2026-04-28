@@ -1,7 +1,9 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
+import { getReachStats, type ReachStat } from '@/api/reach-stats.api';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { SLIDE_DEFAULTS } from '../slide-defaults';
@@ -32,7 +34,7 @@ const SRC_H = 937;
 function drawMapWithLabels(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement,
-  customFields?: Record<string, string>,
+  reachByRegion: Record<string, string>,
 ): void {
   const maybeCtx = canvas.getContext('2d');
   if (!maybeCtx) return;
@@ -70,7 +72,7 @@ function drawMapWithLabels(
     const x = ix + cx * sx;
     const y = iy + cy * sy;
     const fullKey = `reach.${key}`;
-    const members = customFields?.[fullKey] ?? SLIDE_DEFAULTS[fullKey]?.value ?? '';
+    const members = reachByRegion[key] ?? SLIDE_DEFAULTS[fullKey]?.value ?? '';
     const nameSize = Math.max(12, Math.round(20 * sx));
     const countSize = Math.max(16, Math.round(30 * sx));
 
@@ -111,11 +113,22 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
+  const { data: reachStats } = useQuery<ReachStat[]>({
+    queryKey: ['reach-stats'],
+    queryFn: getReachStats,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const reachByRegion = (reachStats ?? []).reduce<Record<string, string>>((acc, r) => {
+    acc[r.region] = r.label;
+    return acc;
+  }, {});
+
   const redraw = useCallback(() => {
     if (canvasRef.current && imgRef.current) {
-      drawMapWithLabels(canvasRef.current, imgRef.current, cf);
+      drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion);
     }
-  }, [cf]);
+  }, [reachByRegion]);
 
   useEffect(() => {
     const img = new Image();

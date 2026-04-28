@@ -21,6 +21,7 @@ const adminLinks: NavItem[] = [
   { label: 'Objectives', path: '/admin/objectives', icon: 'target' },
   { label: 'Deal Tiers', path: '/admin/deal-tiers', icon: 'layers' },
   { label: 'Templates', path: '/admin/templates', icon: 'layout' },
+  { label: 'Reach Stats', path: '/admin/reach-stats', icon: 'globe' },
   { label: 'Image Library', path: '/admin/image-library', icon: 'image' },
   { label: 'LLM Settings', path: '/admin/llm', icon: 'cpu' },
   { label: 'Users', path: '/admin/users', icon: 'users' },
@@ -72,6 +73,12 @@ const iconMap: Record<string, React.ReactNode> = {
       <rect x="5" y="5" width="14" height="14" rx="1" />
       <rect x="9" y="9" width="6" height="6" />
       <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" strokeLinecap="round" />
+    </svg>
+  ),
+  globe: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <circle cx="12" cy="12" r="10" />
+      <path strokeLinecap="round" d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20" />
     </svg>
   ),
 };
