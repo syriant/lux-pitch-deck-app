@@ -151,6 +151,7 @@ export function buildTemplatePreviewDeck(args: {
         objectiveText: 'Drive incremental room nights and capture demand from new market segments.',
         source: 'template',
         sortOrder: 0,
+        isPrimary: true,
       },
       {
         id: 'sample-obj-2',
@@ -158,6 +159,7 @@ export function buildTemplatePreviewDeck(args: {
         objectiveText: 'Increase ADR through premium package positioning and tailored campaigns.',
         source: 'template',
         sortOrder: 1,
+        isPrimary: false,
       },
     ],
     differentiators: [],
