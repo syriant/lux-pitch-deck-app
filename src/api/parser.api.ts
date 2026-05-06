@@ -53,6 +53,11 @@ export interface ParsedPricingTool {
   };
   blackoutDates: string[];
   warnings: string[];
+  originalFile: {
+    url: string;
+    filename: string;
+    originalName: string;
+  };
 }
 
 export async function parsePricingTool(file: File): Promise<ParsedPricingTool> {

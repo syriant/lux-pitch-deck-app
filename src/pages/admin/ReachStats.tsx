@@ -47,7 +47,8 @@ export function ReachStats() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Reach Stats</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Member counts shown on the Reach slide map. Free-form text — e.g. <code>1.1M+</code>, <code>700k+</code>, <code>400k</code>.
+          Member counts on the Reach slide. Free-form text — e.g. <code>1.1M+</code>, <code>700k+</code>, <code>400k</code>.
+          The <strong>Global</strong> row sets the slide subtitle (<code>{`{label}`} members globally trust Luxury Escapes</code>); all other rows label the regional circles on the map.
         </p>
       </div>
 

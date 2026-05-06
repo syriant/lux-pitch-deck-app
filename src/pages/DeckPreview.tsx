@@ -270,6 +270,7 @@ export function DeckPreview() {
   }
 
   const activeSlide = slides[activeIndex];
+  const isActiveHidden = activeSlide ? hiddenSlides.includes(activeSlide.id) : false;
 
   return (
     <AppShell sidebar={false} breadcrumb={deck.name}>
@@ -291,9 +292,30 @@ export function DeckPreview() {
           <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
             {activeSlide && (
               <div className="w-full max-w-5xl">
-                <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
+                {isActiveHidden && (
+                  <div className="mb-3 flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm">
+                    <div className="flex items-center gap-2 text-amber-800">
+                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l1.687 1.687C2.347 6.106 1.293 7.764.6 9.36a1.59 1.59 0 0 0 0 1.28C2.062 13.95 5.42 16.5 10 16.5c1.62 0 3.107-.32 4.42-.86l2.3 2.3a.75.75 0 1 0 1.06-1.06L3.28 2.22Zm6.345 9.527a3 3 0 0 1-3.872-3.872l1.207 1.207a1.5 1.5 0 0 0 1.458 1.458l1.207 1.207ZM10 5a5.96 5.96 0 0 0-1.55.205l1.27 1.27a3 3 0 0 1 3.305 3.305l2.062 2.062c1.041-.943 1.94-2.108 2.713-3.502a1.59 1.59 0 0 0 0-1.28C17.938 6.05 14.58 3.5 10 3.5c-.18 0-.357.005-.532.015L10 5Z" />
+                      </svg>
+                      <span>
+                        This slide is hidden — it will not appear in PPTX or PDF exports.
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleToggleHidden(activeSlide.id)}
+                      className="rounded border border-amber-300 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                    >
+                      Show slide
+                    </button>
+                  </div>
+                )}
+                <div className={isActiveHidden ? 'opacity-40 grayscale' : ''}>
+                  <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
+                </div>
                 <div className="mt-3 text-center text-xs text-gray-400">
                   {activeIndex + 1} / {slides.length} — {activeSlide.label}
+                  {isActiveHidden && <span className="ml-2 font-medium text-amber-600">(hidden)</span>}
                 </div>
               </div>
             )}

@@ -72,6 +72,7 @@ export interface UpdatePropertyRequest {
   grade?: string | null;
   tier?: number | null;
   gmPercentage?: number | null;
+  pricingToolFile?: string | null;
   sortOrder?: number;
 }
 
@@ -227,6 +228,7 @@ export interface FullDeck {
   locale: string;
   coverImage: string | null;
   heroImage: string | null;
+  logoImage: string | null;
   customFields: Record<string, string>;
   gallery: string[];
   templateId: string | null;
@@ -304,6 +306,7 @@ export async function updateDeck(id: string, data: {
   locale?: string;
   coverImage?: string | null;
   heroImage?: string | null;
+  logoImage?: string | null;
   customFields?: Record<string, string>;
   gallery?: string[];
   slideOrder?: TemplateSlide[];

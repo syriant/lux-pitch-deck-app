@@ -112,6 +112,7 @@ export function DeckWizard() {
             deckId={deck.id}
             coverImage={deck.coverImage ?? null}
             heroImage={deck.heroImage ?? null}
+            logoImage={deck.logoImage ?? null}
             gallery={deck.gallery ?? []}
             hotelName={deck.properties[0]?.propertyName ?? null}
             destination={deck.properties[0]?.destination ?? null}

@@ -124,6 +124,11 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
     return acc;
   }, {});
 
+  const globalLabel = reachByRegion['Global'];
+  const subtitleDefault = globalLabel
+    ? `${globalLabel} members globally trust Luxury Escapes`
+    : undefined;
+
   const redraw = useCallback(() => {
     if (canvasRef.current && imgRef.current) {
       drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion);
@@ -179,6 +184,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
           />
           <SlideRichText
             fieldKey="reach.subtitle"
+            defaultValue={subtitleDefault}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="text-gray-600 mb-3"

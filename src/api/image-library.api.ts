@@ -32,6 +32,28 @@ export async function fetchHotelImages(args: {
   return res.data;
 }
 
+export interface FetchLogosResponse {
+  images: LibraryImage[];
+  googleConfigured: boolean;
+  googleUsed: boolean;
+  cachedCount: number;
+}
+
+export async function fetchHotelLogos(args: {
+  hotelName: string;
+  destination?: string;
+  limit?: number;
+  forceGoogle?: boolean;
+}): Promise<FetchLogosResponse> {
+  const res = await apiClient.post<FetchLogosResponse>('/image-library/fetch-logo', {
+    hotelName: args.hotelName,
+    destination: args.destination,
+    limit: args.limit ?? 10,
+    forceGoogle: args.forceGoogle,
+  });
+  return res.data;
+}
+
 export async function searchLibrary(hotelName: string, destination?: string): Promise<LibraryImage[]> {
   const res = await apiClient.get<LibraryImage[]>('/image-library', {
     params: { hotelName, destination },

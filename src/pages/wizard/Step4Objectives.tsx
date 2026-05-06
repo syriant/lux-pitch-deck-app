@@ -1,8 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getObjectiveTemplates, type ObjectiveTemplate } from '@/api/objectives.api';
 import { getDifferentiators, type Differentiator } from '@/api/differentiators.api';
-import { setDeckObjectives, setDeckDifferentiators, getDeckObjectives, getDeckDifferentiators, type FullDeck, type DeckDifferentiatorFull } from '@/api/decks.api';
+import { setDeckObjectives, setDeckDifferentiators, getDeckObjectives, getDeckDifferentiators, updateDeck, type FullDeck, type DeckDifferentiatorFull } from '@/api/decks.api';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
+
+const MAX_DIFFERENTIATORS = 6;
+
+// Slides that are hidden by default unless at least one differentiator
+// from the matching category is selected. The PCM can override visibility
+// in the preview, but re-saving the wizard re-asserts the rule below.
+const SLIDE_VISIBILITY_RULES: Array<{ slideId: string; diffCategory: string }> = [
+  { slideId: 'reach', diffCategory: 'reach' },
+  { slideId: 'demographics', diffCategory: 'demographics' },
+];
+
+function parseHiddenSlides(json: string | undefined): string[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed.filter((s): s is string => typeof s === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 interface Step4Props {
   deckId: string;
@@ -22,6 +42,9 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
   const [primaryKey, setPrimaryKey] = useState<string | null>(null);
   const [suggestedDiffIds, setSuggestedDiffIds] = useState<Set<string>>(new Set());
   const [selectedDiffIds, setSelectedDiffIds] = useState<Set<string>>(new Set());
+  const [hiddenSlides, setHiddenSlides] = useState<string[]>(() =>
+    parseHiddenSlides(deck.customFields?.['hiddenSlides']),
+  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -72,28 +95,41 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
     load();
   }, [deckId]);
 
-  // Auto-suggest differentiators when objectives change
-  useEffect(() => {
-    const suggested = new Set<string>();
-    for (const id of selectedTemplateIds) {
-      const tmpl = templates.find((t) => t.id === id);
-      if (tmpl?.differentiatorIds) {
-        for (const dId of tmpl.differentiatorIds) {
-          suggested.add(dId);
+  // Build the ordered list of differentiator IDs suggested by the currently
+  // selected objectives. Primary objective's differentiators come first, then
+  // remaining objectives in template display order, deduplicated.
+  function computeOrderedSuggestions(
+    templateIds: Set<string>,
+    primaryK: string | null,
+  ): string[] {
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    const push = (tmpl?: ObjectiveTemplate) => {
+      if (!tmpl?.differentiatorIds) return;
+      for (const dId of tmpl.differentiatorIds) {
+        if (!seen.has(dId)) {
+          ordered.push(dId);
+          seen.add(dId);
         }
       }
+    };
+    if (primaryK?.startsWith('tmpl:')) {
+      const primaryId = primaryK.slice(5);
+      if (templateIds.has(primaryId)) push(templates.find((t) => t.id === primaryId));
     }
-    setSuggestedDiffIds(suggested);
+    for (const tmpl of templates) {
+      if (templateIds.has(tmpl.id)) push(tmpl);
+    }
+    return ordered;
+  }
 
-    // Auto-select suggested ones that aren't already selected
-    setSelectedDiffIds((prev) => {
-      const next = new Set(prev);
-      for (const dId of suggested) {
-        next.add(dId);
-      }
-      return next;
-    });
-  }, [selectedTemplateIds, templates]);
+  // Keep the visual "suggested" set in sync with the current objectives.
+  // This is purely derived state — never modifies selectedDiffIds, so reload
+  // doesn't resurrect a differentiator the user explicitly deselected.
+  useEffect(() => {
+    setSuggestedDiffIds(new Set(computeOrderedSuggestions(selectedTemplateIds, primaryKey)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplateIds, templates, primaryKey]);
 
   function toggleTemplate(id: string) {
     setSelectedTemplateIds((prev) => {
@@ -103,6 +139,18 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
         if (primaryKey === `tmpl:${id}`) setPrimaryKey(null);
       } else {
         next.add(id);
+        // Newly-ticked objective triggers auto-fill of its suggested
+        // differentiators, up to the cap. Untick or reload never auto-fills,
+        // so prior deselections survive.
+        const suggested = computeOrderedSuggestions(next, primaryKey);
+        setSelectedDiffIds((prevDiffs) => {
+          const nextDiffs = new Set(prevDiffs);
+          for (const dId of suggested) {
+            if (nextDiffs.size >= MAX_DIFFERENTIATORS) break;
+            nextDiffs.add(dId);
+          }
+          return nextDiffs;
+        });
       }
       return next;
     });
@@ -114,6 +162,7 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
       if (next.has(id)) {
         next.delete(id);
       } else {
+        if (next.size >= MAX_DIFFERENTIATORS) return prev;
         next.add(id);
       }
       return next;
@@ -149,6 +198,35 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
       setDeckObjectives(deckId, objectives),
       setDeckDifferentiators(deckId, Array.from(selectedDiffIds)),
     ]);
+
+    // Reconcile category-driven slide visibility: each slide listed in
+    // SLIDE_VISIBILITY_RULES is hidden unless at least one differentiator
+    // in the matching category is selected. The PCM can override per slide
+    // in the preview, but re-saving here re-asserts the wizard's intent.
+    let nextHidden: string[] = hiddenSlides;
+    let changed = false;
+    for (const { slideId, diffCategory } of SLIDE_VISIBILITY_RULES) {
+      const categoryDiffIds = allDifferentiators
+        .filter((d) => d.category === diffCategory)
+        .map((d) => d.id);
+      if (categoryDiffIds.length === 0) continue;
+      const anySelected = categoryDiffIds.some((id) => selectedDiffIds.has(id));
+      const isHidden = nextHidden.includes(slideId);
+      if (anySelected && isHidden) {
+        nextHidden = nextHidden.filter((s) => s !== slideId);
+        changed = true;
+      } else if (!anySelected && !isHidden) {
+        nextHidden = [...nextHidden, slideId];
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    const updatedFields = {
+      ...(deck.customFields ?? {}),
+      hiddenSlides: JSON.stringify(nextHidden),
+    };
+    await updateDeck(deckId, { customFields: updatedFields });
+    setHiddenSlides(nextHidden);
   }
 
   // Register save with the wizard so Save & Exit / Preview / step-jump persist
@@ -157,7 +235,7 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
   useEffect(() => {
     registerSave?.(persist);
     return () => registerSave?.(null);
-  }, [registerSave, loading, selectedTemplateIds, freeTexts, primaryKey, selectedDiffIds, templates]);
+  }, [registerSave, loading, selectedTemplateIds, freeTexts, primaryKey, selectedDiffIds, templates, allDifferentiators, hiddenSlides]);
 
   async function handleSaveAndNext() {
     setSaving(true);
@@ -191,7 +269,8 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
       <h2 className="text-xl font-bold text-gray-900 mb-1">Campaign Objectives</h2>
       <p className="text-sm text-gray-500 mb-6">
         Select objectives from templates or add your own. Tap the star next to a selection to mark it as the Primary
-        objective on the slide. Differentiators are auto-suggested based on your selections.
+        objective on the slide. Differentiators are auto-suggested based on your selections — up to {MAX_DIFFERENTIATORS} fit
+        on the slide.
       </p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -287,38 +366,52 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
         <div>
           <h3 className="text-sm font-semibold text-gray-700 mb-3">
             Differentiators
-            {suggestedDiffIds.size > 0 && (
-              <span className="ml-2 font-normal text-gray-400 text-xs">
-                ({suggestedDiffIds.size} auto-suggested)
-              </span>
-            )}
+            <span className="ml-2 font-normal text-gray-400 text-xs">
+              ({selectedDiffIds.size} of {MAX_DIFFERENTIATORS} selected
+              {suggestedDiffIds.size > 0 ? `, ${suggestedDiffIds.size} suggested` : ''})
+            </span>
           </h3>
+          {selectedDiffIds.size >= MAX_DIFFERENTIATORS && (
+            <p className="mb-2 text-xs text-amber-600">
+              Maximum {MAX_DIFFERENTIATORS} differentiators — deselect one to swap.
+            </p>
+          )}
           <div className="space-y-1">
             {allDifferentiators.map((diff) => {
               const isSuggested = suggestedDiffIds.has(diff.id);
               const isSelected = selectedDiffIds.has(diff.id);
+              const atCap = selectedDiffIds.size >= MAX_DIFFERENTIATORS;
+              const disabled = !isSelected && atCap;
 
               return (
                 <label
                   key={diff.id}
-                  className={`flex items-start gap-2 rounded-md border px-3 py-2 cursor-pointer text-sm ${
+                  className={`flex items-start gap-2 rounded-md border px-3 py-2 text-sm ${
+                    disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                  } ${
                     isSelected
                       ? isSuggested
                         ? 'border-green-300 bg-green-50'
                         : 'border-[#01B18B]/50 bg-[#E6F9F5]'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      : isSuggested
+                        ? 'border-green-200 bg-green-50/40 hover:bg-green-50'
+                        : 'border-gray-200 hover:bg-gray-50'
                   }`}
+                  title={disabled ? `Maximum ${MAX_DIFFERENTIATORS} differentiators reached` : undefined}
                 >
                   <input
                     type="checkbox"
                     checked={isSelected}
+                    disabled={disabled}
                     onChange={() => toggleDifferentiator(diff.id)}
                     className="mt-0.5"
                   />
                   <div>
                     <div className="font-medium">{diff.title}</div>
                     {isSuggested && (
-                      <div className="text-xs text-green-600">Auto-suggested</div>
+                      <div className="text-xs text-green-600">
+                        {isSelected ? 'Auto-suggested' : 'Suggested — deselect another to add'}
+                      </div>
                     )}
                   </div>
                 </label>

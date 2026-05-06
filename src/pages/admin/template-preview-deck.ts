@@ -25,6 +25,7 @@ export function buildTemplatePreviewDeck(args: {
     locale: 'en-AU',
     coverImage: null,
     heroImage: null,
+    logoImage: null,
     customFields: {},
     templateDefaults,
     gallery: [],

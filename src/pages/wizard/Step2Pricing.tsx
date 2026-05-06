@@ -14,6 +14,7 @@ interface PropertyParseState {
   error: string;
   result: ParsedPricingTool | null;
   hasSavedOptions?: boolean;
+  pricingToolFile?: string | null;
 }
 
 export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props) {
@@ -21,8 +22,14 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
   const [parseStates, setParseStates] = useState<Record<string, PropertyParseState>>(() => {
     const init: Record<string, PropertyParseState> = {};
     for (const p of properties) {
-      if (p.options.length > 0) {
-        init[p.id] = { loading: false, error: '', result: null, hasSavedOptions: true };
+      if (p.options.length > 0 || p.pricingToolFile) {
+        init[p.id] = {
+          loading: false,
+          error: '',
+          result: null,
+          hasSavedOptions: p.options.length > 0,
+          pricingToolFile: p.pricingToolFile ?? null,
+        };
       }
     }
     return init;
@@ -92,18 +99,23 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
 
       await setPropertyOptions(deckId, propertyId, options);
 
-      // Update property grade/tier if parser extracted them
+      // Persist original file URL + grade/tier
       const firstOpt = result.options[0];
-      if (firstOpt?.tier != null || result.metadata.grade) {
-        await updateProperty(deckId, propertyId, {
-          grade: result.metadata.grade ?? undefined,
-          tier: firstOpt?.tier ?? undefined,
-        });
-      }
+      const propertyUpdates: Parameters<typeof updateProperty>[2] = {
+        pricingToolFile: result.originalFile.url,
+      };
+      if (firstOpt?.tier != null) propertyUpdates.tier = firstOpt.tier;
+      if (result.metadata.grade) propertyUpdates.grade = result.metadata.grade;
+      await updateProperty(deckId, propertyId, propertyUpdates);
 
       setParseStates((prev) => ({
         ...prev,
-        [propertyId]: { loading: false, error: '', result },
+        [propertyId]: {
+          loading: false,
+          error: '',
+          result,
+          pricingToolFile: result.originalFile.url,
+        },
       }));
       setExpandedProperty(propertyId);
 
@@ -160,7 +172,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
               {/* Expanded content */}
               {isExpanded && (
                 <div className="border-t border-gray-100 px-4 py-4">
-                  <div className="mb-4">
+                  <div className="mb-4 flex items-center gap-4 flex-wrap">
                     <input
                       ref={(el) => { fileInputRefs.current[prop.id] = el; }}
                       type="file"
@@ -168,6 +180,19 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
                       onChange={(e) => handleFileChange(prop.id, e)}
                       className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-[#01B18B] file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-[#009977]"
                     />
+                    {state?.pricingToolFile && (
+                      <a
+                        href={state.pricingToolFile}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-[#01B18B] hover:text-[#009977] underline"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download original
+                      </a>
+                    )}
                   </div>
 
                   {versionWarnings.has(prop.id) && state?.result && !state.result.version.startsWith('5.1') && (
