@@ -116,12 +116,15 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
     size: 9,
   },
 
-  // ─── Marketing Assets ────────────────────────────────────────────────
+  // ─── Marketing Assets (Campaign Details slide — type=marketing-assets) ─
   'mktg.headline': { value: 'Your tailored campaign options', size: 20 },
   'mktg.disclaimer': {
     value: "<strong>Rates provided are inclusive of taxes and fees, and Luxury Escapes' marketing investment.</strong>",
     size: 9,
   },
+
+  // ─── Marketing Assets grid (per-tier ✓/✗ slide — type=marketing-assets-grid) ─
+  'mktgAssets.headline': { value: 'Marketing Assets', size: 20 },
 
   // ─── Market Challenges ───────────────────────────────────────────────
   'market-challenges.headline': { value: 'Market Challenges', size: 24 },
