@@ -131,23 +131,45 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
             <tbody>
               {rows.map((row, ri) => {
                 const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+                const effective = row.cells.map((defaultCell, ci) => {
+                  const fk = `mktg.${propId}.${row.key}.opt${optNums[ci]}`;
+                  return cf?.[fk] ?? defaultCell;
+                });
+                const placeholder = effective[0]?.trim();
+                const allSame = effective.length > 1
+                  && placeholder !== ''
+                  && placeholder !== '-'
+                  && effective.every((v) => v === effective[0]);
                 return (
                   <tr key={row.key} className="border-b border-gray-200">
                     <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
                       {row.label}
                     </td>
-                    {row.cells.map((cell, ci) => (
-                      <td key={ci} className={`p-2 align-top ${rowBg}`}>
+                    {allSame ? (
+                      <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>
                         <SlideRichText
-                          fieldKey={`mktg.${propId}.${row.key}.opt${optNums[ci]}`}
-                          defaultValue={cell}
+                          fieldKey={`mktg.${propId}.${row.key}.opt${optNums[0]}`}
+                          defaultValue={row.cells[0]}
                           defaultSize={9}
                           customFields={cf}
                           onFieldChange={onFieldChange}
-                          style={{ color: '#1a1a1a' }}
+                          style={{ color: '#1a1a1a', textAlign: 'center' }}
                         />
                       </td>
-                    ))}
+                    ) : (
+                      row.cells.map((cell, ci) => (
+                        <td key={ci} className={`p-2 align-top ${rowBg}`}>
+                          <SlideRichText
+                            fieldKey={`mktg.${propId}.${row.key}.opt${optNums[ci]}`}
+                            defaultValue={cell}
+                            defaultSize={9}
+                            customFields={cf}
+                            onFieldChange={onFieldChange}
+                            style={{ color: '#1a1a1a' }}
+                          />
+                        </td>
+                      ))
+                    )}
                   </tr>
                 );
               })}

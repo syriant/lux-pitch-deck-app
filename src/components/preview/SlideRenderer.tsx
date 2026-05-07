@@ -14,6 +14,7 @@ import { ObjectivesSlide } from './slides/ObjectivesSlide';
 import { CampaignOptionsSlide } from './slides/CampaignOptionsSlide';
 import { DealOptionsSlide } from './slides/DealOptionsSlide';
 import { MarketingAssetsSlide } from './slides/MarketingAssetsSlide';
+import { MarketingAssetsGridSlide } from './slides/MarketingAssetsGridSlide';
 import { MarketChallengesSlide } from './slides/MarketChallengesSlide';
 
 interface SlideRendererProps {
@@ -85,6 +86,8 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
       return <CampaignOptionsSlide deck={deck} onFieldChange={onFieldChange} onGalleryAdd={ga} />;
     case 'deal-options':
       return <DealOptionsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
+    case 'marketing-assets-grid':
+      return <MarketingAssetsGridSlide property={slide.property} deck={deck} channels={slide.marketingAssetsChannels} onFieldChange={onFieldChange} />;
     case 'marketing-assets':
       return <MarketingAssetsSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
     case 'market-challenges':

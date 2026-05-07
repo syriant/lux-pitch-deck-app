@@ -9,6 +9,17 @@ const LOGO_SIZE_MIN = 8;
 const LOGO_SIZE_MAX = 80;
 const LOGO_SIZE_STEP = 2;
 
+type LogoBackdrop = 'none' | 'light' | 'dark';
+const LOGO_BACKDROPS: ReadonlyArray<{ key: LogoBackdrop; label: string; swatch: string }> = [
+  { key: 'none', label: 'No backdrop', swatch: 'border border-white/40 bg-transparent' },
+  { key: 'light', label: 'Light backdrop', swatch: 'bg-white/80' },
+  { key: 'dark', label: 'Dark backdrop', swatch: 'bg-black/70 border border-white/20' },
+];
+
+function parseBackdrop(raw: string | undefined): LogoBackdrop {
+  return raw === 'light' || raw === 'dark' ? raw : 'none';
+}
+
 interface CoverSlideProps {
   deck: FullDeck;
   onFieldChange?: FieldChangeHandler;
@@ -45,18 +56,24 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
             const size = Number.isFinite(rawSize) && rawSize > 0
               ? Math.min(LOGO_SIZE_MAX, Math.max(LOGO_SIZE_MIN, rawSize))
               : LOGO_SIZE_DEFAULT;
+            const backdrop = parseBackdrop(cf['cover.logoBackdrop']);
+            const backdropPanel =
+              backdrop === 'light' ? 'bg-white/75 rounded-md p-[6%]'
+              : backdrop === 'dark' ? 'bg-black/60 rounded-md p-[6%]'
+              : '';
             return (
               <div className="relative group" style={{ width: `${size}%` }}>
-                <img
-                  src={logoImgUrl}
-                  alt="Hotel logo"
-                  className="w-full object-contain drop-shadow-md"
-                />
+                <div className={backdropPanel}>
+                  <img
+                    src={logoImgUrl}
+                    alt="Hotel logo"
+                    className="w-full object-contain drop-shadow-md"
+                  />
+                </div>
                 {onFieldChange && (
-                  // Anchor the size control at the TOP of the wrapper. Logos
+                  // Anchor the toolbar at the TOP of the wrapper. Logos
                   // grow downward as size increases (top is fixed, bottom
-                  // extends), so a top-anchored toolbar stays put while the
-                  // logo expands underneath it.
+                  // extends), so a top-anchored toolbar stays put.
                   <div className="absolute left-1/2 -top-7 -translate-x-1/2 flex items-center gap-0.5 rounded bg-black/60 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
@@ -73,6 +90,19 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
                     >
                       +
                     </button>
+                    <div className="w-px h-4 bg-white/20 mx-1" />
+                    {LOGO_BACKDROPS.map((opt) => {
+                      const isActive = backdrop === opt.key;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          title={opt.label}
+                          onClick={() => onFieldChange('custom', '', 'cover.logoBackdrop', opt.key)}
+                          className={`w-5 h-5 rounded-sm ${opt.swatch} ${isActive ? 'ring-2 ring-white' : 'opacity-70 hover:opacity-100'}`}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -240,6 +240,12 @@ export interface FullDeck {
   objectives: DeckObjective[];
   differentiators: DeckDifferentiatorFull[];
   templateDefaults: Record<string, string>;
+  dealTierRules?: Array<{
+    grade: string;
+    tier: number;
+    destination: string;
+    assetEntitlements: Record<string, string>;
+  }>;
 }
 
 export async function getFullDeck(id: string): Promise<FullDeck> {

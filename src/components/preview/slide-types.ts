@@ -11,6 +11,7 @@ export type SlideType =
   | 'objectives'
   | 'campaign-options'
   | 'deal-options'
+  | 'marketing-assets-grid'
   | 'marketing-assets'
   | 'market-challenges';
 
@@ -21,7 +22,64 @@ export interface SlideDefinition {
   property?: DeckPropertyFull;
   caseStudies?: DeckCaseStudyLink[];
   caseStudyChunkIndex?: number;
+  marketingAssetsChannels?: string[];
+  marketingAssetsChunkIndex?: number;
   removable?: boolean;
+}
+
+const MARKETING_ASSETS_PAGE_SIZE = 6;
+
+function findRulesByTierForProperty(
+  rules: NonNullable<FullDeck['dealTierRules']>,
+  property: { grade: string | null; destination: string | null },
+): Record<number, { assetEntitlements: Record<string, string> } | undefined> {
+  const out: Record<number, { assetEntitlements: Record<string, string> } | undefined> = {};
+  if (!property.grade) return out;
+  const sameGrade = rules.filter((r) => r.grade === property.grade);
+  let matches = sameGrade;
+  if (property.destination) {
+    const exact = sameGrade.filter((r) => r.destination === property.destination);
+    if (exact.length > 0) matches = exact;
+    else {
+      const partial = sameGrade.filter(
+        (r) => property.destination!.toLowerCase().includes(r.destination.toLowerCase())
+          || r.destination.toLowerCase().includes(property.destination!.toLowerCase()),
+      );
+      if (partial.length > 0) matches = partial;
+    }
+  }
+  for (const tier of [1, 2, 3] as const) {
+    out[tier] = matches.find((r) => r.tier === tier);
+  }
+  return out;
+}
+
+export function computeMarketingAssetChannels(
+  prop: DeckPropertyFull,
+  rules: NonNullable<FullDeck['dealTierRules']> = [],
+): string[] {
+  const rulesByTier = findRulesByTierForProperty(rules, { grade: prop.grade, destination: prop.destination });
+  const all = new Set<string>();
+  for (const tier of [1, 2, 3] as const) {
+    const r = rulesByTier[tier];
+    if (r) for (const ch of Object.keys(r.assetEntitlements)) all.add(ch);
+  }
+  const seen = new Set<number>();
+  const opts = prop.options.filter((o) => {
+    if (seen.has(o.optionNumber)) return false;
+    seen.add(o.optionNumber);
+    return true;
+  });
+  return Array.from(all).filter((ch) => opts.some((o) => o.marketingAssets?.[ch] === true));
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (items.length === 0) return [[]];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
 }
 
 export function buildSlideList(deck: FullDeck): SlideDefinition[] {
@@ -54,6 +112,23 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
                 property: prop,
                 caseStudies: chunks[ci],
                 caseStudyChunkIndex: ci,
+                removable: entry.removable,
+              });
+            }
+          } else if (slideType === 'marketing-assets-grid') {
+            const channels = computeMarketingAssetChannels(prop, deck.dealTierRules ?? []);
+            const chunks = channels.length === 0 ? [[]] : chunkArray(channels, MARKETING_ASSETS_PAGE_SIZE);
+            for (let ci = 0; ci < chunks.length; ci++) {
+              const start = ci * MARKETING_ASSETS_PAGE_SIZE + 1;
+              const end = start + chunks[ci].length - 1;
+              const suffix = chunks.length > 1 ? ` (${start}-${end})` : '';
+              slides.push({
+                id: `marketing-assets-grid-${prop.id}-${ci}`,
+                type: slideType,
+                label: `${prop.propertyName} Marketing Assets${suffix}`,
+                property: prop,
+                marketingAssetsChannels: chunks[ci],
+                marketingAssetsChunkIndex: ci,
                 removable: entry.removable,
               });
             }
@@ -94,6 +169,8 @@ function getPerPropertyLabel(type: SlideType, defaultLabel: string, prop: DeckPr
       return `${prop.destination ?? prop.propertyName} & LE`;
     case 'deal-options':
       return `${prop.propertyName} Options`;
+    case 'marketing-assets-grid':
+      return `${prop.propertyName} Marketing Assets`;
     case 'marketing-assets':
       return `${prop.propertyName} Details`;
     case 'case-study':

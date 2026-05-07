@@ -101,20 +101,6 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
   type Row = { key: string; label: string; cells: string[] };
   const rows: Row[] = [];
 
-  // Marketing Assets row
-  rows.push({
-    key: 'assets',
-    label: 'Marketing Assets',
-    cells: optNums.map((num) => {
-      const first = groups.get(num)![0];
-      if (!first.marketingAssets) return '-';
-      return Object.entries(first.marketingAssets)
-        .filter(([, v]) => v)
-        .map(([k]) => `• ${k}`)
-        .join('\n') || '-';
-    }),
-  });
-
   // Inclusions row
   rows.push({
     key: 'inclusions',
@@ -172,23 +158,49 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
         <tbody>
           {rows.map((row, ri) => {
             const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+            // Merge adjacent option cells when they resolve to the same text
+            // (after applying any per-cell custom-field overrides). Cuts the
+            // visual repetition for rows like "VCC / VCC / VCC".
+            const effective = row.cells.map((defaultCell, ci) => {
+              const fk = `deal.${property.id}.${row.key}.opt${optNums[ci]}`;
+              return customFields?.[fk] ?? defaultCell;
+            });
+            const placeholder = effective[0]?.trim();
+            const allSame = effective.length > 1
+              && placeholder !== ''
+              && placeholder !== '-'
+              && effective.every((v) => v === effective[0]);
+
             return (
               <tr key={ri} className="border-b border-gray-200">
                 <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
                   {row.label}
                 </td>
-                {row.cells.map((cell, ci) => (
-                  <td key={ci} className={`p-2 align-top ${rowBg}`}>
+                {allSame ? (
+                  <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>
                     <SlideRichText
-                      fieldKey={`deal.${property.id}.${row.key}.opt${optNums[ci]}`}
-                      defaultValue={cell.replace(/\n/g, '<br>')}
+                      fieldKey={`deal.${property.id}.${row.key}.opt${optNums[0]}`}
+                      defaultValue={row.cells[0].replace(/\n/g, '<br>')}
                       defaultSize={9}
                       customFields={customFields}
                       onFieldChange={onFieldChange}
-                      style={{ color: '#1a1a1a' }}
+                      style={{ color: '#1a1a1a', textAlign: 'center' }}
                     />
                   </td>
-                ))}
+                ) : (
+                  row.cells.map((cell, ci) => (
+                    <td key={ci} className={`p-2 align-top ${rowBg}`}>
+                      <SlideRichText
+                        fieldKey={`deal.${property.id}.${row.key}.opt${optNums[ci]}`}
+                        defaultValue={cell.replace(/\n/g, '<br>')}
+                        defaultSize={9}
+                        customFields={customFields}
+                        onFieldChange={onFieldChange}
+                        style={{ color: '#1a1a1a' }}
+                      />
+                    </td>
+                  ))
+                )}
               </tr>
             );
           })}

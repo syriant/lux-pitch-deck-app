@@ -76,7 +76,12 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
             .map((s) => ({ name: s.day, amount: s.allYear, period: 'Day of week' })),
         ];
 
-        const inclusionNames = result.inclusions.map((inc) => inc.assetName);
+        // Per-option inclusions (parsed from each option's block in the Hotel
+        // Proposal sheet). Falls back to the flat "Inclusions Import" list
+        // if a particular option's block is empty — mostly a safety net for
+        // older sheets where the per-option block isn't filled in.
+        const fallbackInclusionNames = result.inclusions.map((inc) => inc.assetName);
+        const optInclusions = opt.inclusions.length > 0 ? opt.inclusions : fallbackInclusionNames;
 
         for (const deal of opt.dealOptions) {
           options.push({
@@ -91,7 +96,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
             blackoutDates: result.blackoutDates.length > 0
               ? result.blackoutDates.map((d) => ({ from: d, to: d }))
               : null,
-            inclusions: inclusionNames.length > 0 ? inclusionNames : null,
+            inclusions: optInclusions.length > 0 ? optInclusions : null,
             marketingAssets: null,
           });
         }
@@ -314,14 +319,24 @@ function ParsedResult({ result }: { result: ParsedPricingTool }) {
               ))}
             </tbody>
           </table>
+
+          {opt.inclusions.length > 0 && (
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">Inclusions: </span>
+              <span className="text-xs text-gray-600">{opt.inclusions.join(', ')}</span>
+            </div>
+          )}
         </div>
       ))}
 
-      {/* Inclusions */}
+      {/* Inclusion library — flat list from "Inclusions Import" sheet, kept
+          as a reference (it carries RRP). The actual per-option inclusions
+          shown above each option's table are what get saved to the deck. */}
       {result.inclusions.length > 0 && (
         <div>
           <h4 className="text-sm font-semibold text-gray-700 mb-1">
-            Inclusions ({result.inclusions.length})
+            Inclusion library
+            <span className="ml-2 font-normal text-gray-500 text-xs">({result.inclusions.length} items — reference only, see per-option lists above)</span>
           </h4>
           <ul className="text-xs text-gray-600 space-y-0.5">
             {result.inclusions.map((inc, i) => (

@@ -21,6 +21,7 @@ const ALL_SLIDE_TYPES: Array<{ type: string; label: string; defaultPerProperty?:
   { type: 'objectives', label: 'Campaign Objectives' },
   { type: 'campaign-options', label: 'Campaign Options Overview' },
   { type: 'deal-options', label: 'Deal Options', defaultPerProperty: true },
+  { type: 'marketing-assets-grid', label: 'Marketing Assets', defaultPerProperty: true },
   { type: 'marketing-assets', label: 'Campaign Details', defaultPerProperty: true },
 ];
 

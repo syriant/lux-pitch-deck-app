@@ -28,6 +28,7 @@ export interface ParsedPricingTool {
       maxExtraNights: number;
       allocationPerDay: string | null;
     }>;
+    inclusions: string[];
   }>;
   inclusions: Array<{
     assetName: string;
