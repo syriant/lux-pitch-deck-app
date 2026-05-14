@@ -1,17 +1,26 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import {
   createProperty,
   updateProperty,
   deleteProperty,
+  updateDeck,
   type DeckProperty,
 } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { DestinationCombobox, type DestinationSelection } from '@/components/common/DestinationCombobox';
+import { substitutePlaceholders } from '@/components/preview/DeckRenderContext';
+
+const HOTEL_INTRO_FIELD = 'hotelIntro.valueProp';
+const HOTEL_INTRO_FALLBACK_LIMIT = 200;
+const HOTEL_INTRO_DEBOUNCE_MS = 700;
 
 interface Step1Props {
   deckId: string;
   properties: DeckProperty[];
+  customFields: Record<string, string>;
+  templateDefaults: Record<string, string>;
   onPropertiesChange: () => Promise<void>;
+  onDeckChange: () => Promise<void>;
   onNext: () => void;
 }
 
@@ -30,13 +39,79 @@ function formatDestinationLabel(opt: DestinationOption): string {
   return opt.destination;
 }
 
-export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: Step1Props) {
+export function Step1Hotels({
+  deckId,
+  properties,
+  customFields,
+  templateDefaults,
+  onPropertiesChange,
+  onDeckChange,
+  onNext,
+}: Step1Props) {
   const [showForm, setShowForm] = useState(properties.length === 0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PropertyForm>(emptyForm);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+
+  const [hotelIntro, setHotelIntro] = useState<string>(customFields[HOTEL_INTRO_FIELD] ?? '');
+  const [introSavedAt, setIntroSavedAt] = useState<number | null>(null);
+  const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedIntroRef = useRef<string>(customFields[HOTEL_INTRO_FIELD] ?? '');
+
+  useEffect(() => {
+    const incoming = customFields[HOTEL_INTRO_FIELD] ?? '';
+    if (incoming !== lastSavedIntroRef.current) {
+      setHotelIntro(incoming);
+      lastSavedIntroRef.current = incoming;
+    }
+  }, [customFields]);
+
+  const destination = properties[0]?.destination ?? '';
+  const resolvedDefault = substitutePlaceholders(
+    templateDefaults[HOTEL_INTRO_FIELD] ?? '',
+    { destination, hotelName: properties[0]?.propertyName ?? '' },
+  );
+  const introLimit = resolvedDefault.length > 0 ? resolvedDefault.length : HOTEL_INTRO_FALLBACK_LIMIT;
+  const introCount = hotelIntro.length;
+  const introOverLimit = introCount > introLimit;
+
+  function commitIntro(value: string) {
+    if (value === lastSavedIntroRef.current) return;
+    const next: Record<string, string> = { ...customFields };
+    if (value.trim() === '') {
+      delete next[HOTEL_INTRO_FIELD];
+    } else {
+      next[HOTEL_INTRO_FIELD] = value;
+    }
+    lastSavedIntroRef.current = value;
+    updateDeck(deckId, { customFields: next })
+      .then(() => {
+        setIntroSavedAt(Date.now());
+        onDeckChange().catch(() => {});
+      })
+      .catch(() => setError('Failed to save hotel introduction'));
+  }
+
+  function handleIntroChange(value: string) {
+    setHotelIntro(value);
+    setIntroSavedAt(null);
+    if (introTimerRef.current) clearTimeout(introTimerRef.current);
+    introTimerRef.current = setTimeout(() => commitIntro(value), HOTEL_INTRO_DEBOUNCE_MS);
+  }
+
+  function handleIntroBlur() {
+    if (introTimerRef.current) {
+      clearTimeout(introTimerRef.current);
+      introTimerRef.current = null;
+    }
+    commitIntro(hotelIntro);
+  }
+
+  useEffect(() => () => {
+    if (introTimerRef.current) clearTimeout(introTimerRef.current);
+  }, []);
 
   useEffect(() => {
     getDestinations()
@@ -200,6 +275,31 @@ export function Step1Hotels({ deckId, properties, onPropertiesChange, onNext }: 
           + Add another property
         </button>
       )}
+
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-5">
+        <label className="block text-sm font-medium text-gray-700">
+          Hotel Introduction
+          <span className="ml-2 text-xs font-normal text-gray-500">
+            shown on slide 2 — leave blank to use the template default
+          </span>
+        </label>
+        <textarea
+          rows={4}
+          value={hotelIntro}
+          onChange={(e) => handleIntroChange(e.target.value)}
+          onBlur={handleIntroBlur}
+          placeholder={resolvedDefault || 'Enter a short headline for slide 2…'}
+          className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+        />
+        <div className="mt-1 flex items-center justify-between text-xs">
+          <span className={introOverLimit ? 'text-red-600' : 'text-gray-500'}>
+            {introCount}/{introLimit}
+          </span>
+          {introSavedAt && (
+            <span className="text-[#01B18B]">Saved</span>
+          )}
+        </div>
+      </div>
 
       <div className="flex justify-end">
         <button

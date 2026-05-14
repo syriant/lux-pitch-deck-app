@@ -29,6 +29,7 @@ export function DeckPreview() {
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingPdfCompressed, setExportingPdfCompressed] = useState(false);
   const [hiddenSlides, setHiddenSlides] = useState<string[]>([]);
 
   // Keep ref in sync for use in callbacks
@@ -346,7 +347,7 @@ export function DeckPreview() {
                   setExportingPdf(false);
                 }
               }}
-              disabled={exportingPdf}
+              disabled={exportingPdf || exportingPdfCompressed}
               className="rounded-md border border-[#01B18B] px-4 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5"
             >
               {exportingPdf && (
@@ -356,6 +357,30 @@ export function DeckPreview() {
                 </svg>
               )}
               {exportingPdf ? 'Generating PDF...' : 'Export PDF'}
+            </button>
+            <button
+              onClick={async () => {
+                if (!id || exportingPdfCompressed) return;
+                setExportingPdfCompressed(true);
+                try {
+                  await exportPdf(id, { compressed: true });
+                } catch {
+                  console.error('Compressed PDF export failed');
+                } finally {
+                  setExportingPdfCompressed(false);
+                }
+              }}
+              disabled={exportingPdf || exportingPdfCompressed}
+              title="Smaller file size, suitable for email — slightly softer image quality"
+              className="rounded-md border border-[#01B18B] px-4 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5"
+            >
+              {exportingPdfCompressed && (
+                <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              )}
+              {exportingPdfCompressed ? 'Generating…' : 'Export Compressed PDF'}
             </button>
             <button
               onClick={async () => {

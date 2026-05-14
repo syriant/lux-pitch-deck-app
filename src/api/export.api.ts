@@ -1,7 +1,11 @@
 import { apiClient } from './client';
 
-export async function exportPdf(deckId: string): Promise<void> {
+export async function exportPdf(
+  deckId: string,
+  opts: { compressed?: boolean } = {},
+): Promise<void> {
   const res = await apiClient.post(`/export/${deckId}/pdf`, {}, {
+    params: opts.compressed ? { compressed: 'true' } : undefined,
     responseType: 'blob',
     timeout: 120_000,
   });

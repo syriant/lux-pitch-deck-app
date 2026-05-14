@@ -9,9 +9,10 @@ const MAX_DIFFERENTIATORS = 6;
 // Slides that are hidden by default unless at least one differentiator
 // from the matching category is selected. The PCM can override visibility
 // in the preview, but re-saving the wizard re-asserts the rule below.
-const SLIDE_VISIBILITY_RULES: Array<{ slideId: string; diffCategory: string }> = [
-  { slideId: 'reach', diffCategory: 'reach' },
-  { slideId: 'demographics', diffCategory: 'demographics' },
+// `label` is used in the wizard's slide-preview column.
+const SLIDE_VISIBILITY_RULES: Array<{ slideId: 'reach' | 'demographics'; diffCategory: string; label: string }> = [
+  { slideId: 'reach', diffCategory: 'reach', label: 'Our Reach' },
+  { slideId: 'demographics', diffCategory: 'demographics', label: 'Our Customers' },
 ];
 
 function parseHiddenSlides(json: string | undefined): string[] {
@@ -482,6 +483,15 @@ function DifferentiatorsPreview({ deck, allDifferentiators, selectedDiffIds }: D
     return { ...deck, differentiators: selected };
   }, [deck, allDifferentiators, selectedDiffIds]);
 
+  const triggeredSlides = useMemo(() => {
+    return SLIDE_VISIBILITY_RULES.filter(({ diffCategory }) => {
+      const categoryIds = allDifferentiators
+        .filter((d) => d.category === diffCategory)
+        .map((d) => d.id);
+      return categoryIds.some((id) => selectedDiffIds.has(id));
+    });
+  }, [allDifferentiators, selectedDiffIds]);
+
   if (selectedDiffIds.size === 0) {
     return (
       <div className="rounded-md border border-dashed border-gray-200 p-4 text-xs text-gray-400 text-center">
@@ -493,17 +503,25 @@ function DifferentiatorsPreview({ deck, allDifferentiators, selectedDiffIds }: D
   const selected = allDifferentiators.filter((d) => selectedDiffIds.has(d.id));
 
   return (
-    <div className="space-y-3">
-      <div
-        className="rounded border border-gray-200 shadow-sm overflow-hidden"
-        style={{ width: thumbWidth, height: thumbHeight }}
-      >
+    <div className="space-y-4">
+      <ThumbCard label="Why Partner With Us" width={thumbWidth} height={thumbHeight}>
         <SlideRenderer
           slide={{ id: 'differentiators', type: 'differentiators', label: 'Why Partner With Us' }}
           deck={previewDeck}
           scale={scale}
         />
-      </div>
+      </ThumbCard>
+
+      {triggeredSlides.map(({ slideId, label }) => (
+        <ThumbCard key={slideId} label={label} width={thumbWidth} height={thumbHeight}>
+          <SlideRenderer
+            slide={{ id: slideId, type: slideId, label }}
+            deck={previewDeck}
+            scale={scale}
+          />
+        </ThumbCard>
+      ))}
+
       <div className="space-y-2" style={{ width: thumbWidth }}>
         {selected.map((diff) => (
           <div
@@ -529,6 +547,27 @@ function DifferentiatorsPreview({ deck, allDifferentiators, selectedDiffIds }: D
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ThumbCard({
+  label, width, height, children,
+}: {
+  label: string;
+  width: number;
+  height: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ width }}>
+      <div
+        className="rounded border border-gray-200 shadow-sm overflow-hidden"
+        style={{ width, height }}
+      >
+        {children}
+      </div>
+      <div className="mt-1 text-[11px] font-medium text-gray-500">{label}</div>
     </div>
   );
 }

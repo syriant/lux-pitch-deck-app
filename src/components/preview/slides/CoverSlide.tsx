@@ -20,6 +20,17 @@ function parseBackdrop(raw: string | undefined): LogoBackdrop {
   return raw === 'light' || raw === 'dark' ? raw : 'none';
 }
 
+type CoverBackdrop = 'none' | 'light' | 'dark';
+const COVER_BACKDROPS: ReadonlyArray<{ key: CoverBackdrop; label: string; swatch: string; overlay: string }> = [
+  { key: 'none',  label: 'No image tint',    swatch: 'border border-white/40 bg-transparent', overlay: '' },
+  { key: 'light', label: 'Light image tint', swatch: 'bg-white/60',                            overlay: 'bg-white/30' },
+  { key: 'dark',  label: 'Dark image tint',  swatch: 'bg-black/60 border border-white/20',     overlay: 'bg-black/35' },
+];
+
+function parseCoverBackdrop(raw: string | undefined): CoverBackdrop {
+  return raw === 'light' || raw === 'dark' ? raw : 'none';
+}
+
 interface CoverSlideProps {
   deck: FullDeck;
   onFieldChange?: FieldChangeHandler;
@@ -34,13 +45,35 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
   const quarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}${String(new Date().getFullYear()).slice(2)}`;
   const cf = { ...deck.templateDefaults, ...deck.customFields };
 
+  const coverBackdrop = parseCoverBackdrop(cf['cover.imageBackdrop']);
+  const coverBackdropOverlay = COVER_BACKDROPS.find((b) => b.key === coverBackdrop)?.overlay ?? '';
+
   return (
-    <div className="relative h-full w-full bg-gray-300 overflow-hidden">
+    <div className="relative h-full w-full bg-gray-300 overflow-hidden group/slide">
       <div className="absolute inset-0" style={
         coverImgUrl
           ? { backgroundImage: `url(${coverImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
           : { background: 'linear-gradient(135deg, #8eb8b0 0%, #b0cfc9 30%, #c8ddd8 60%, #a3c4bd 100%)' }
       } />
+      {coverBackdropOverlay && <div className={`absolute inset-0 ${coverBackdropOverlay}`} />}
+
+      {onFieldChange && coverImgUrl && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 rounded bg-black/60 p-0.5 opacity-0 group-hover/slide:opacity-100 transition-opacity">
+          <span className="px-1.5 py-1 text-[10px] text-white/70">Image tint</span>
+          {COVER_BACKDROPS.map((opt) => {
+            const isActive = coverBackdrop === opt.key;
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                title={opt.label}
+                onClick={() => onFieldChange('custom', '', 'cover.imageBackdrop', opt.key)}
+                className={`w-5 h-5 rounded-sm ${opt.swatch} ${isActive ? 'ring-2 ring-white' : 'opacity-70 hover:opacity-100'}`}
+              />
+            );
+          })}
+        </div>
+      )}
 
       <div className="relative h-full flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-start pt-[6%] px-[12%]">

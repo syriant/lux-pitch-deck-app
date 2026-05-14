@@ -93,7 +93,10 @@ export function DeckWizard() {
           <Step1Hotels
             deckId={deck.id}
             properties={deck.properties}
+            customFields={deck.customFields ?? {}}
+            templateDefaults={deck.templateDefaults ?? {}}
             onPropertiesChange={loadDeck}
+            onDeckChange={loadDeck}
             onNext={() => setCurrentStep(2)}
           />
         )}
