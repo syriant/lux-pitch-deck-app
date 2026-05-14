@@ -4,7 +4,7 @@ import { uploadUrl } from '@/api/upload.api';
 import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
 
-const LOGO_SIZE_DEFAULT = 40;
+const LOGO_SIZE_DEFAULT = 35;
 const LOGO_SIZE_MIN = 8;
 const LOGO_SIZE_MAX = 80;
 const LOGO_SIZE_STEP = 2;
