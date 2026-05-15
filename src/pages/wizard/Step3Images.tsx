@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
 import { updateDeck } from '@/api/decks.api';
-import { fetchHotelImages, fetchHotelLogos, lookupLibraryByUrls, uploadToLibrary, type LibraryImage } from '@/api/image-library.api';
+import { fetchHotelImages, fetchHotelLogos, fetchLuxImages, lookupLibraryByUrls, uploadToLibrary, type LibraryImage, type LuxOfferCandidate } from '@/api/image-library.api';
 import { Spinner } from '@/components/common/Spinner';
 
 interface Step3Props {
@@ -468,38 +468,78 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
   const [images, setImages] = useState<LibraryImage[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [googleUsed, setGoogleUsed] = useState(false);
+  const [luxUsed, setLuxUsed] = useState(false);
   const [googleConfigured, setGoogleConfigured] = useState(true);
   const [cachedCount, setCachedCount] = useState(0);
   const [adding, setAdding] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
+  const [luxCandidates, setLuxCandidates] = useState<LuxOfferCandidate[] | null>(null);
+  const [pickingOfferId, setPickingOfferId] = useState<string | null>(null);
+  const [refreshNoNewResult, setRefreshNoNewResult] = useState(false);
 
-  const loadImages = useCallback(async (forceGoogle: boolean) => {
+  const applyResult = useCallback((result: Awaited<ReturnType<typeof fetchHotelImages>>) => {
+    setImages(result.images);
+    setGoogleUsed(result.googleUsed);
+    setLuxUsed(result.luxUsed);
+    setGoogleConfigured(result.googleConfigured);
+    setCachedCount(result.cachedCount);
+    setLuxCandidates(result.luxCandidates && result.luxCandidates.length > 0 ? result.luxCandidates : null);
+    const preselect = new Set(result.images.filter((i) => !existingUrls.has(i.url)).map((i) => i.url));
+    setSelected(preselect);
+  }, [existingUrls]);
+
+  const loadImages = useCallback(async (forceRefresh: boolean) => {
     setError('');
-    const setBusy = forceGoogle ? setFetchingMore : setLoading;
+    setRefreshNoNewResult(false);
+    const setBusy = forceRefresh ? setFetchingMore : setLoading;
     setBusy(true);
+    const before = images.length;
     try {
       const result = await fetchHotelImages({
         hotelName,
         destination: destination ?? undefined,
         limit: 10,
-        forceGoogle,
+        forceRefresh,
       });
-      setImages(result.images);
-      setGoogleUsed(result.googleUsed);
-      setGoogleConfigured(result.googleConfigured);
-      setCachedCount(result.cachedCount);
-      const preselect = new Set(result.images.filter((i) => !existingUrls.has(i.url)).map((i) => i.url));
-      setSelected(preselect);
+      applyResult(result);
+      if (forceRefresh && !result.luxUsed && !result.googleUsed && !result.luxCandidates && result.images.length <= before) {
+        setRefreshNoNewResult(true);
+      }
     } catch {
       setError('Failed to fetch images');
     } finally {
       setBusy(false);
     }
-  }, [hotelName, destination, existingUrls]);
+  }, [hotelName, destination, applyResult, images.length]);
 
   useEffect(() => {
     loadImages(false);
   }, [loadImages]);
+
+  async function pickLuxCandidate(offerId: string) {
+    setPickingOfferId(offerId);
+    setError('');
+    try {
+      await fetchLuxImages({
+        hotelName,
+        destination: destination ?? undefined,
+        offerId,
+        limit: 10,
+      });
+      // Re-run the standard fetch to merge LUX results with anything new,
+      // and to clear the candidates banner.
+      const result = await fetchHotelImages({
+        hotelName,
+        destination: destination ?? undefined,
+        limit: 10,
+      });
+      applyResult(result);
+    } catch {
+      setError('Failed to fetch images from LUX');
+    } finally {
+      setPickingOfferId(null);
+    }
+  }
 
   function toggle(url: string) {
     setSelected((prev) => {
@@ -530,36 +570,79 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="relative flex-1 overflow-y-auto p-6">
+          {(fetchingMore || pickingOfferId !== null) && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/85 backdrop-blur-sm">
+              <Spinner className="text-[#01B18B]" />
+              <p className="text-sm text-gray-700">
+                {pickingOfferId !== null ? 'Fetching high-res images from LUX…' : 'Fetching from LUX and Google…'}
+              </p>
+              <p className="text-xs text-gray-500">This can take 20–40 seconds while we download and cache full-resolution photos.</p>
+            </div>
+          )}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Spinner className="text-[#01B18B]" />
-              <p className="text-sm text-gray-500">Searching library and Google Places...</p>
+              <p className="text-sm text-gray-500">Searching library, LUX, and Google...</p>
             </div>
           ) : error ? (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>
-          ) : images.length === 0 ? (
-            <div className="rounded-md border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
-              {!googleConfigured
-                ? 'No cached images found. Google Places API key is not configured, so we can\'t fetch new images.'
-                : 'No images found for this hotel.'}
-            </div>
           ) : (
             <>
-              {!googleConfigured && (
-                <div className="mb-4 rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                  Google Places API key not configured — showing cached library results only.
+              {luxCandidates && (
+                <div className="mb-4 rounded-md border border-[#01B18B]/30 bg-[#E6F9F5] p-3">
+                  <p className="mb-2 text-xs font-medium text-gray-800">
+                    LUX has multiple properties matching "{hotelName}". Pick the right one to fetch high-res images, or skip to use Google.
+                  </p>
+                  <div className="space-y-1.5">
+                    {luxCandidates.map((cand) => (
+                      <button
+                        key={cand.offerId}
+                        type="button"
+                        onClick={() => pickLuxCandidate(cand.offerId)}
+                        disabled={pickingOfferId !== null}
+                        className="w-full rounded-md border border-[#01B18B]/40 bg-white px-3 py-2 text-left text-xs hover:bg-[#E6F9F5] disabled:opacity-50"
+                      >
+                        <div className="font-medium text-gray-900">{cand.mainText}</div>
+                        <div className="text-gray-500">{cand.secondaryText}</div>
+                        {pickingOfferId === cand.offerId && <div className="mt-1 text-[#01B18B]">Fetching images…</div>}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setLuxCandidates(null); void loadImages(true); }}
+                    disabled={pickingOfferId !== null || fetchingMore}
+                    className="mt-2 text-xs text-gray-600 underline hover:text-gray-800 disabled:opacity-50"
+                  >
+                    Skip LUX — search Google instead
+                  </button>
                 </div>
               )}
-              {googleConfigured && cachedCount > 0 && !googleUsed && (
+              {!luxCandidates && images.length === 0 && (
+                <div className="rounded-md border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+                  {!googleConfigured
+                    ? 'No cached or LUX images found, and Google Places API key is not configured.'
+                    : 'No images found for this hotel.'}
+                </div>
+              )}
+              {!googleConfigured && images.length > 0 && (
+                <div className="mb-4 rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                  Google Places API key not configured — Google fallback unavailable.
+                </div>
+              )}
+              {cachedCount > 0 && !googleUsed && !luxUsed && !luxCandidates && (
                 <div className="mb-4 rounded-md bg-[#E6F9F5] border border-[#01B18B]/30 p-3 text-xs text-gray-700 flex items-center justify-between">
-                  <span>Showing {cachedCount} cached {cachedCount === 1 ? 'image' : 'images'} for this hotel. No Google Places call was made.</span>
+                  <span>
+                    {refreshNoNewResult
+                      ? `Searched LUX and Google — no new images found. Still showing ${cachedCount} cached ${cachedCount === 1 ? 'image' : 'images'}.`
+                      : `Showing ${cachedCount} cached ${cachedCount === 1 ? 'image' : 'images'} for this hotel. No external API call was made.`}
+                  </span>
                   <button
                     onClick={() => loadImages(true)}
                     disabled={fetchingMore}
                     className="ml-3 shrink-0 rounded-md border border-[#01B18B] px-3 py-1 text-xs text-[#01B18B] hover:bg-white disabled:opacity-50"
                   >
-                    {fetchingMore ? 'Fetching...' : 'Fetch more from Google'}
+                    {fetchingMore ? 'Fetching...' : refreshNoNewResult ? 'Try again' : 'Fetch more'}
                   </button>
                 </div>
               )}
@@ -567,7 +650,13 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
                 {images.map((img) => {
                   const isSelected = selected.has(img.url);
                   const alreadyInGallery = existingUrls.has(img.url);
-                  const isLibrary = img.source !== 'google_places' || !googleUsed || new Date(img.createdAt).getTime() < Date.now() - 60_000;
+                  const justFetched = new Date(img.createdAt).getTime() >= Date.now() - 60_000;
+                  const badgeLabel = (() => {
+                    if (justFetched && img.source === 'lux_api' && luxUsed) return 'From LUX · just now';
+                    if (justFetched && img.source === 'google_places' && googleUsed) return 'From Google · just now';
+                    if (img.source === 'lux_api') return `LUX · ${relativeTime(img.createdAt)}`;
+                    return `Library · ${relativeTime(img.createdAt)}`;
+                  })();
                   return (
                     <button
                       key={img.id}
@@ -580,9 +669,7 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
                     >
                       <img src={uploadUrl(img.url) ?? ''} alt="" className="w-full h-40 object-cover" />
                       <div className="absolute top-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                        {isLibrary
-                          ? `Library · ${relativeTime(img.createdAt)}`
-                          : 'From Google · just now'}
+                        {badgeLabel}
                       </div>
                       {alreadyInGallery && (
                         <div className="absolute top-2 right-2 rounded bg-[#01B18B] px-1.5 py-0.5 text-[10px] font-medium text-white">
@@ -608,6 +695,7 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
         <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
           <span className="text-xs text-gray-500">
             {images.length > 0 && `${selected.size} of ${images.length} selected`}
+            {luxUsed && ' · includes new LUX results'}
             {googleUsed && ' · includes new Google Places results'}
           </span>
           <div className="flex gap-2">

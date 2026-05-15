@@ -10,10 +10,19 @@ export interface LibraryImage {
   createdAt: string;
 }
 
+export interface LuxOfferCandidate {
+  offerId: string;
+  name: string;
+  mainText: string;
+  secondaryText: string;
+}
+
 export interface FetchImagesResponse {
   images: LibraryImage[];
   googleUsed: boolean;
   googleConfigured: boolean;
+  luxUsed: boolean;
+  luxCandidates?: LuxOfferCandidate[];
   cachedCount: number;
 }
 
@@ -21,13 +30,33 @@ export async function fetchHotelImages(args: {
   hotelName: string;
   destination?: string;
   limit?: number;
-  forceGoogle?: boolean;
+  forceRefresh?: boolean;
 }): Promise<FetchImagesResponse> {
   const res = await apiClient.post<FetchImagesResponse>('/image-library/fetch', {
     hotelName: args.hotelName,
     destination: args.destination,
     limit: args.limit ?? 10,
-    forceGoogle: args.forceGoogle,
+    forceRefresh: args.forceRefresh,
+  });
+  return res.data;
+}
+
+export interface FetchLuxResponse {
+  images: LibraryImage[];
+  ingested: number;
+}
+
+export async function fetchLuxImages(args: {
+  hotelName: string;
+  destination?: string;
+  offerId: string;
+  limit?: number;
+}): Promise<FetchLuxResponse> {
+  const res = await apiClient.post<FetchLuxResponse>('/image-library/fetch-lux', {
+    hotelName: args.hotelName,
+    destination: args.destination,
+    offerId: args.offerId,
+    limit: args.limit ?? 10,
   });
   return res.data;
 }
