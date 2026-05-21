@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
 import { updateDeck } from '@/api/decks.api';
-import { fetchHotelImages, fetchHotelLogos, fetchLuxImages, lookupLibraryByUrls, uploadToLibrary, type LibraryImage, type LuxOfferCandidate } from '@/api/image-library.api';
+import { fetchHotelImages, fetchHotelLogos, fetchLuxImages, lookupLibraryByUrls, uploadToLibrary, type LibraryImage, type LuxOfferCandidate, type FetchStep } from '@/api/image-library.api';
 import { Spinner } from '@/components/common/Spinner';
 
 interface Step3Props {
@@ -14,6 +14,34 @@ interface Step3Props {
   destination: string | null;
   onBack: () => void;
   onNext: () => void;
+}
+
+function stepSourceLabel(source: FetchStep['source']): string {
+  switch (source) {
+    case 'library': return 'Library';
+    case 'lux': return 'LUX';
+    case 'google': return 'Google';
+  }
+}
+
+function stepStatusIcon(status: FetchStep['status']): string {
+  switch (status) {
+    case 'ok': return '✓';
+    case 'skipped': return '–';
+    case 'no_match': return '·';
+    case 'ambiguous': return '?';
+    case 'not_configured': return '!';
+  }
+}
+
+function stepStatusColor(status: FetchStep['status']): string {
+  switch (status) {
+    case 'ok': return 'text-[#01B18B]';
+    case 'skipped': return 'text-gray-400';
+    case 'no_match': return 'text-gray-400';
+    case 'ambiguous': return 'text-amber-600';
+    case 'not_configured': return 'text-amber-600';
+  }
 }
 
 function relativeTime(iso: string): string {
@@ -467,22 +495,15 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
   const [error, setError] = useState('');
   const [images, setImages] = useState<LibraryImage[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [googleUsed, setGoogleUsed] = useState(false);
-  const [luxUsed, setLuxUsed] = useState(false);
-  const [googleConfigured, setGoogleConfigured] = useState(true);
-  const [cachedCount, setCachedCount] = useState(0);
+  const [steps, setSteps] = useState<FetchStep[]>([]);
   const [adding, setAdding] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [luxCandidates, setLuxCandidates] = useState<LuxOfferCandidate[] | null>(null);
   const [pickingOfferId, setPickingOfferId] = useState<string | null>(null);
-  const [refreshNoNewResult, setRefreshNoNewResult] = useState(false);
 
   const applyResult = useCallback((result: Awaited<ReturnType<typeof fetchHotelImages>>) => {
     setImages(result.images);
-    setGoogleUsed(result.googleUsed);
-    setLuxUsed(result.luxUsed);
-    setGoogleConfigured(result.googleConfigured);
-    setCachedCount(result.cachedCount);
+    setSteps(result.steps);
     setLuxCandidates(result.luxCandidates && result.luxCandidates.length > 0 ? result.luxCandidates : null);
     const preselect = new Set(result.images.filter((i) => !existingUrls.has(i.url)).map((i) => i.url));
     setSelected(preselect);
@@ -490,10 +511,8 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
 
   const loadImages = useCallback(async (forceRefresh: boolean) => {
     setError('');
-    setRefreshNoNewResult(false);
     const setBusy = forceRefresh ? setFetchingMore : setLoading;
     setBusy(true);
-    const before = images.length;
     try {
       const result = await fetchHotelImages({
         hotelName,
@@ -502,15 +521,12 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
         forceRefresh,
       });
       applyResult(result);
-      if (forceRefresh && !result.luxUsed && !result.googleUsed && !result.luxCandidates && result.images.length <= before) {
-        setRefreshNoNewResult(true);
-      }
     } catch {
       setError('Failed to fetch images');
     } finally {
       setBusy(false);
     }
-  }, [hotelName, destination, applyResult, images.length]);
+  }, [hotelName, destination, applyResult]);
 
   useEffect(() => {
     loadImages(false);
@@ -618,32 +634,34 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
                   </button>
                 </div>
               )}
+              {steps.length > 0 && (
+                <div className="mb-4 rounded-md border border-gray-200 bg-white p-3 text-xs">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="font-medium text-gray-700">Searched for "{hotelName}"</span>
+                    <button
+                      onClick={() => loadImages(true)}
+                      disabled={fetchingMore}
+                      className="text-[#01B18B] hover:underline disabled:opacity-50"
+                    >
+                      {fetchingMore ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                  </div>
+                  <ul className="space-y-1">
+                    {steps.map((step) => (
+                      <li key={step.source} className="flex items-start gap-2">
+                        <span className={`w-3 shrink-0 text-center font-bold ${stepStatusColor(step.status)}`}>
+                          {stepStatusIcon(step.status)}
+                        </span>
+                        <span className="w-14 shrink-0 font-medium text-gray-600">{stepSourceLabel(step.source)}</span>
+                        <span className="text-gray-700">{step.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {!luxCandidates && images.length === 0 && (
                 <div className="rounded-md border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
-                  {!googleConfigured
-                    ? 'No cached or LUX images found, and Google Places API key is not configured.'
-                    : 'No images found for this hotel.'}
-                </div>
-              )}
-              {!googleConfigured && images.length > 0 && (
-                <div className="mb-4 rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                  Google Places API key not configured — Google fallback unavailable.
-                </div>
-              )}
-              {cachedCount > 0 && !googleUsed && !luxUsed && !luxCandidates && (
-                <div className="mb-4 rounded-md bg-[#E6F9F5] border border-[#01B18B]/30 p-3 text-xs text-gray-700 flex items-center justify-between">
-                  <span>
-                    {refreshNoNewResult
-                      ? `Searched LUX and Google — no new images found. Still showing ${cachedCount} cached ${cachedCount === 1 ? 'image' : 'images'}.`
-                      : `Showing ${cachedCount} cached ${cachedCount === 1 ? 'image' : 'images'} for this hotel. No external API call was made.`}
-                  </span>
-                  <button
-                    onClick={() => loadImages(true)}
-                    disabled={fetchingMore}
-                    className="ml-3 shrink-0 rounded-md border border-[#01B18B] px-3 py-1 text-xs text-[#01B18B] hover:bg-white disabled:opacity-50"
-                  >
-                    {fetchingMore ? 'Fetching...' : refreshNoNewResult ? 'Try again' : 'Fetch more'}
-                  </button>
+                  No images found for this hotel.
                 </div>
               )}
               <div className="grid grid-cols-3 gap-4">
@@ -652,8 +670,8 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
                   const alreadyInGallery = existingUrls.has(img.url);
                   const justFetched = new Date(img.createdAt).getTime() >= Date.now() - 60_000;
                   const badgeLabel = (() => {
-                    if (justFetched && img.source === 'lux_api' && luxUsed) return 'From LUX · just now';
-                    if (justFetched && img.source === 'google_places' && googleUsed) return 'From Google · just now';
+                    if (justFetched && img.source === 'lux_api') return 'From LUX · just now';
+                    if (justFetched && img.source === 'google_places') return 'From Google · just now';
                     if (img.source === 'lux_api') return `LUX · ${relativeTime(img.createdAt)}`;
                     return `Library · ${relativeTime(img.createdAt)}`;
                   })();
@@ -695,8 +713,6 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
         <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
           <span className="text-xs text-gray-500">
             {images.length > 0 && `${selected.size} of ${images.length} selected`}
-            {luxUsed && ' · includes new LUX results'}
-            {googleUsed && ' · includes new Google Places results'}
           </span>
           <div className="flex gap-2">
             <button onClick={onClose} className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">

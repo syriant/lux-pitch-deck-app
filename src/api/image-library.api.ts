@@ -17,13 +17,16 @@ export interface LuxOfferCandidate {
   secondaryText: string;
 }
 
+export interface FetchStep {
+  source: 'library' | 'lux' | 'google';
+  status: 'ok' | 'skipped' | 'no_match' | 'ambiguous' | 'not_configured';
+  detail: string;
+}
+
 export interface FetchImagesResponse {
   images: LibraryImage[];
-  googleUsed: boolean;
-  googleConfigured: boolean;
-  luxUsed: boolean;
+  steps: FetchStep[];
   luxCandidates?: LuxOfferCandidate[];
-  cachedCount: number;
 }
 
 export async function fetchHotelImages(args: {

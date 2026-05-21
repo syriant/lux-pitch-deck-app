@@ -9,6 +9,7 @@ import {
 } from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
+import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
 import { uploadUrl } from '@/api/upload.api';
 import { ingestBase64Images } from '@/api/image-library.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
@@ -73,6 +74,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   const [createImages, setCreateImages] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+  const [destinationsLoaded, setDestinationsLoaded] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
   const [pdfMessage, setPdfMessage] = useState('');
   const [viewingImage, setViewingImage] = useState<string | null>(null);
@@ -90,7 +92,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         const labels = [...labelSet].sort((a, b) => a.localeCompare(b));
         setDestinationOptions(labels);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setDestinationsLoaded(true));
   }, []);
 
   async function load() {
@@ -307,6 +310,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       </p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      {destinationsLoaded && destinationOptions.length === 0 && <DealTiersMissingBanner />}
 
       {/* Property tabs */}
       {properties.length > 1 && (

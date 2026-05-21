@@ -63,6 +63,7 @@ export function buildTemplatePreviewDeck(args: {
             blackoutDates: null,
             inclusions: ['Daily breakfast', 'Welcome cocktail', 'Spa credit'],
             marketingAssets: { 'At A Glance': true, 'Daily Email': true, 'Paid Search': true },
+            selected: true,
           },
           {
             id: 'sample-opt-2',
@@ -78,6 +79,7 @@ export function buildTemplatePreviewDeck(args: {
             blackoutDates: null,
             inclusions: ['Daily breakfast', 'Late checkout'],
             marketingAssets: { 'At A Glance': true, 'Daily Email': true },
+            selected: true,
           },
           {
             id: 'sample-opt-3',
@@ -93,6 +95,7 @@ export function buildTemplatePreviewDeck(args: {
             blackoutDates: null,
             inclusions: ['Daily breakfast'],
             marketingAssets: { 'At A Glance': true },
+            selected: true,
           },
         ],
         caseStudies: [

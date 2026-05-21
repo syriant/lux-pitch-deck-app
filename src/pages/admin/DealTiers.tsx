@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, type ChangeEvent } from 'react';
 import {
   getDealTierRules,
+  getDealTiersMasterFile,
   uploadDealTiers,
   type DealTierRule,
+  type MasterFileInfo,
 } from '@/api/deal-tiers.api';
+import { uploadUrl } from '@/api/upload.api';
 
 interface DestinationGroup {
   destination: string;
@@ -45,6 +48,7 @@ const gradeColors: Record<string, string> = {
 
 export function DealTiers() {
   const [rules, setRules] = useState<DealTierRule[]>([]);
+  const [masterFile, setMasterFile] = useState<MasterFileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -54,7 +58,12 @@ export function DealTiers() {
 
   async function load() {
     try {
-      setRules(await getDealTierRules());
+      const [rulesData, masterData] = await Promise.all([
+        getDealTierRules(),
+        getDealTiersMasterFile(),
+      ]);
+      setRules(rulesData);
+      setMasterFile(masterData);
     } catch {
       setError('Failed to load deal tier rules');
     } finally {
@@ -94,6 +103,19 @@ export function DealTiers() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Deal Tiers</h1>
         <div className="flex items-center gap-3">
+          {masterFile && (
+            <a
+              href={uploadUrl(masterFile.fileUrl) ?? '#'}
+              download={masterFile.originalName}
+              className="inline-flex items-center gap-1.5 rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5]"
+              title={`Last uploaded ${new Date(masterFile.uploadedAt).toLocaleString()}`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download MASTER
+            </a>
+          )}
           <input
             ref={fileInputRef}
             type="file"

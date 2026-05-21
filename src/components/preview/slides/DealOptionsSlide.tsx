@@ -113,11 +113,13 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
 
   // Rates row — show nett (cost) price. If nights > 1, show as package (e.g. "Standard Room 2N – $290");
   // otherwise show per-night (e.g. "Standard Room – $290 per night").
+  // Rows ticked off in Step 2 are excluded; per the chosen behaviour we keep the
+  // option column even when every row is unticked (renders empty).
   rows.push({
     key: 'rates',
     label: 'Rate',
     cells: optNums.map((num) => {
-      const rooms = groups.get(num)!;
+      const rooms = groups.get(num)!.filter((r) => r.selected);
       return rooms.map((r) => {
         const price = r.costPrice ? `$${Number(r.costPrice).toLocaleString()}` : '?';
         const roomLabel = r.roomType ?? 'Room';

@@ -43,6 +43,17 @@ export async function getDealTierRules(): Promise<DealTierRule[]> {
   return res.data;
 }
 
+export interface MasterFileInfo {
+  fileUrl: string;
+  originalName: string;
+  uploadedAt: string;
+}
+
+export async function getDealTiersMasterFile(): Promise<MasterFileInfo | null> {
+  const res = await apiClient.get<MasterFileInfo | null>('/deal-tiers/master-file');
+  return res.data;
+}
+
 export async function uploadDealTiers(file: File): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);

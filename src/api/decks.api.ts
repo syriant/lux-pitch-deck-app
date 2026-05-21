@@ -177,6 +177,7 @@ export interface DeckOption {
   blackoutDates: Array<{ from: string; to: string }> | null;
   inclusions: string[] | null;
   marketingAssets: Record<string, boolean> | null;
+  selected: boolean;
 }
 
 export interface DeckCaseStudyLink {
@@ -267,6 +268,7 @@ export interface SetOptionRequest {
   blackoutDates?: Array<{ from: string; to: string }> | null;
   inclusions?: string[] | null;
   marketingAssets?: Record<string, boolean> | null;
+  selected?: boolean;
 }
 
 export async function setPropertyOptions(

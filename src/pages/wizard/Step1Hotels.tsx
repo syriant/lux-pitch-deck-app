@@ -8,6 +8,7 @@ import {
 } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { DestinationCombobox, type DestinationSelection } from '@/components/common/DestinationCombobox';
+import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
 import { substitutePlaceholders } from '@/components/preview/DeckRenderContext';
 
 const HOTEL_INTRO_FIELD = 'hotelIntro.valueProp';
@@ -54,6 +55,7 @@ export function Step1Hotels({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
+  const [destinationsLoaded, setDestinationsLoaded] = useState(false);
 
   const [hotelIntro, setHotelIntro] = useState<string>(customFields[HOTEL_INTRO_FIELD] ?? '');
   const [introSavedAt, setIntroSavedAt] = useState<number | null>(null);
@@ -121,6 +123,9 @@ export function Step1Hotels({
       })
       .catch(() => {
         // Silently fail — user can still type manually
+      })
+      .finally(() => {
+        setDestinationsLoaded(true);
       });
   }, []);
 
@@ -195,6 +200,8 @@ export function Step1Hotels({
       <p className="text-sm text-gray-500 mb-6">Add one or more properties to this deck.</p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      {destinationsLoaded && destinationOptions.length === 0 && <DealTiersMissingBanner />}
 
       {properties.length > 0 && (
         <div className="mb-6 space-y-3">

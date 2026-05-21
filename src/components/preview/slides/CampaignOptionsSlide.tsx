@@ -13,8 +13,11 @@ interface CampaignOptionsSlideProps {
 
 const ORDINALS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 
-function buildOptionSummary(opt: DeckOption, index: number): string {
+function buildOptionSummary(opt: DeckOption, index: number, hasSelected: boolean): string {
   const label = opt.tierLabel || `Option ${ORDINALS[index] ?? index + 1}`;
+  // No rows selected for this option — keep the bullet but blank the detail,
+  // matching the "keep the column, show empty" choice from Step 2.
+  if (!hasSelected) return `<strong>${label}:</strong> details to be confirmed`;
   const parts: string[] = [];
   if (opt.roomType) parts.push(opt.roomType);
   if (opt.nights) parts.push(`${opt.nights} night${opt.nights > 1 ? 's' : ''}`);
@@ -25,15 +28,22 @@ function buildOptionSummary(opt: DeckOption, index: number): string {
 
 function buildBodyFromOptions(options: DeckOption[]): string {
   const sorted = [...options].sort((a, b) => a.optionNumber - b.optionNumber);
-  // Group by optionNumber to get unique options (multiple room types per option)
-  const seen = new Map<number, DeckOption>();
+  // Group by optionNumber. Pick the first SELECTED row as the representative so
+  // the summary reflects the user's Step 2 ticks; fall back to the first row
+  // when none are selected so the option label still appears.
+  const seen = new Map<number, { rep: DeckOption; hasSelected: boolean }>();
   for (const opt of sorted) {
-    if (!seen.has(opt.optionNumber)) seen.set(opt.optionNumber, opt);
+    const cur = seen.get(opt.optionNumber);
+    if (!cur) {
+      seen.set(opt.optionNumber, { rep: opt, hasSelected: opt.selected });
+    } else if (!cur.hasSelected && opt.selected) {
+      seen.set(opt.optionNumber, { rep: opt, hasSelected: true });
+    }
   }
   const unique = Array.from(seen.values());
 
   const optionLines = unique
-    .map((opt, i) => `<li>${buildOptionSummary(opt, i)}</li>`)
+    .map(({ rep, hasSelected }, i) => `<li>${buildOptionSummary(rep, i, hasSelected)}</li>`)
     .join('\n');
 
   return `From reviewing your rates in market and applied learnings from recent campaigns we have prepared ${unique.length} tailored option${unique.length !== 1 ? 's' : ''} for your review.

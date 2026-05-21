@@ -1,6 +1,6 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import { parsePricingTool, type ParsedPricingTool } from '@/api/parser.api';
-import { type DeckPropertyFull, type SetOptionRequest, setPropertyOptions, updateProperty } from '@/api/decks.api';
+import { type DeckPropertyFull, type SetOptionRequest, setPropertyOptions, updateProperty, updateOption } from '@/api/decks.api';
 
 interface Step2Props {
   deckId: string;
@@ -225,7 +225,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
                   {state?.result && <ParsedResult result={state.result} />}
 
                   {!state?.result && state?.hasSavedOptions && (
-                    <SavedOptionsView options={prop.options} />
+                    <SavedOptionsView deckId={deckId} options={prop.options} />
                   )}
                 </div>
               )}
@@ -352,7 +352,40 @@ function ParsedResult({ result }: { result: ParsedPricingTool }) {
   );
 }
 
-function SavedOptionsView({ options }: { options: import('@/api/decks.api').DeckOption[] }) {
+function SavedOptionsView({ deckId, options }: { deckId: string; options: import('@/api/decks.api').DeckOption[] }) {
+  // Local mirror of each row's `selected` flag, keyed by option id. We optimistically
+  // flip this on click and revert if the server rejects — keeps the checkbox snappy
+  // without waiting for a round-trip.
+  const [selectedById, setSelectedById] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const o of options) init[o.id] = o.selected;
+    return init;
+  });
+
+  async function toggleRow(id: string, next: boolean) {
+    const prev = selectedById[id];
+    setSelectedById((s) => ({ ...s, [id]: next }));
+    try {
+      await updateOption(deckId, id, { selected: next });
+    } catch {
+      setSelectedById((s) => ({ ...s, [id]: prev }));
+    }
+  }
+
+  async function toggleAllForOption(ids: string[], next: boolean) {
+    const prev = { ...selectedById };
+    setSelectedById((s) => {
+      const out = { ...s };
+      for (const id of ids) out[id] = next;
+      return out;
+    });
+    try {
+      await Promise.all(ids.map((id) => updateOption(deckId, id, { selected: next })));
+    } catch {
+      setSelectedById(prev);
+    }
+  }
+
   const grouped = new Map<number, typeof options>();
   for (const opt of options) {
     const group = grouped.get(opt.optionNumber) ?? [];
@@ -363,46 +396,76 @@ function SavedOptionsView({ options }: { options: import('@/api/decks.api').Deck
   return (
     <div className="space-y-4">
       <div className="rounded-md bg-green-50 border border-green-200 p-3 text-xs text-green-700">
-        Pricing data saved from a previous upload. Upload a new file to replace.
+        Pricing data saved from a previous upload. Untick rows to exclude them from the slide; upload a new file to replace the data.
       </div>
 
-      {Array.from(grouped.entries()).map(([optNum, opts]) => (
-        <div key={optNum}>
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">
-            Option {optNum} — {opts[0].tierLabel ?? ''}
-            <span className="ml-2 font-normal text-gray-500">{opts.length} room types</span>
-          </h4>
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-gray-500">
-                <th className="pb-1 pr-2">Room Type</th>
-                <th className="pb-1 pr-2">Nights</th>
-                <th className="pb-1 pr-2 text-right">Sell</th>
-                <th className="pb-1 pr-2 text-right">Cost</th>
-                <th className="pb-1 text-right">Alloc</th>
-              </tr>
-            </thead>
-            <tbody>
-              {opts.map((d) => (
-                <tr key={d.id} className="border-b border-gray-50">
-                  <td className="py-1 pr-2">{d.roomType ?? '-'}</td>
-                  <td className="py-1 pr-2">{d.nights ?? '-'}</td>
-                  <td className="py-1 pr-2 text-right font-mono">{d.sellPrice ? `$${Number(d.sellPrice).toLocaleString()}` : '-'}</td>
-                  <td className="py-1 pr-2 text-right font-mono">{d.costPrice ? `$${Number(d.costPrice).toLocaleString()}` : '-'}</td>
-                  <td className="py-1 text-right">{d.allocation ?? '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {Array.from(grouped.entries()).map(([optNum, opts]) => {
+        const ids = opts.map((o) => o.id);
+        const selectedCount = ids.filter((id) => selectedById[id]).length;
+        const allSelected = selectedCount === ids.length;
+        const noneSelected = selectedCount === 0;
 
-          {opts[0].inclusions && opts[0].inclusions.length > 0 && (
-            <div className="mt-2">
-              <span className="text-xs text-gray-500">Inclusions: </span>
-              <span className="text-xs text-gray-600">{opts[0].inclusions.join(', ')}</span>
-            </div>
-          )}
-        </div>
-      ))}
+        return (
+          <div key={optNum}>
+            <h4 className="text-sm font-semibold text-gray-700 mb-1 flex items-center gap-2">
+              <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = !allSelected && !noneSelected; }}
+                  onChange={(e) => toggleAllForOption(ids, e.target.checked)}
+                  className="h-3.5 w-3.5 accent-[#01B18B]"
+                />
+                <span>Option {optNum} — {opts[0].tierLabel ?? ''}</span>
+              </label>
+              <span className="font-normal text-gray-500">
+                {selectedCount} of {opts.length} room types selected
+              </span>
+            </h4>
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-gray-500">
+                  <th className="pb-1 pr-2 w-6"></th>
+                  <th className="pb-1 pr-2">Room Type</th>
+                  <th className="pb-1 pr-2">Nights</th>
+                  <th className="pb-1 pr-2 text-right">Sell</th>
+                  <th className="pb-1 pr-2 text-right">Cost</th>
+                  <th className="pb-1 text-right">Alloc</th>
+                </tr>
+              </thead>
+              <tbody>
+                {opts.map((d) => {
+                  const isSelected = selectedById[d.id] ?? true;
+                  return (
+                    <tr key={d.id} className={`border-b border-gray-50 ${isSelected ? '' : 'text-gray-400'}`}>
+                      <td className="py-1 pr-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => toggleRow(d.id, e.target.checked)}
+                          className="h-3.5 w-3.5 accent-[#01B18B] cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-1 pr-2">{d.roomType ?? '-'}</td>
+                      <td className="py-1 pr-2">{d.nights ?? '-'}</td>
+                      <td className="py-1 pr-2 text-right font-mono">{d.sellPrice ? `$${Number(d.sellPrice).toLocaleString()}` : '-'}</td>
+                      <td className="py-1 pr-2 text-right font-mono">{d.costPrice ? `$${Number(d.costPrice).toLocaleString()}` : '-'}</td>
+                      <td className="py-1 text-right">{d.allocation ?? '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {opts[0].inclusions && opts[0].inclusions.length > 0 && (
+              <div className="mt-2">
+                <span className="text-xs text-gray-500">Inclusions: </span>
+                <span className="text-xs text-gray-600">{opts[0].inclusions.join(', ')}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
