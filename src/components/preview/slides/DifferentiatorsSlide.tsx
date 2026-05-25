@@ -2,9 +2,17 @@ import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
+const HEADLINE_FIELD_KEY = 'diff.headline';
+
+function isPositioned(cf: Record<string, string>, fieldKey: string): boolean {
+  const x = cf[`${fieldKey}.x`];
+  const y = cf[`${fieldKey}.y`];
+  return x !== undefined && x !== '' && y !== undefined && y !== '';
+}
 
 interface DifferentiatorsSlideProps {
   deck: FullDeck;
@@ -32,17 +40,36 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
   const cf = { ...deck.templateDefaults, ...deck.customFields };
 
+  const headlinePositioned = isPositioned(cf, HEADLINE_FIELD_KEY);
+
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div data-slide-root="true" className="relative h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       <div className="flex-1 flex p-[5%] gap-[4%]">
         <div className="flex-1 flex flex-col">
-          <SlideRichText
-            fieldKey="diff.headline"
+          <DraggableSlideElement
+            fieldKey={HEADLINE_FIELD_KEY}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="font-bold leading-snug mb-4"
-            style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', color: GREEN }}
-          />
+            className="mb-4 group/headline"
+          >
+            <SlideRichText
+              fieldKey="diff.headline"
+              customFields={cf}
+              onFieldChange={onFieldChange}
+              className="font-bold leading-snug"
+              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', color: GREEN }}
+            />
+            {onFieldChange && headlinePositioned && (
+              <button
+                type="button"
+                onClick={() => resetSlideElementPosition(HEADLINE_FIELD_KEY, onFieldChange)}
+                className="absolute -top-7 right-0 rounded bg-black/60 px-2 py-1 text-[10px] text-white/90 hover:text-white opacity-0 group-hover/headline:opacity-100 transition-opacity"
+                title="Move headline back to default position"
+              >
+                ↺ Reset position
+              </button>
+            )}
+          </DraggableSlideElement>
 
           <div className="grid grid-cols-2 gap-4 mt-auto">
             {items.map((item) => (

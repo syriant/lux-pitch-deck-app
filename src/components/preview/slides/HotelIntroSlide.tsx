@@ -3,8 +3,16 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { useSlideEditorContext } from '../SlideEditorContext';
+import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 
 const GREEN = '#00b2a0';
+const VALUE_PROP_FIELD_KEY = 'hotelIntro.valueProp';
+
+function isPositioned(cf: Record<string, string>, fieldKey: string): boolean {
+  const x = cf[`${fieldKey}.x`];
+  const y = cf[`${fieldKey}.y`];
+  return x !== undefined && x !== '' && y !== undefined && y !== '';
+}
 
 const NO_DESTINATION_FALLBACK =
   'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.';
@@ -32,20 +40,39 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
     cf['hotelIntro.valueProp'] = NO_DESTINATION_FALLBACK;
   }
 
+  const valuePropPositioned = isPositioned(cf, VALUE_PROP_FIELD_KEY);
+
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
+    <div data-slide-root="true" className="relative h-full w-full flex flex-col overflow-hidden">
       <div className="flex-1 flex">
         <div className="w-[50%] flex flex-col p-[5%]" style={{ backgroundColor: GREEN }}>
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-5 w-auto self-start mb-6" />
 
           <div className="flex-1 flex items-center">
-            <SlideRichText
-              fieldKey="hotelIntro.valueProp"
+            <DraggableSlideElement
+              fieldKey={VALUE_PROP_FIELD_KEY}
               customFields={cf}
               onFieldChange={onFieldChange}
-              className="font-bold text-white leading-snug"
-              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
-            />
+              className="group/valueprop w-full"
+            >
+              <SlideRichText
+                fieldKey="hotelIntro.valueProp"
+                customFields={cf}
+                onFieldChange={onFieldChange}
+                className="font-bold text-white leading-snug"
+                style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
+              />
+              {onFieldChange && valuePropPositioned && (
+                <button
+                  type="button"
+                  onClick={() => resetSlideElementPosition(VALUE_PROP_FIELD_KEY, onFieldChange)}
+                  className="absolute -top-7 right-0 rounded bg-black/60 px-2 py-1 text-[10px] text-white/90 hover:text-white opacity-0 group-hover/valueprop:opacity-100 transition-opacity"
+                  title="Move text back to default position"
+                >
+                  ↺ Reset position
+                </button>
+              )}
+            </DraggableSlideElement>
           </div>
         </div>
 
