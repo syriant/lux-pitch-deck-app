@@ -3,6 +3,16 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
+import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+
+const HOOK_FIELD_KEY = 'cover.hookText';
+const LOGO_FIELD_KEY = 'cover.logo';
+
+function isPositioned(cf: Record<string, string>, fieldKey: string): boolean {
+  const x = cf[`${fieldKey}.x`];
+  const y = cf[`${fieldKey}.y`];
+  return x !== undefined && x !== '' && y !== undefined && y !== '';
+}
 
 const LOGO_SIZE_DEFAULT = 35;
 const LOGO_SIZE_MIN = 8;
@@ -48,8 +58,11 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
   const coverBackdrop = parseCoverBackdrop(cf['cover.imageBackdrop']);
   const coverBackdropOverlay = COVER_BACKDROPS.find((b) => b.key === coverBackdrop)?.overlay ?? '';
 
+  const hookPositioned = isPositioned(cf, HOOK_FIELD_KEY);
+  const logoPositioned = isPositioned(cf, LOGO_FIELD_KEY);
+
   return (
-    <div className="relative h-full w-full bg-gray-300 overflow-hidden group/slide">
+    <div data-slide-root="true" className="relative h-full w-full bg-gray-300 overflow-hidden group/slide">
       <div className="absolute inset-0" style={
         coverImgUrl
           ? { backgroundImage: `url(${coverImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
@@ -77,13 +90,30 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
 
       <div className="relative h-full flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-start pt-[6%] px-[12%]">
-          <SlideRichText
-            fieldKey="cover.hookText"
+          <DraggableSlideElement
+            fieldKey={HOOK_FIELD_KEY}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="font-bold text-white leading-snug max-w-2xl drop-shadow-md"
-            style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
-          />
+            className="max-w-2xl group/hook"
+          >
+            <SlideRichText
+              fieldKey="cover.hookText"
+              customFields={cf}
+              onFieldChange={onFieldChange}
+              className="font-bold text-white leading-snug drop-shadow-md"
+              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
+            />
+            {onFieldChange && hookPositioned && (
+              <button
+                type="button"
+                onClick={() => resetSlideElementPosition(HOOK_FIELD_KEY, onFieldChange)}
+                className="absolute -top-7 right-0 rounded bg-black/60 px-2 py-1 text-[10px] text-white/90 hover:text-white opacity-0 group-hover/hook:opacity-100 transition-opacity"
+                title="Move text back to default position"
+              >
+                ↺ Reset position
+              </button>
+            )}
+          </DraggableSlideElement>
           {logoImgUrl && (() => {
             const rawSize = Number(cf['cover.logoSize']);
             const size = Number.isFinite(rawSize) && rawSize > 0
@@ -95,7 +125,13 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
               : backdrop === 'dark' ? 'bg-black/60 rounded-md p-[6%]'
               : '';
             return (
-              <div className="relative group" style={{ width: `${size}%` }}>
+              <DraggableSlideElement
+                fieldKey={LOGO_FIELD_KEY}
+                customFields={cf}
+                onFieldChange={onFieldChange}
+                className="relative group"
+                style={{ width: `${size}%` }}
+              >
                 <div className={backdropPanel}>
                   <img
                     src={logoImgUrl}
@@ -108,22 +144,26 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
                   // grow downward as size increases (top is fixed, bottom
                   // extends), so a top-anchored toolbar stays put.
                   <div className="absolute left-1/2 -top-7 -translate-x-1/2 flex items-center gap-0.5 rounded bg-black/60 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={() => onFieldChange('custom', '', 'cover.logoSize', String(Math.max(LOGO_SIZE_MIN, size - LOGO_SIZE_STEP)))}
-                      className="px-2 py-1 text-white/80 hover:text-white text-sm font-bold leading-none"
-                    >
-                      −
-                    </button>
-                    <span className="px-1.5 py-1 text-[10px] text-white/70 tabular-nums">{size}%</span>
-                    <button
-                      type="button"
-                      onClick={() => onFieldChange('custom', '', 'cover.logoSize', String(Math.min(LOGO_SIZE_MAX, size + LOGO_SIZE_STEP)))}
-                      className="px-2 py-1 text-white/80 hover:text-white text-sm font-bold leading-none"
-                    >
-                      +
-                    </button>
-                    <div className="w-px h-4 bg-white/20 mx-1" />
+                    {!logoPositioned && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onFieldChange('custom', '', 'cover.logoSize', String(Math.max(LOGO_SIZE_MIN, size - LOGO_SIZE_STEP)))}
+                          className="px-2 py-1 text-white/80 hover:text-white text-sm font-bold leading-none"
+                        >
+                          −
+                        </button>
+                        <span className="px-1.5 py-1 text-[10px] text-white/70 tabular-nums">{size}%</span>
+                        <button
+                          type="button"
+                          onClick={() => onFieldChange('custom', '', 'cover.logoSize', String(Math.min(LOGO_SIZE_MAX, size + LOGO_SIZE_STEP)))}
+                          className="px-2 py-1 text-white/80 hover:text-white text-sm font-bold leading-none"
+                        >
+                          +
+                        </button>
+                        <div className="w-px h-4 bg-white/20 mx-1" />
+                      </>
+                    )}
                     {LOGO_BACKDROPS.map((opt) => {
                       const isActive = backdrop === opt.key;
                       return (
@@ -136,9 +176,22 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
                         />
                       );
                     })}
+                    {logoPositioned && (
+                      <>
+                        <div className="w-px h-4 bg-white/20 mx-1" />
+                        <button
+                          type="button"
+                          onClick={() => resetSlideElementPosition(LOGO_FIELD_KEY, onFieldChange)}
+                          className="px-2 py-1 text-[10px] text-white/80 hover:text-white"
+                          title="Move logo back to default position"
+                        >
+                          ↺ Reset
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
-              </div>
+              </DraggableSlideElement>
             );
           })()}
         </div>
