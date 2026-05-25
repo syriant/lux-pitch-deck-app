@@ -7,6 +7,16 @@ import { getReachStats, type ReachStat } from '@/api/reach-stats.api';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { SLIDE_DEFAULTS } from '../slide-defaults';
+import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+
+const TITLE_FIELD_KEY = 'reach.title';
+const SUBTITLE_FIELD_KEY = 'reach.subtitle';
+
+function isPositioned(cf: Record<string, string>, fieldKey: string): boolean {
+  const x = cf[`${fieldKey}.x`];
+  const y = cf[`${fieldKey}.y`];
+  return x !== undefined && x !== '' && y !== undefined && y !== '';
+}
 
 interface ReachSlideProps {
   deck?: FullDeck;
@@ -129,6 +139,9 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
     ? `${globalLabel} members globally trust Luxury Escapes`
     : undefined;
 
+  const titlePositioned = isPositioned(cf, TITLE_FIELD_KEY);
+  const subtitlePositioned = isPositioned(cf, SUBTITLE_FIELD_KEY);
+
   const redraw = useCallback(() => {
     if (canvasRef.current && imgRef.current) {
       drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion);
@@ -173,23 +186,59 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
           <div className="absolute inset-0 bg-gradient-to-b from-[#8eb8b0] to-[#c8ddd8]" />
         )}
 
-        {/* White card overlay */}
-        <div className="absolute left-[8%] right-[8%] top-[4%] bottom-[4%] bg-white/92 rounded-lg flex flex-col items-center px-[3%] py-[2.5%] overflow-hidden">
-          <SlideRichText
-            fieldKey="reach.title"
+        {/* White card overlay — data-slide-root="true" makes this the
+            positioning context for draggable children. Title/subtitle x/y/w
+            overrides are therefore CARD-relative, not slide-relative; the
+            PPTX template shifts them by the card's slide offset. */}
+        <div data-slide-root="true" className="absolute left-[8%] right-[8%] top-[4%] bottom-[4%] bg-white/92 rounded-lg flex flex-col items-center px-[3%] py-[2.5%] overflow-hidden">
+          <DraggableSlideElement
+            fieldKey={TITLE_FIELD_KEY}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="mb-0.5"
-            style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
-          />
-          <SlideRichText
-            fieldKey="reach.subtitle"
-            defaultValue={subtitleDefault}
+            className="mb-0.5 w-full group/title"
+          >
+            <SlideRichText
+              fieldKey="reach.title"
+              customFields={cf}
+              onFieldChange={onFieldChange}
+              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
+            />
+            {onFieldChange && titlePositioned && (
+              <button
+                type="button"
+                onClick={() => resetSlideElementPosition(TITLE_FIELD_KEY, onFieldChange)}
+                className="absolute -top-7 right-0 rounded bg-black/60 px-2 py-1 text-[10px] text-white/90 hover:text-white opacity-0 group-hover/title:opacity-100 transition-opacity"
+                title="Move title back to default position"
+              >
+                ↺ Reset position
+              </button>
+            )}
+          </DraggableSlideElement>
+          <DraggableSlideElement
+            fieldKey={SUBTITLE_FIELD_KEY}
             customFields={cf}
             onFieldChange={onFieldChange}
-            className="text-gray-600 mb-3"
-            style={{ textAlign: 'center' }}
-          />
+            className="mb-3 w-full group/subtitle"
+          >
+            <SlideRichText
+              fieldKey="reach.subtitle"
+              defaultValue={subtitleDefault}
+              customFields={cf}
+              onFieldChange={onFieldChange}
+              className="text-gray-600"
+              style={{ textAlign: 'center' }}
+            />
+            {onFieldChange && subtitlePositioned && (
+              <button
+                type="button"
+                onClick={() => resetSlideElementPosition(SUBTITLE_FIELD_KEY, onFieldChange)}
+                className="absolute -top-7 right-0 rounded bg-black/60 px-2 py-1 text-[10px] text-white/90 hover:text-white opacity-0 group-hover/subtitle:opacity-100 transition-opacity"
+                title="Move subtitle back to default position"
+              >
+                ↺ Reset position
+              </button>
+            )}
+          </DraggableSlideElement>
 
           <canvas ref={canvasRef} className="flex-1 w-full" />
         </div>

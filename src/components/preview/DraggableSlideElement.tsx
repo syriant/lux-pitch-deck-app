@@ -131,15 +131,30 @@ export function DraggableSlideElement({
       top: `${displayY}%`,
       ...(displayW !== null ? { width: `${displayW}%` } : {}),
     };
+    // Invisible spacer preserves the original flex slot so flex-1 siblings
+    // (e.g. the map canvas on the Reach slide) don't grow to fill the gap
+    // when the element goes absolute. Children render twice but the spacer
+    // is hidden + non-interactive, and SlideRichText etc. are controlled by
+    // props so there's no state divergence.
+    const spacerStyle: React.CSSProperties = {
+      ...style,
+      visibility: 'hidden',
+      pointerEvents: 'none',
+    };
     return (
-      <div
-        ref={elRef}
-        onMouseDown={handleMouseDown}
-        className={`${draggableCursor} ${className ?? ''}`}
-        style={absoluteStyle}
-      >
-        {children}
-      </div>
+      <>
+        <div aria-hidden className={className ?? ''} style={spacerStyle}>
+          {children}
+        </div>
+        <div
+          ref={elRef}
+          onMouseDown={handleMouseDown}
+          className={`${draggableCursor} ${className ?? ''}`}
+          style={absoluteStyle}
+        >
+          {children}
+        </div>
+      </>
     );
   }
 
