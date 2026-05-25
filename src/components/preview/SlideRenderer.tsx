@@ -49,7 +49,7 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd 
     : {};
 
   return (
-    <DeckRenderContext.Provider value={{ placeholders }}>
+    <DeckRenderContext.Provider value={{ placeholders, deckId: deck.id }}>
       <div
         className="bg-white shadow-lg overflow-hidden"
         style={{

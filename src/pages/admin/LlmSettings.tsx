@@ -3,6 +3,7 @@ import {
   listLlmSettings,
   updateLlmSetting,
   listLlmUsage,
+  listLlmUsageFacets,
   listLlmProviderModels,
   createLlmProviderModel,
   updateLlmProviderModel,
@@ -12,6 +13,7 @@ import {
   type LlmProviderModel,
   type LlmProvider,
   type LlmUsageRow,
+  type UsageFacets,
 } from '@/api/llm.api';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 
@@ -709,34 +711,70 @@ function ModelSelect({
 // Usage tab (unchanged behaviour)
 // ============================================================================
 
+const USAGE_PAGE_SIZE = 50;
+
 function UsageTab({ settings }: { settings: LlmSetting[] }) {
   const [usage, setUsage] = useState<LlmUsageRow[]>([]);
   const [totals, setTotals] = useState({ inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, costUsd: 0 });
+  const [total, setTotal] = useState(0);
   const [usageKey, setUsageKey] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+  const [deckId, setDeckId] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [facets, setFacets] = useState<UsageFacets>({ users: [], decks: [] });
+
+  // Reset to the first page whenever a filter changes.
+  useEffect(() => { setPage(1); }, [usageKey, userId, deckId]);
 
   useEffect(() => {
-    listLlmUsage({ settingKey: usageKey || undefined, limit: 50 })
+    listLlmUsageFacets().then(setFacets).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    listLlmUsage({
+      settingKey: usageKey || undefined,
+      userId: userId || undefined,
+      deckId: deckId || undefined,
+      page,
+      limit: USAGE_PAGE_SIZE,
+    })
       .then((res) => {
         setUsage(res.data);
         setTotals(res.meta.totals);
+        setTotal(res.meta.total);
       })
       .catch(() => {});
-  }, [usageKey]);
+  }, [usageKey, userId, deckId, page]);
+
+  const pageCount = Math.max(1, Math.ceil(total / USAGE_PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * USAGE_PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * USAGE_PAGE_SIZE, total);
+  const selectClass = 'rounded-md border border-gray-300 px-3 py-1.5 text-sm';
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <h2 className="text-lg font-semibold">Usage</h2>
-        <select
-          value={usageKey}
-          onChange={(e) => setUsageKey(e.target.value)}
-          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
-        >
-          <option value="">All systems</option>
-          {settings.map((s) => (
-            <option key={s.key} value={s.key}>{s.key}</option>
-          ))}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={usageKey} onChange={(e) => setUsageKey(e.target.value)} className={selectClass}>
+            <option value="">All systems</option>
+            {settings.map((s) => (
+              <option key={s.key} value={s.key}>{s.key}</option>
+            ))}
+          </select>
+          <select value={userId} onChange={(e) => setUserId(e.target.value)} className={selectClass}>
+            <option value="">All users</option>
+            {facets.users.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+          <select value={deckId} onChange={(e) => setDeckId(e.target.value)} className={selectClass}>
+            <option value="">All decks</option>
+            {facets.decks.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-4">
@@ -751,6 +789,8 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
           <tr className="border-b border-gray-200 text-left text-gray-500">
             <th className="pb-2 pr-3">When</th>
             <th className="pb-2 pr-3">System</th>
+            <th className="pb-2 pr-3">User</th>
+            <th className="pb-2 pr-3">Deck</th>
             <th className="pb-2 pr-3">Model</th>
             <th className="pb-2 pr-3 text-right">In</th>
             <th className="pb-2 pr-3 text-right">Out</th>
@@ -762,11 +802,24 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
         </thead>
         <tbody>
           {usage.length === 0 ? (
-            <tr><td colSpan={9} className="py-6 text-center text-gray-400">No usage yet.</td></tr>
+            <tr><td colSpan={11} className="py-6 text-center text-gray-400">No usage yet.</td></tr>
           ) : usage.map((row) => (
             <tr key={row.id} className="border-b border-gray-100">
               <td className="py-2 pr-3 text-gray-600">{new Date(row.createdAt).toLocaleString()}</td>
               <td className="py-2 pr-3 font-mono text-xs text-gray-700">{row.settingKey}</td>
+              <td className="py-2 pr-3 text-gray-700" title={row.user?.email ?? ''}>{row.user?.name ?? '—'}</td>
+              <td className="py-2 pr-3 text-gray-700">
+                {row.deck ? (
+                  <a
+                    href={`/decks/${row.deck.id}/preview`}
+                    className="hover:underline"
+                    style={{ color: TEAL }}
+                    title={row.deck.name ?? row.deck.id}
+                  >
+                    {row.deck.name ?? '(deleted deck)'}
+                  </a>
+                ) : '—'}
+              </td>
               <td className="py-2 pr-3 font-mono text-xs text-gray-700">{row.model}</td>
               <td className="py-2 pr-3 text-right font-mono">{row.inputTokens.toLocaleString()}</td>
               <td className="py-2 pr-3 text-right font-mono">{row.outputTokens.toLocaleString()}</td>
@@ -784,6 +837,29 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
           ))}
         </tbody>
       </table>
+
+      <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+        <span>{total === 0 ? 'No results' : `${rangeStart}–${rangeEnd} of ${total.toLocaleString()}`}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="rounded-md border border-gray-300 px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
+          >
+            Prev
+          </button>
+          <span>Page {page} of {pageCount}</span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+            disabled={page >= pageCount}
+            className="rounded-md border border-gray-300 px-3 py-1 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

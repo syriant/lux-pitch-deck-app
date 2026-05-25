@@ -16,6 +16,8 @@ import { createContext, useContext } from 'react';
  */
 export interface DeckRenderContextValue {
   placeholders: Record<string, string>;
+  /** Deck id, used to attribute LLM usage (e.g. LUX voice rewrites) to a deck. */
+  deckId?: string;
 }
 
 export const DeckRenderContext = createContext<DeckRenderContextValue>({ placeholders: {} });

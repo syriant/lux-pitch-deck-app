@@ -3,6 +3,8 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { RichEditableText } from './RichEditableText';
 import { AlignToggle, type Align } from './AlignToggle';
 import { FontSizeControl } from './FontSizeControl';
+import { LuxVoiceButton } from './LuxVoiceButton';
+import { isVoiceEligible, VOICE_ORIGINAL_SUFFIX } from './voice-fields';
 import { SLIDE_DEFAULTS } from './slide-defaults';
 import { useSlideEditorContext } from './SlideEditorContext';
 import { useDeckRenderContext, substitutePlaceholders } from './DeckRenderContext';
@@ -80,11 +82,12 @@ export function SlideRichText({
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    if (!hovered || !wrapperRef.current) {
+    if ((!hovered && !voiceOpen) || !wrapperRef.current) {
       setPos(null);
       return;
     }
@@ -94,7 +97,7 @@ export function SlideRichText({
       left: rect.left,
       top: spaceBelow > 40 ? rect.bottom + 4 : rect.top - 32,
     });
-  }, [hovered]);
+  }, [hovered, voiceOpen]);
 
   function handleEnter() {
     clearTimeout(hideTimer.current);
@@ -102,8 +105,33 @@ export function SlideRichText({
   }
 
   function handleLeave() {
+    if (voiceOpen) return; // keep the toolbar alive while the picker is open
     hideTimer.current = setTimeout(() => setHovered(false), 500);
   }
+
+  // "LUX voice" rewrite — only on prose fields, and only when there's text.
+  const hasContent = !!value && value !== '<br>';
+  const voiceEligible = isVoiceEligible(fieldKey);
+  const storedOriginal = customFields?.[`${fieldKey}${VOICE_ORIGINAL_SUFFIX}`];
+
+  function handleVoiceOpenChange(next: boolean) {
+    setVoiceOpen(next);
+    if (!next) hideTimer.current = setTimeout(() => setHovered(false), 300);
+  }
+
+  const applyVoice = (suggestion: string) => {
+    // Capture the pre-rewrite text once, so the original is always recoverable.
+    if (!storedOriginal) {
+      effectiveOnFieldChange('custom', '', `${fieldKey}${VOICE_ORIGINAL_SUFFIX}`, value);
+    }
+    effectiveOnFieldChange('custom', '', fieldKey, suggestion);
+    handleVoiceOpenChange(false);
+  };
+
+  const revertVoice = () => {
+    effectiveOnFieldChange('custom', '', fieldKey, storedOriginal ?? value);
+    handleVoiceOpenChange(false);
+  };
 
   return (
     <div
@@ -118,13 +146,27 @@ export function SlideRichText({
         className={className}
         style={mergedStyle}
       />
-      {hovered && pos && (
+      {(hovered || voiceOpen) && pos && (
         <div
           className="fixed z-50 flex gap-2"
           style={{ top: pos.top, left: pos.left }}
           onMouseEnter={handleEnter}
           onMouseLeave={handleLeave}
         >
+          {voiceEligible && hasContent && (
+            <LuxVoiceButton
+              fieldKey={fieldKey}
+              currentValue={value}
+              hasStoredOriginal={!!storedOriginal}
+              deckId={deckContext.deckId}
+              hotelName={deckContext.placeholders.hotelName}
+              destination={deckContext.placeholders.destination}
+              open={voiceOpen}
+              onOpenChange={handleVoiceOpenChange}
+              onApply={applyVoice}
+              onRevert={revertVoice}
+            />
+          )}
           <AlignToggle fieldKey={`${fieldKey}.align`} align={align} onFieldChange={effectiveOnFieldChange} />
           <FontSizeControl fieldKey={`${fieldKey}.size`} size={fontSize} onFieldChange={effectiveOnFieldChange} />
           {canReset && (

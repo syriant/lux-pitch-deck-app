@@ -70,7 +70,14 @@ export interface LlmUsageRow {
   errorMessage: string | null;
   context: Record<string, unknown> | null;
   userId: string | null;
+  user: { id: string; name: string; email: string } | null;
+  deck: { id: string; name: string | null } | null;
   createdAt: string;
+}
+
+export interface UsageFacets {
+  users: { id: string; name: string; email: string }[];
+  decks: { id: string; name: string }[];
 }
 
 export interface LlmUsageResponse {
@@ -135,11 +142,18 @@ export async function pingLlmProviderModel(id: string): Promise<LlmProviderModel
 // Usage
 export async function listLlmUsage(params?: {
   settingKey?: string;
+  userId?: string;
+  deckId?: string;
   from?: string;
   to?: string;
   page?: number;
   limit?: number;
 }): Promise<LlmUsageResponse> {
   const res = await apiClient.get<LlmUsageResponse>('/admin/llm/usage', { params });
+  return res.data;
+}
+
+export async function listLlmUsageFacets(): Promise<UsageFacets> {
+  const res = await apiClient.get<UsageFacets>('/admin/llm/usage/facets');
   return res.data;
 }
