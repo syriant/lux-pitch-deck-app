@@ -31,6 +31,7 @@ export function buildTemplatePreviewDeck(args: {
     gallery: [],
     templateId: null,
     slideOrder: slides,
+    salesforceOpportunityId: null,
     createdBy: 'preview',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
