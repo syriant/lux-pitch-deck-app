@@ -95,6 +95,7 @@ export function DeckWizard() {
             properties={deck.properties}
             customFields={deck.customFields ?? {}}
             templateDefaults={deck.templateDefaults ?? {}}
+            salesforceOpportunityId={deck.salesforceOpportunityId}
             onPropertiesChange={loadDeck}
             onDeckChange={loadDeck}
             onNext={() => setCurrentStep(2)}

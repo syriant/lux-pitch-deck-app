@@ -234,6 +234,7 @@ export interface FullDeck {
   gallery: string[];
   templateId: string | null;
   slideOrder: TemplateSlide[] | null;
+  salesforceOpportunityId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -318,6 +319,7 @@ export async function updateDeck(id: string, data: {
   customFields?: Record<string, string>;
   gallery?: string[];
   slideOrder?: TemplateSlide[];
+  salesforceOpportunityId?: string | null;
 }): Promise<{ id: string }> {
   const res = await apiClient.patch(`/decks/${id}`, data);
   return res.data;

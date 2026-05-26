@@ -7,6 +7,11 @@ import {
   type DeckProperty,
 } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
+import {
+  getSalesforceStatus,
+  fetchSalesforceOpportunity,
+  type OpportunitySummary,
+} from '@/api/salesforce.api';
 import { DestinationCombobox, type DestinationSelection } from '@/components/common/DestinationCombobox';
 import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
 import { substitutePlaceholders } from '@/components/preview/DeckRenderContext';
@@ -20,6 +25,7 @@ interface Step1Props {
   properties: DeckProperty[];
   customFields: Record<string, string>;
   templateDefaults: Record<string, string>;
+  salesforceOpportunityId: string | null;
   onPropertiesChange: () => Promise<void>;
   onDeckChange: () => Promise<void>;
   onNext: () => void;
@@ -45,6 +51,7 @@ export function Step1Hotels({
   properties,
   customFields,
   templateDefaults,
+  salesforceOpportunityId,
   onPropertiesChange,
   onDeckChange,
   onNext,
@@ -56,6 +63,14 @@ export function Step1Hotels({
   const [saving, setSaving] = useState(false);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
   const [destinationsLoaded, setDestinationsLoaded] = useState(false);
+
+  // Salesforce import — opp-id field + Import button. Both disabled while we
+  // wait for LUX to deliver Connected App credentials; the backend reports
+  // configured:false until SALESFORCE_* env vars are set.
+  const [sfOppId, setSfOppId] = useState<string>(salesforceOpportunityId ?? '');
+  const [sfConfigured, setSfConfigured] = useState<boolean | null>(null);
+  const [sfImporting, setSfImporting] = useState(false);
+  const [sfMessage, setSfMessage] = useState<{ kind: 'info' | 'error'; text: string } | null>(null);
 
   const [hotelIntro, setHotelIntro] = useState<string>(customFields[HOTEL_INTRO_FIELD] ?? '');
   const [introSavedAt, setIntroSavedAt] = useState<number | null>(null);
@@ -129,6 +144,57 @@ export function Step1Hotels({
       });
   }, []);
 
+  useEffect(() => {
+    getSalesforceStatus()
+      .then((s) => setSfConfigured(s.configured))
+      .catch(() => setSfConfigured(false));
+  }, []);
+
+  // Keep the input in sync if the deck reloads with a different stored id.
+  useEffect(() => {
+    setSfOppId(salesforceOpportunityId ?? '');
+  }, [salesforceOpportunityId]);
+
+  async function handleSalesforceImport() {
+    const id = sfOppId.trim();
+    if (!id) return;
+    setSfImporting(true);
+    setSfMessage(null);
+    try {
+      const opp: OpportunitySummary = await fetchSalesforceOpportunity(id);
+      // Persist the opp id + any intro text on the deck, then either update
+      // the existing single property or create one from the SF data.
+      const nextCustomFields: Record<string, string> = { ...customFields };
+      if (opp.hotelIntroduction) nextCustomFields[HOTEL_INTRO_FIELD] = opp.hotelIntroduction;
+      await updateDeck(deckId, {
+        salesforceOpportunityId: id,
+        customFields: nextCustomFields,
+      });
+      const existing = properties[0];
+      if (existing) {
+        await updateProperty(deckId, existing.id, {
+          propertyName: opp.hotelName ?? existing.propertyName,
+          destination: opp.destination ?? existing.destination ?? null,
+        });
+      } else if (opp.hotelName) {
+        await createProperty(deckId, {
+          propertyName: opp.hotelName,
+          destination: opp.destination ?? undefined,
+          isCustomDestination: false,
+          sortOrder: 0,
+        });
+      }
+      await onPropertiesChange();
+      await onDeckChange();
+      setSfMessage({ kind: 'info', text: `Imported from "${opp.opportunityName ?? id}".` });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch Salesforce opportunity';
+      setSfMessage({ kind: 'error', text: msg });
+    } finally {
+      setSfImporting(false);
+    }
+  }
+
   function openAdd() {
     setForm({ ...emptyForm });
     setEditingId(null);
@@ -200,6 +266,46 @@ export function Step1Hotels({
       <p className="text-sm text-gray-500 mb-6">Add the hotel this deck is for.</p>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      {/* Salesforce import — disabled until the API reports configured:true. */}
+      <div className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-sm font-medium text-gray-800">Salesforce Opportunity ID</label>
+          {sfConfigured === false && (
+            <span className="text-[10px] uppercase tracking-wide text-gray-500">
+              Coming soon — awaiting credentials
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 mb-2">
+          Pre-fills hotel, destination, and Hotel Introduction from the linked opportunity in Salesforce.
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={sfOppId}
+            onChange={(e) => setSfOppId(e.target.value)}
+            placeholder="e.g. 006XX000003DH8YYAW"
+            disabled={!sfConfigured || sfImporting}
+            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#01B18B]/30 disabled:bg-gray-50 disabled:cursor-not-allowed"
+            title={sfConfigured === false ? 'Salesforce integration not yet configured — waiting on credentials from LUX' : ''}
+          />
+          <button
+            type="button"
+            onClick={handleSalesforceImport}
+            disabled={!sfConfigured || sfImporting || !sfOppId.trim()}
+            className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50 disabled:cursor-not-allowed"
+            title={sfConfigured === false ? 'Salesforce integration not yet configured — waiting on credentials from LUX' : ''}
+          >
+            {sfImporting ? 'Importing…' : 'Import'}
+          </button>
+        </div>
+        {sfMessage && (
+          <div className={`mt-2 text-xs ${sfMessage.kind === 'error' ? 'text-red-600' : 'text-[#009977]'}`}>
+            {sfMessage.text}
+          </div>
+        )}
+      </div>
 
       {destinationsLoaded && destinationOptions.length === 0 && <DealTiersMissingBanner />}
 
