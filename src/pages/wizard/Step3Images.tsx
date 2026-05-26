@@ -44,6 +44,16 @@ function stepStatusColor(status: FetchStep['status']): string {
   }
 }
 
+function logoSourceLabel(source: string): string {
+  switch (source) {
+    case 'brandfetch_logo': return 'From Brandfetch';
+    case 'clearbit_logo': return 'From Clearbit';
+    case 'google_cse_logo': return 'From Google search';
+    case 'manual_upload_logo': return 'Uploaded by a PCM';
+    default: return 'From library';
+  }
+}
+
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.round(diffMs / 60_000);
@@ -279,7 +289,7 @@ export function Step3Images({ deckId, coverImage, heroImage, logoImage, gallery:
                     className={`relative w-24 h-16 rounded border-2 ${
                       isCurrent ? 'border-[#01B18B] ring-2 ring-[#01B18B]/30' : 'border-gray-200 hover:border-[#01B18B]'
                     } overflow-hidden bg-[repeating-conic-gradient(#f3f4f6_0_25%,#ffffff_0_50%)] bg-[length:12px_12px] flex items-center justify-center disabled:cursor-not-allowed`}
-                    title={img.source === 'google_cse_logo' ? 'From Google search' : 'Uploaded by a previous PCM'}
+                    title={logoSourceLabel(img.source)}
                   >
                     <img src={uploadUrl(img.url) ?? ''} alt="" className="max-w-full max-h-full object-contain p-1" />
                     {isCurrent && (

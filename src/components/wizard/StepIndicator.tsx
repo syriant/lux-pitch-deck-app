@@ -1,5 +1,5 @@
 const steps = [
-  { number: 1, label: 'Hotels' },
+  { number: 1, label: 'Hotel' },
   { number: 2, label: 'Pricing' },
   { number: 3, label: 'Images' },
   { number: 4, label: 'Objectives' },
