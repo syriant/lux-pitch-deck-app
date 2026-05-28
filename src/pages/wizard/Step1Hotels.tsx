@@ -171,22 +171,42 @@ export function Step1Hotels({
         customFields: nextCustomFields,
       });
       const existing = properties[0];
+      let targetPropertyId: string | null = null;
       if (existing) {
         await updateProperty(deckId, existing.id, {
           propertyName: opp.hotelName ?? existing.propertyName,
           destination: opp.destination ?? existing.destination ?? null,
         });
+        targetPropertyId = existing.id;
       } else if (opp.hotelName) {
-        await createProperty(deckId, {
+        const created = await createProperty(deckId, {
           propertyName: opp.hotelName,
           destination: opp.destination ?? undefined,
           isCustomDestination: false,
           sortOrder: 0,
         });
+        targetPropertyId = created.id;
       }
       await onPropertiesChange();
       await onDeckChange();
-      setSfMessage({ kind: 'info', text: `Imported from "${opp.opportunityName ?? id}".` });
+      // Salesforce's Destination__c is free text — it might match a deal-tiers
+      // destination exactly, but often doesn't (e.g. "Bali" vs "Bali, Indonesia").
+      // Open the edit form pre-filled so the PCM is nudged to pick a real entry
+      // from the dropdown rather than silently accepting custom text, which
+      // would later miss deal-tier rules + reach stats keyed by destination.
+      if (targetPropertyId) {
+        setForm({
+          propertyName: opp.hotelName ?? '',
+          destination: opp.destination ?? '',
+          isCustomDestination: true,
+        });
+        setEditingId(targetPropertyId);
+        setShowForm(true);
+      }
+      setSfMessage({
+        kind: 'info',
+        text: `Imported from "${opp.opportunityName ?? id}". Confirm the destination matches an option in the dropdown so deal-tier rules apply.`,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch Salesforce opportunity';
       setSfMessage({ kind: 'error', text: msg });

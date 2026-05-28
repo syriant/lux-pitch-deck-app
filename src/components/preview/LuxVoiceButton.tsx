@@ -34,7 +34,7 @@ export function LuxVoiceButton({
 }: LuxVoiceButtonProps) {
   const btnRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; maxBodyH: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [variations, setVariations] = useState<string[]>([]);
@@ -64,7 +64,15 @@ export function LuxVoiceButton({
     const rect = btnRef.current?.getBoundingClientRect();
     if (rect) {
       const left = Math.max(12, Math.min(rect.left, window.innerWidth - POPOVER_WIDTH - 12));
-      setPos({ top: rect.bottom + 6, left });
+      const top = rect.bottom + 6;
+      // Room remaining below the button minus header + bottom gutter. Without
+      // this the body's max-h: 55vh ignores how far down the button sits, so
+      // the 3rd suggestion gets clipped below the viewport when the button is
+      // mid-page.
+      const HEADER_H = 42;
+      const BOTTOM_GUTTER = 16;
+      const maxBodyH = Math.max(160, window.innerHeight - top - HEADER_H - BOTTOM_GUTTER);
+      setPos({ top, left, maxBodyH });
     }
     if (variations.length === 0 && !loading && !error) {
       void fetchSuggestions();
@@ -121,7 +129,7 @@ export function LuxVoiceButton({
             </button>
           </div>
 
-          <div className="p-3 max-h-[55vh] overflow-y-auto space-y-2">
+          <div className="p-3 overflow-y-auto space-y-2" style={{ maxHeight: pos.maxBodyH }}>
             {loading && (
               <div className="py-6 text-center text-sm text-gray-500">Applying the LUX voice…</div>
             )}

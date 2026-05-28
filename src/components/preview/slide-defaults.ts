@@ -97,7 +97,7 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
   // ─── Objectives ──────────────────────────────────────────────────────
   'obj.headline': {
     value: "We create <mark style='background-color:#00b2a0;color:#ffffff;padding:0 2px;border-radius:2px'>tailored tactical campaigns</mark><br>to achieve your specific key objectives",
-    size: 28,
+    size: 26,
   },
   'obj.primary.title': { value: 'Primary Objective', size: 18 },
   'obj.secondary.title': { value: 'Secondary Objectives', size: 18 },

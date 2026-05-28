@@ -48,8 +48,33 @@ export interface TemplateSlide {
   label: string;
   required?: boolean;
   perProperty?: boolean;
+  perOption?: boolean;
   removable?: boolean;
   config?: Record<string, unknown>;
+}
+
+export interface TacticalRoomRow {
+  roomType: string;
+  allotment: number | null;
+  occupancy: string | null;
+  nightRates: Array<{ nights: number; rate: number | null }>;
+  extraNightRate: number | null;
+  currency: string | null;
+}
+
+export interface TacticalExtraGuestRow {
+  guest: string;
+  age: string | null;
+  inclusions: string | null;
+  feePerNight: number | null;
+  feeLabel: string | null;
+}
+
+export interface TacticalDetails {
+  roomNightForecast?: number | null;
+  extraGuestPolicy?: TacticalExtraGuestRow[];
+  extraNightInclusions?: string[];
+  comparisonOverrides?: Record<string, string>;
 }
 
 export interface CreateDeckRequest {
@@ -177,6 +202,8 @@ export interface DeckOption {
   blackoutDates: Array<{ from: string; to: string }> | null;
   inclusions: string[] | null;
   marketingAssets: Record<string, boolean> | null;
+  rooms: TacticalRoomRow[] | null;
+  tacticalDetails: TacticalDetails | null;
   selected: boolean;
 }
 
@@ -235,6 +262,10 @@ export interface FullDeck {
   templateId: string | null;
   slideOrder: TemplateSlide[] | null;
   salesforceOpportunityId: string | null;
+  campaignStart: string | null;
+  campaignEnd: string | null;
+  travelStart: string | null;
+  travelEnd: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -269,6 +300,8 @@ export interface SetOptionRequest {
   blackoutDates?: Array<{ from: string; to: string }> | null;
   inclusions?: string[] | null;
   marketingAssets?: Record<string, boolean> | null;
+  rooms?: TacticalRoomRow[] | null;
+  tacticalDetails?: TacticalDetails | null;
   selected?: boolean;
 }
 
@@ -320,6 +353,10 @@ export async function updateDeck(id: string, data: {
   gallery?: string[];
   slideOrder?: TemplateSlide[];
   salesforceOpportunityId?: string | null;
+  campaignStart?: string | null;
+  campaignEnd?: string | null;
+  travelStart?: string | null;
+  travelEnd?: string | null;
 }): Promise<{ id: string }> {
   const res = await apiClient.patch(`/decks/${id}`, data);
   return res.data;

@@ -1,4 +1,4 @@
-import { type FullDeck, type DeckPropertyFull, type DeckCaseStudyLink } from '@/api/decks.api';
+import { type FullDeck, type DeckPropertyFull, type DeckCaseStudyLink, type DeckOption } from '@/api/decks.api';
 
 export type SlideType =
   | 'cover'
@@ -13,13 +13,17 @@ export type SlideType =
   | 'deal-options'
   | 'marketing-assets-grid'
   | 'marketing-assets'
-  | 'market-challenges';
+  | 'market-challenges'
+  | 'tactical-investment-overview'
+  | 'tactical-amplification'
+  | 'tactical-package-detail';
 
 export interface SlideDefinition {
   id: string;
   type: SlideType;
   label: string;
   property?: DeckPropertyFull;
+  option?: DeckOption;
   caseStudies?: DeckCaseStudyLink[];
   caseStudyChunkIndex?: number;
   marketingAssetsChannels?: string[];
@@ -112,6 +116,36 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
                 property: prop,
                 caseStudies: chunks[ci],
                 caseStudyChunkIndex: ci,
+                removable: entry.removable,
+              });
+            }
+          } else if (slideType === 'tactical-package-detail' && entry.perOption) {
+            // Same rooms-aware pick as uniqueOptionsByNumber — rows sharing
+            // an optionNumber hold tactical data sparsely, so we must prefer
+            // the row that carries it.
+            const byOpt = new Map<number, typeof prop.options>();
+            for (const o of prop.options) {
+              const arr = byOpt.get(o.optionNumber) ?? [];
+              arr.push(o);
+              byOpt.set(o.optionNumber, arr);
+            }
+            const opts: typeof prop.options = [];
+            for (const rows of byOpt.values()) {
+              const withTactical = rows.find(
+                (r) => (r.rooms != null && r.rooms.length > 0)
+                  || (r.tacticalDetails != null && Object.keys(r.tacticalDetails).length > 0),
+              );
+              opts.push(withTactical ?? rows[0]);
+            }
+            opts.sort((a, b) => a.optionNumber - b.optionNumber);
+            for (const opt of opts) {
+              const tierName = opt.tierLabel ?? `Option ${opt.optionNumber}`;
+              slides.push({
+                id: `tactical-package-detail-${prop.id}-${opt.id}`,
+                type: slideType,
+                label: `${tierName} Package`,
+                property: prop,
+                option: opt,
                 removable: entry.removable,
               });
             }

@@ -29,6 +29,14 @@ export interface ParsedPricingTool {
       allocationPerDay: string | null;
     }>;
     inclusions: string[];
+    rooms: Array<{
+      roomType: string;
+      allotment: number | null;
+      occupancy: string | null;
+      nightRates: Array<{ nights: number; rate: number | null }>;
+      extraNightRate: number | null;
+      currency: string | null;
+    }>;
   }>;
   inclusions: Array<{
     assetName: string;

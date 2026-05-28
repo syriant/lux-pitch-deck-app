@@ -105,7 +105,9 @@ export function DeckWizard() {
         {currentStep === 2 && (
           <Step2Pricing
             deckId={deck.id}
+            deck={deck}
             properties={deck.properties}
+            onDeckChange={loadDeck}
             onBack={() => setCurrentStep(1)}
             onNext={() => setCurrentStep(3)}
           />

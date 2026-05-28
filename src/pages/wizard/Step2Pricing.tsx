@@ -1,12 +1,19 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import { parsePricingTool, type ParsedPricingTool } from '@/api/parser.api';
-import { type DeckPropertyFull, type SetOptionRequest, setPropertyOptions, updateProperty, updateOption } from '@/api/decks.api';
+import { type DeckPropertyFull, type FullDeck, type SetOptionRequest, setPropertyOptions, updateProperty, updateOption } from '@/api/decks.api';
+import { TacticalPackagesSection } from './TacticalPackagesSection';
 
 interface Step2Props {
   deckId: string;
+  deck: FullDeck;
   properties: DeckPropertyFull[];
+  onDeckChange: () => void;
   onBack: () => void;
   onNext: () => void;
+}
+
+function isTacticalTemplate(deck: FullDeck): boolean {
+  return (deck.slideOrder ?? []).some((s) => s.type.startsWith('tactical-'));
 }
 
 interface PropertyParseState {
@@ -17,7 +24,7 @@ interface PropertyParseState {
   pricingToolFile?: string | null;
 }
 
-export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props) {
+export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, onNext }: Step2Props) {
   // Pre-populate parse states from existing saved options
   const [parseStates, setParseStates] = useState<Record<string, PropertyParseState>>(() => {
     const init: Record<string, PropertyParseState> = {};
@@ -83,7 +90,11 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
         const fallbackInclusionNames = result.inclusions.map((inc) => inc.assetName);
         const optInclusions = opt.inclusions.length > 0 ? opt.inclusions : fallbackInclusionNames;
 
-        for (const deal of opt.dealOptions) {
+        // The tactical-package "rooms" table is per-option, not per-deal-row,
+        // so it rides on the first row for this option. Slides + the wizard
+        // editor read it off the first matching optionNumber row.
+        for (let di = 0; di < opt.dealOptions.length; di++) {
+          const deal = opt.dealOptions[di];
           options.push({
             optionNumber: opt.optionNumber,
             tierLabel: opt.tierLabel,
@@ -98,6 +109,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
               : null,
             inclusions: optInclusions.length > 0 ? optInclusions : null,
             marketingAssets: null,
+            rooms: di === 0 && opt.rooms.length > 0 ? opt.rooms : null,
           });
         }
       }
@@ -119,6 +131,7 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
           loading: false,
           error: '',
           result,
+          hasSavedOptions: true,
           pricingToolFile: result.originalFile.url,
         },
       }));
@@ -127,6 +140,11 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
       if (!result.version.startsWith('5.1')) {
         setVersionWarning(propertyId);
       }
+
+      // Refresh the parent deck so prop.options reflects what was just saved.
+      // Without this, the tactical section sees zero options and SavedOptionsView
+      // can't render its checkboxes against the persisted rows.
+      onDeckChange();
     } catch {
       setParseStates((prev) => ({
         ...prev,
@@ -139,12 +157,21 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
   }
 
   const allParsed = properties.every((p) => parseStates[p.id]?.result || parseStates[p.id]?.hasSavedOptions);
+  // While any pricing tool is parsing+saving we lock down the rest of the page.
+  // Without this a PCM can tick/untick rows or edit tactical data on cards that
+  // are about to be replaced by setPropertyOptions when the upload completes.
+  const anyLoading = Object.values(parseStates).some((s) => s?.loading);
 
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-1">Pricing Tool Upload</h2>
       <p className="text-sm text-gray-500 mb-6">Upload a pricing tool for each property.</p>
 
+      <fieldset
+        disabled={anyLoading}
+        className={anyLoading ? 'opacity-60 cursor-progress' : undefined}
+        aria-busy={anyLoading || undefined}
+      >
       <div className="space-y-4 mb-6">
         {properties.map((prop) => {
           const state = parseStates[prop.id];
@@ -222,9 +249,9 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
                   {state?.loading && <div className="text-sm text-gray-500">Parsing...</div>}
                   {state?.error && <div className="text-sm text-red-600">{state.error}</div>}
 
-                  {state?.result && <ParsedResult result={state.result} />}
+                  {state?.result && <ParseSummary result={state.result} />}
 
-                  {!state?.result && state?.hasSavedOptions && (
+                  {prop.options.length > 0 && (
                     <SavedOptionsView deckId={deckId} options={prop.options} />
                   )}
                 </div>
@@ -234,7 +261,15 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
         })}
       </div>
 
-      <div className="flex justify-between">
+      {isTacticalTemplate(deck) && (
+        <TacticalPackagesSection
+          deck={deck}
+          properties={properties}
+          onDeckChange={onDeckChange}
+        />
+      )}
+
+      <div className="flex justify-between mt-6">
         <button
           onClick={onBack}
           className="rounded-md border border-gray-300 px-6 py-2 text-sm text-gray-700 hover:bg-gray-50"
@@ -250,13 +285,14 @@ export function Step2Pricing({ deckId, properties, onBack, onNext }: Step2Props)
           Next: Images
         </button>
       </div>
+      </fieldset>
     </div>
   );
 }
 
-function ParsedResult({ result }: { result: ParsedPricingTool }) {
+function ParseSummary({ result }: { result: ParsedPricingTool }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 mb-4">
       {/* Warnings */}
       {result.warnings.length > 0 && (
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
@@ -267,7 +303,7 @@ function ParsedResult({ result }: { result: ParsedPricingTool }) {
       )}
 
       {/* Metadata */}
-      <div className="grid grid-cols-4 gap-3 text-sm">
+      <div className="grid grid-cols-4 gap-3 text-sm rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
         <div>
           <div className="text-xs text-gray-500">Version</div>
           <div className="font-medium">{result.version}</div>
@@ -286,59 +322,16 @@ function ParsedResult({ result }: { result: ParsedPricingTool }) {
         </div>
       </div>
 
-      {/* Options summary */}
-      {result.options.map((opt) => (
-        <div key={opt.optionNumber}>
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">
-            Option {opt.optionNumber} — {opt.tierLabel}
-            <span className="ml-2 font-normal text-gray-500">
-              {opt.dealOptions.length} deals
-              {opt.grossMargin != null && ` | GM: $${Math.round(opt.grossMargin).toLocaleString()}`}
-              {opt.tier != null && ` | Tier ${opt.tier}`}
-            </span>
-          </h4>
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-gray-500">
-                <th className="pb-1 pr-2">Room Type</th>
-                <th className="pb-1 pr-2">Nights</th>
-                <th className="pb-1 pr-2 text-right">Sell</th>
-                <th className="pb-1 pr-2 text-right">Cost</th>
-                <th className="pb-1 text-right">Alloc</th>
-              </tr>
-            </thead>
-            <tbody>
-              {opt.dealOptions.map((d, i) => (
-                <tr key={i} className="border-b border-gray-50">
-                  <td className="py-1 pr-2">{d.roomType}</td>
-                  <td className="py-1 pr-2">{d.nights}</td>
-                  <td className="py-1 pr-2 text-right font-mono">{d.sellPrice ? `$${d.sellPrice}` : '-'}</td>
-                  <td className="py-1 pr-2 text-right font-mono">${d.costPrice}</td>
-                  <td className="py-1 text-right">{d.allocationPerDay}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {opt.inclusions.length > 0 && (
-            <div className="mt-2">
-              <span className="text-xs text-gray-500">Inclusions: </span>
-              <span className="text-xs text-gray-600">{opt.inclusions.join(', ')}</span>
-            </div>
-          )}
-        </div>
-      ))}
-
       {/* Inclusion library — flat list from "Inclusions Import" sheet, kept
-          as a reference (it carries RRP). The actual per-option inclusions
-          shown above each option's table are what get saved to the deck. */}
+          as a reference (it carries RRP). Per-option inclusions live inside
+          SavedOptionsView below. */}
       {result.inclusions.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">
+        <details className="rounded-md border border-gray-200 px-3 py-2">
+          <summary className="text-xs font-semibold text-gray-700 cursor-pointer">
             Inclusion library
-            <span className="ml-2 font-normal text-gray-500 text-xs">({result.inclusions.length} items — reference only, see per-option lists above)</span>
-          </h4>
-          <ul className="text-xs text-gray-600 space-y-0.5">
+            <span className="ml-2 font-normal text-gray-500">({result.inclusions.length} items — reference only)</span>
+          </summary>
+          <ul className="text-xs text-gray-600 space-y-0.5 mt-2">
             {result.inclusions.map((inc, i) => (
               <li key={i}>
                 {inc.assetName}
@@ -346,7 +339,7 @@ function ParsedResult({ result }: { result: ParsedPricingTool }) {
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
     </div>
   );
