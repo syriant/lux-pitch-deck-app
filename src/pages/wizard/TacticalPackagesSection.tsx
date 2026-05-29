@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   type DeckOption,
   type DeckPropertyFull,
@@ -10,13 +10,8 @@ import {
   updateOption,
 } from '@/api/decks.api';
 import {
-  AMPLIFICATION_ROWS,
-  INVESTMENT_OVERVIEW_ROWS,
   TIER_PALETTE,
-  findRulesByTier,
   uniqueOptionsByNumber,
-  type ComparisonRow,
-  type TierRule,
 } from '@/components/preview/slides/tactical-shared';
 
 interface Props {
@@ -24,8 +19,6 @@ interface Props {
   properties: DeckPropertyFull[];
   onDeckChange: () => void;
 }
-
-const ALL_COMPARISON_ROWS: ComparisonRow[] = [...INVESTMENT_OVERVIEW_ROWS, ...AMPLIFICATION_ROWS];
 
 const EMPTY_ROOM: TacticalRoomRow = {
   roomType: '',
@@ -155,7 +148,7 @@ function LabelledDate({ label, value, onChange, onBlur }: { label: string; value
 }
 
 function PackageCard({
-  deck, property, option, isOpen, onToggle, onChange,
+  deck, property: _property, option, isOpen, onToggle, onChange,
 }: {
   deck: FullDeck;
   property: DeckPropertyFull;
@@ -175,12 +168,6 @@ function PackageCard({
     setDetails(option.tacticalDetails ?? {});
     setRooms(option.rooms ?? []);
   }, [option.id, option.tierLabel, option.tacticalDetails, option.rooms]);
-
-  const rulesByTier = useMemo(
-    () => findRulesByTier((deck.dealTierRules ?? []) as TierRule[], { grade: property.grade, destination: property.destination }),
-    [deck.dealTierRules, property.grade, property.destination],
-  );
-  const ownTierRule = rulesByTier[option.optionNumber];
 
   async function saveDetails(next: TacticalDetails) {
     setDetails(next);
@@ -206,7 +193,6 @@ function PackageCard({
       : DEFAULT_GUEST_ROWS;
   }
 
-  const overrides = details.comparisonOverrides ?? {};
 
   return (
     <div
