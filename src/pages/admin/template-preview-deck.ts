@@ -48,6 +48,7 @@ export function buildTemplatePreviewDeck(args: {
         isCustomDestination: false,
         grade: 'A',
         tier: 1,
+        currency: 'AUD',
         gmPercentage: null,
         pricingToolFile: null,
         sortOrder: 0,

@@ -2,6 +2,7 @@ import { useState, useRef, type ChangeEvent } from 'react';
 import { parsePricingTool, type ParsedPricingTool } from '@/api/parser.api';
 import { type DeckPropertyFull, type FullDeck, type SetOptionRequest, setPropertyOptions, updateProperty, updateOption } from '@/api/decks.api';
 import { TacticalPackagesSection } from './TacticalPackagesSection';
+import { formatMoney } from '@/components/preview/currency';
 
 interface Step2Props {
   deckId: string;
@@ -123,6 +124,7 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
       };
       if (firstOpt?.tier != null) propertyUpdates.tier = firstOpt.tier;
       if (result.metadata.grade) propertyUpdates.grade = result.metadata.grade;
+      if (result.metadata.currency) propertyUpdates.currency = result.metadata.currency;
       await updateProperty(deckId, propertyId, propertyUpdates);
 
       setParseStates((prev) => ({
@@ -252,7 +254,11 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
                   {state?.result && <ParseSummary result={state.result} />}
 
                   {prop.options.length > 0 && (
-                    <SavedOptionsView deckId={deckId} options={prop.options} />
+                    <SavedOptionsView
+                      deckId={deckId}
+                      options={prop.options}
+                      currency={state?.result?.metadata.currency ?? prop.currency}
+                    />
                   )}
                 </div>
               )}
@@ -345,7 +351,10 @@ function ParseSummary({ result }: { result: ParsedPricingTool }) {
   );
 }
 
-function SavedOptionsView({ deckId, options }: { deckId: string; options: import('@/api/decks.api').DeckOption[] }) {
+function SavedOptionsView({ deckId, options, currency }: { deckId: string; options: import('@/api/decks.api').DeckOption[]; currency?: string | null }) {
+  // Cost (net rate) is in the property's local currency; Sell is always AUD
+  // (the pricing tool enters sell in AUD), so the two columns can differ.
+  const costCode = (currency ?? 'AUD').toUpperCase();
   // Local mirror of each row's `selected` flag, keyed by option id. We optimistically
   // flip this on click and revert if the server rejects — keeps the checkbox snappy
   // without waiting for a round-trip.
@@ -421,8 +430,8 @@ function SavedOptionsView({ deckId, options }: { deckId: string; options: import
                   <th className="pb-1 pr-2 w-6"></th>
                   <th className="pb-1 pr-2">Room Type</th>
                   <th className="pb-1 pr-2">Nights</th>
-                  <th className="pb-1 pr-2 text-right">Sell</th>
-                  <th className="pb-1 pr-2 text-right">Cost</th>
+                  <th className="pb-1 pr-2 text-right">Sell (AUD)</th>
+                  <th className="pb-1 pr-2 text-right">Cost{costCode !== 'AUD' ? ` (${costCode})` : ''}</th>
                   <th className="pb-1 text-right">Alloc</th>
                 </tr>
               </thead>
@@ -442,7 +451,7 @@ function SavedOptionsView({ deckId, options }: { deckId: string; options: import
                       <td className="py-1 pr-2">{d.roomType ?? '-'}</td>
                       <td className="py-1 pr-2">{d.nights ?? '-'}</td>
                       <td className="py-1 pr-2 text-right font-mono">{d.sellPrice ? `$${Number(d.sellPrice).toLocaleString()}` : '-'}</td>
-                      <td className="py-1 pr-2 text-right font-mono">{d.costPrice ? `$${Number(d.costPrice).toLocaleString()}` : '-'}</td>
+                      <td className="py-1 pr-2 text-right font-mono">{formatMoney(d.costPrice, currency) ?? '-'}</td>
                       <td className="py-1 text-right">{d.allocation ?? '-'}</td>
                     </tr>
                   );

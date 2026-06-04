@@ -1,6 +1,7 @@
 import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
+import { formatMoney, currencySymbol } from '../currency';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -121,7 +122,7 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
     cells: optNums.map((num) => {
       const rooms = groups.get(num)!.filter((r) => r.selected);
       return rooms.map((r) => {
-        const price = r.costPrice ? `$${Number(r.costPrice).toLocaleString()}` : '?';
+        const price = formatMoney(r.costPrice, property.currency) ?? '?';
         const roomLabel = r.roomType ?? 'Room';
         return r.nights && r.nights > 1
           ? `${roomLabel} ${r.nights}N – ${price}`
@@ -138,7 +139,7 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
       cells: optNums.map((num) => {
         const first = groups.get(num)![0];
         return first.surcharges?.map((s) =>
-          `${s.period ?? s.name} - $${Number(s.amount).toFixed(2)} per night`
+          `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toFixed(2)} per night`
         ).join('\n') ?? '-';
       }),
     });

@@ -22,6 +22,7 @@ export interface DeckProperty {
   isCustomDestination: boolean;
   grade: string | null;
   tier: number | null;
+  currency: string | null;
   gmPercentage: string | null;
   pricingToolFile: string | null;
   sortOrder: number;
@@ -96,6 +97,7 @@ export interface UpdatePropertyRequest {
   isCustomDestination?: boolean;
   grade?: string | null;
   tier?: number | null;
+  currency?: string | null;
   gmPercentage?: number | null;
   pricingToolFile?: string | null;
   sortOrder?: number;
