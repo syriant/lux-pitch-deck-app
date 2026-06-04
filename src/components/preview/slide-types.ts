@@ -31,7 +31,19 @@ export interface SlideDefinition {
   removable?: boolean;
 }
 
-const MARKETING_ASSETS_PAGE_SIZE = 6;
+// Marketing Assets grid is capped at 2 slides (mirror of the API's
+// slide-builder). Up to 7 channels sit on one slide; 8-14 split evenly across
+// two (still ≤7 each, full size). Beyond 14 the even split puts >7 on a slide
+// and the renderer shrinks the text to fit — never a third slide.
+const MARKETING_ASSETS_SINGLE_SLIDE_MAX = 7;
+const MARKETING_ASSETS_MAX_SLIDES = 2;
+
+function chunkMarketingAssetChannels(channels: string[]): string[][] {
+  if (channels.length === 0) return [[]];
+  if (channels.length <= MARKETING_ASSETS_SINGLE_SLIDE_MAX) return [channels];
+  const perSlide = Math.ceil(channels.length / MARKETING_ASSETS_MAX_SLIDES);
+  return [channels.slice(0, perSlide), channels.slice(perSlide)];
+}
 
 function findRulesByTierForProperty(
   rules: NonNullable<FullDeck['dealTierRules']>,
@@ -75,15 +87,6 @@ export function computeMarketingAssetChannels(
     return true;
   });
   return Array.from(all).filter((ch) => opts.some((o) => o.marketingAssets?.[ch] === true));
-}
-
-function chunkArray<T>(items: T[], size: number): T[][] {
-  if (items.length === 0) return [[]];
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
 }
 
 export function buildSlideList(deck: FullDeck): SlideDefinition[] {
@@ -151,10 +154,12 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
             }
           } else if (slideType === 'marketing-assets-grid') {
             const channels = computeMarketingAssetChannels(prop, deck.dealTierRules ?? []);
-            const chunks = channels.length === 0 ? [[]] : chunkArray(channels, MARKETING_ASSETS_PAGE_SIZE);
+            const chunks = chunkMarketingAssetChannels(channels);
+            let mktgOffset = 0;
             for (let ci = 0; ci < chunks.length; ci++) {
-              const start = ci * MARKETING_ASSETS_PAGE_SIZE + 1;
-              const end = start + chunks[ci].length - 1;
+              const start = mktgOffset + 1;
+              const end = mktgOffset + chunks[ci].length;
+              mktgOffset += chunks[ci].length;
               const suffix = chunks.length > 1 ? ` (${start}-${end})` : '';
               slides.push({
                 id: `marketing-assets-grid-${prop.id}-${ci}`,

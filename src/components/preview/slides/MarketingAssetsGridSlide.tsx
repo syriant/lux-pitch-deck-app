@@ -52,9 +52,9 @@ function findRulesByTier(rules: DealTierRule[], property: DeckPropertyFull): Rec
   return byTier;
 }
 
-function CheckIcon() {
+function CheckIcon({ cls = 'w-8 h-8' }: { cls?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className="w-8 h-8 mx-auto" aria-label="Included">
+    <svg viewBox="0 0 24 24" className={`${cls} mx-auto`} aria-label="Included">
       <circle cx="12" cy="12" r="10.5" fill="none" stroke={GREEN} strokeWidth="1.5" />
       <path
         d="M7 12.5l3.2 3.2L17 9"
@@ -68,9 +68,9 @@ function CheckIcon() {
   );
 }
 
-function CrossIcon() {
+function CrossIcon({ cls = 'w-8 h-8' }: { cls?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className="w-8 h-8 mx-auto" aria-label="Not included">
+    <svg viewBox="0 0 24 24" className={`${cls} mx-auto`} aria-label="Not included">
       <circle cx="12" cy="12" r="10.5" fill="none" stroke={RED} strokeWidth="1.5" />
       <path
         d="M8 8l8 8M16 8l-8 8"
@@ -117,6 +117,14 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
     );
   })();
 
+  // Marketing Assets is capped at 2 slides, so a heavy deck can put more than
+  // the comfortable 6 channels on one slide. Scale the text/padding/ticks down
+  // by row count so the table still fits the fixed slide height.
+  const rowCount = channels.length;
+  const fontPx = rowCount <= 7 ? 9 : rowCount <= 10 ? 8 : rowCount <= 13 ? 7 : 6;
+  const cellPad = rowCount <= 7 ? 12 : rowCount <= 10 ? 4 : rowCount <= 13 ? 3 : 2;
+  const iconCls = rowCount <= 7 ? 'w-8 h-8' : rowCount <= 10 ? 'w-6 h-6' : rowCount <= 13 ? 'w-5 h-5' : 'w-4 h-4';
+
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
       <div className="px-[5%] pt-[4%] pb-3">
@@ -150,7 +158,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
           </div>
         </div>
       ) : (
-        <div className="flex-1 px-[5%] pb-2 overflow-visible">
+        <div className="flex-1 min-h-0 px-[5%] pb-2 overflow-hidden">
           {(() => {
             // Asset name + description live in the left column; each option
             // column only shows ✓/✗. Pin column widths with table-fixed so
@@ -158,7 +166,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
             const optionColPct = 18;
             const labelColPct = 100 - optionColPct * optNums.length;
             return (
-          <table className="w-full text-[9px] border-collapse table-fixed">
+          <table className="w-full border-collapse table-fixed" style={{ fontSize: fontPx }}>
             <colgroup>
               <col style={{ width: `${labelColPct}%` }} />
               {optNums.map((num) => (
@@ -192,7 +200,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                 }
                 return (
                   <tr key={channel}>
-                    <td className={`p-3 align-top ${rowBg}`}>
+                    <td className={`align-top ${rowBg}`} style={{ padding: cellPad }}>
                       <div className="font-bold mb-0.5" style={{ color: GREEN }}>{channel}</div>
                       {description && (
                         <SlideRichText
@@ -212,10 +220,10 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                       return (
                         <td
                           key={ci}
-                          className={`p-3 align-middle text-center ${rowBg}`}
-                          style={{ borderLeft: '2px solid white' }}
+                          className={`align-middle text-center ${rowBg}`}
+                          style={{ borderLeft: '2px solid white', padding: cellPad }}
                         >
-                          {included ? <CheckIcon /> : <CrossIcon />}
+                          {included ? <CheckIcon cls={iconCls} /> : <CrossIcon cls={iconCls} />}
                         </td>
                       );
                     })}
