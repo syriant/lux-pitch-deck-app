@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { rewriteVoice } from '@/api/voice.api';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface LuxVoiceButtonProps {
   fieldKey: string;
   /** Current (placeholder-substituted) HTML shown in the field. */
@@ -46,7 +48,10 @@ export function LuxVoiceButton({
       const res = await rewriteVoice({
         fieldKey,
         text: currentValue,
-        deckId: deckId || undefined,
+        // Only send a real (persisted) deck id. The template-preview editor
+        // uses a sentinel id ('template-preview'); sending it would record a
+        // non-UUID deckId in llm_usage and break the usage admin's deck lookup.
+        deckId: deckId && UUID_RE.test(deckId) ? deckId : undefined,
         hotelName: hotelName || undefined,
         destination: destination || undefined,
       });

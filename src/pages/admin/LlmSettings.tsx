@@ -722,12 +722,15 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
   const [deckId, setDeckId] = useState<string>('');
   const [page, setPage] = useState(1);
   const [facets, setFacets] = useState<UsageFacets>({ users: [], decks: [] });
+  const [loadError, setLoadError] = useState('');
 
   // Reset to the first page whenever a filter changes.
   useEffect(() => { setPage(1); }, [usageKey, userId, deckId]);
 
   useEffect(() => {
-    listLlmUsageFacets().then(setFacets).catch(() => {});
+    listLlmUsageFacets()
+      .then(setFacets)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load usage filters'));
   }, []);
 
   useEffect(() => {
@@ -742,8 +745,9 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
         setUsage(res.data);
         setTotals(res.meta.totals);
         setTotal(res.meta.total);
+        setLoadError('');
       })
-      .catch(() => {});
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load usage'));
   }, [usageKey, userId, deckId, page]);
 
   const pageCount = Math.max(1, Math.ceil(total / USAGE_PAGE_SIZE));
@@ -776,6 +780,12 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
           </select>
         </div>
       </div>
+
+      {loadError && (
+        <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          Couldn’t load usage: {loadError}
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-4 mb-4">
         <Stat label="Input tokens" value={totals.inputTokens.toLocaleString()} />
