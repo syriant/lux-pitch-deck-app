@@ -92,6 +92,9 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
       const results: Record<string, LookupResult | null> = {};
       const toggles: Record<string, Record<string, boolean>> = {};
       const manual: Record<string, boolean> = {};
+      // Groups that already have saved assets — must NOT be re-persisted on
+      // remount, or a re-mount can clobber recently-toggled selections.
+      const savedKeys = new Set<string>();
 
       for (const prop of freshProperties) {
         // Load existing per-option-group assets (read from first option in each group)
@@ -99,7 +102,9 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
         for (const group of groups) {
           const representative = group.options[0];
           if (representative?.marketingAssets && Object.keys(representative.marketingAssets).length > 0) {
-            toggles[groupKey(prop.id, group.optionNumber)] = { ...representative.marketingAssets };
+            const key = groupKey(prop.id, group.optionNumber);
+            toggles[key] = { ...representative.marketingAssets };
+            savedKeys.add(key);
           }
         }
 
@@ -122,13 +127,14 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
               tier: lookup.tier,
             }).catch(() => {});
 
-            // Merge lookup channels with any existing saved state per option group
+            // Merge lookup channels with any existing saved state per option
+            // group — preserve every saved selection, only adding entitlement
+            // channels that aren't present yet (defaulting them off).
             for (const group of groups) {
               const key = groupKey(prop.id, group.optionNumber);
-              const existing = toggles[key] ?? {};
-              const merged: Record<string, boolean> = {};
+              const merged: Record<string, boolean> = { ...(toggles[key] ?? {}) };
               for (const channel of Object.keys(lookup.assetEntitlements)) {
-                merged[channel] = existing[channel] ?? false;
+                if (!(channel in merged)) merged[channel] = false;
               }
               toggles[key] = merged;
             }
@@ -147,10 +153,9 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
               manual[prop.id] = true;
               for (const group of groups) {
                 const key = groupKey(prop.id, group.optionNumber);
-                const existing = toggles[key] ?? {};
-                const merged: Record<string, boolean> = {};
+                const merged: Record<string, boolean> = { ...(toggles[key] ?? {}) };
                 for (const channel of Object.keys(rule.assetEntitlements)) {
-                  merged[channel] = existing[channel] ?? false;
+                  if (!(channel in merged)) merged[channel] = false;
                 }
                 toggles[key] = merged;
               }
@@ -168,13 +173,15 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
       setGroupToggles(toggles);
       setLoading(false);
 
-      // Persist initial asset state to all options in each group
+      // Persist initial asset state only for groups that had none yet. Groups
+      // with previously-saved assets are left untouched so a remount can never
+      // overwrite a selection the user just made (which raced with this write).
       for (const prop of freshProperties) {
         const groups = groupOptionsByNumber(prop.options);
         for (const group of groups) {
           const key = groupKey(prop.id, group.optionNumber);
           const assets = toggles[key];
-          if (assets) {
+          if (assets && !savedKeys.has(key)) {
             await Promise.all(
               group.options.map((o) => updateOption(deckId, o.id, { marketingAssets: assets }).catch(() => {})),
             );
@@ -235,26 +242,42 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
     });
   }
 
+  // Optimistically apply the new selection, then persist it. On failure the
+  // optimistic change is rolled back and the error surfaced, so a toggle never
+  // silently fails to save.
+  async function persistAssets(
+    propId: string,
+    optNum: number,
+    next: Record<string, boolean>,
+    previous: Record<string, boolean> | undefined,
+  ) {
+    const key = groupKey(propId, optNum);
+    setGroupToggles((prev) => ({ ...prev, [key]: next }));
+    setSaving(true);
+    setError('');
+    try {
+      await saveGroupAssets(propId, optNum, next);
+    } catch {
+      setGroupToggles((prev) => ({ ...prev, [key]: previous ?? {} }));
+      setError('Failed to save marketing assets — please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function toggleAsset(propId: string, optNum: number, channel: string) {
     const key = groupKey(propId, optNum);
-    setGroupToggles((prev) => {
-      const updated = {
-        ...(prev[key] ?? {}),
-        [channel]: !(prev[key]?.[channel] ?? false),
-      };
-      saveGroupAssets(propId, optNum, updated).catch(() => {});
-      return { ...prev, [key]: updated };
-    });
+    const previous = groupToggles[key];
+    const updated = { ...(previous ?? {}), [channel]: !(previous?.[channel] ?? false) };
+    void persistAssets(propId, optNum, updated, previous);
   }
 
   function toggleAll(propId: string, optNum: number, channels: string[], value: boolean) {
     const key = groupKey(propId, optNum);
-    setGroupToggles((prev) => {
-      const updated: Record<string, boolean> = {};
-      for (const ch of channels) updated[ch] = value;
-      saveGroupAssets(propId, optNum, updated).catch(() => {});
-      return { ...prev, [key]: updated };
-    });
+    const previous = groupToggles[key];
+    const updated: Record<string, boolean> = { ...(previous ?? {}) };
+    for (const ch of channels) updated[ch] = value;
+    void persistAssets(propId, optNum, updated, previous);
   }
 
   async function handleSaveAndPreview() {
@@ -391,9 +414,9 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
                       <table className="w-full text-sm border-collapse">
                         <thead>
                           <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 pr-3 font-medium text-gray-600 min-w-[180px]">Channel</th>
+                            <th className="text-left py-2 pr-3 font-medium text-gray-600 min-w-45">Channel</th>
                             {groups.map((group) => (
-                              <th key={group.optionNumber} className="text-center py-2 px-3 font-medium text-gray-600 min-w-[100px]">
+                              <th key={group.optionNumber} className="text-center py-2 px-3 font-medium text-gray-600 min-w-25">
                                 <div className="text-xs leading-tight">
                                   <div>Opt {group.optionNumber}</div>
                                   {group.tierLabel && <div className="text-gray-400">{group.tierLabel}</div>}
@@ -432,7 +455,7 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
                             {groups.map((group) => {
                               const key = groupKey(prop.id, group.optionNumber);
                               const channelNames = channels.map(([ch]) => ch);
-                              const allOn = channelNames.every((ch) => groupToggles[key]?.[ch] !== false);
+                              const allOn = channelNames.every((ch) => groupToggles[key]?.[ch]);
                               return (
                                 <td key={group.optionNumber} className="text-center py-2 px-3">
                                   <button
