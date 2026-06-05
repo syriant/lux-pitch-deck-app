@@ -161,6 +161,45 @@ export async function parseCaseStudyPdf(file: File): Promise<CaseStudyDraft> {
   return res.data;
 }
 
+/** One property card extracted from a multi-property case-study summary PDF. */
+export interface CaseStudySummaryDraft {
+  title: string | null;
+  hotelName: string | null;
+  destination: string | null;
+  propertyType: string | null;
+  narrative: string | null;
+  tags: string[] | null;
+  roomNights: number | null;
+  revenue: number | null;
+  bookings: number | null;
+  pcmNotes: string | null;
+  images: string[];
+  destinationMatched: boolean;
+  duplicateCandidates: DuplicateCandidate[];
+}
+
+export interface CaseStudySummaryResult {
+  drafts: CaseStudySummaryDraft[];
+  llm: {
+    provider: string;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    costUsd: number | null;
+    latencyMs: number;
+  };
+  warnings: string[];
+}
+
+export async function parseCaseStudySummaryPdf(file: File): Promise<CaseStudySummaryResult> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await apiClient.post<CaseStudySummaryResult>('/case-studies/from-summary-pdf', form, {
+    timeout: 180000,
+  });
+  return res.data;
+}
+
 export async function updateCaseStudy(id: string, data: UpdateCaseStudyRequest): Promise<CaseStudy> {
   const res = await apiClient.patch<CaseStudy>(`/case-studies/${id}`, data);
   return res.data;

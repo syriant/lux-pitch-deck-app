@@ -5,8 +5,10 @@ import {
   updateCaseStudy,
   deleteCaseStudy,
   parseCaseStudyPdf,
+  parseCaseStudySummaryPdf,
   type CaseStudy,
   type CaseStudyDraft,
+  type CaseStudySummaryDraft,
   type DuplicateCandidate,
 } from '@/api/case-studies.api';
 import { fetchTableauMetrics } from '@/api/tableau.api';
@@ -16,6 +18,7 @@ import { ingestBase64Images } from '@/api/image-library.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
+import { CaseStudySummaryReview } from '@/components/case-studies/CaseStudySummaryReview';
 
 interface FormData {
   title: string;
@@ -58,6 +61,8 @@ export function CaseStudies() {
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
   const [metricsMessage, setMetricsMessage] = useState('');
   const [parsingPdf, setParsingPdf] = useState(false);
+  const [parsingSummary, setParsingSummary] = useState(false);
+  const [summary, setSummary] = useState<{ drafts: CaseStudySummaryDraft[]; warnings: string[] } | null>(null);
   const [pdfMessage, setPdfMessage] = useState('');
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
@@ -238,6 +243,24 @@ export function CaseStudies() {
     }
   }
 
+  async function handleSummaryUpload(file: File) {
+    setParsingSummary(true);
+    setPdfMessage('');
+    setError('');
+    try {
+      const res = await parseCaseStudySummaryPdf(file);
+      if (res.drafts.length === 0) {
+        setPdfMessage('No property cards were found in that PDF.');
+        return;
+      }
+      setSummary({ drafts: res.drafts, warnings: res.warnings });
+    } catch {
+      setError('Failed to parse case study summary PDF');
+    } finally {
+      setParsingSummary(false);
+    }
+  }
+
   async function handlePdfUpload(file: File) {
     setParsingPdf(true);
     setPdfMessage('');
@@ -320,6 +343,20 @@ export function CaseStudies() {
               }}
             />
           </label>
+          <label className={`rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] cursor-pointer inline-flex items-center gap-2 ${parsingSummary ? 'opacity-50 pointer-events-none' : ''}`}>
+            {parsingSummary ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
+            {parsingSummary ? 'Parsing…' : 'Upload Case Study Summary'}
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) handleSummaryUpload(file);
+              }}
+            />
+          </label>
           <button
             onClick={openCreate}
             className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
@@ -328,6 +365,15 @@ export function CaseStudies() {
           </button>
         </div>
       </div>
+
+      {summary && (
+        <CaseStudySummaryReview
+          drafts={summary.drafts}
+          warnings={summary.warnings}
+          onClose={() => { setSummary(null); void load(); }}
+          onCreated={() => { void load(); }}
+        />
+      )}
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {pdfMessage && <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">{pdfMessage}</div>}
