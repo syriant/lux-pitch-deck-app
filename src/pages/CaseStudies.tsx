@@ -503,9 +503,12 @@ export function CaseStudies() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+            {form.images.length > 1 && (
+              <p className="text-xs text-gray-500 mb-1">The first image is the hero shown on the case study slide — hover an image to set it.</p>
+            )}
             <div className="flex gap-2 flex-wrap mb-2">
-              {form.images.map((url) => (
-                <div key={url} className="relative group w-20 h-20 rounded border border-gray-200 overflow-hidden">
+              {form.images.map((url, idx) => (
+                <div key={url} className={`relative group w-20 h-20 rounded border overflow-hidden ${idx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>
                   <button
                     type="button"
                     onClick={() => setViewingImage(url)}
@@ -514,6 +517,18 @@ export function CaseStudies() {
                   >
                     <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
                   </button>
+                  {idx === 0 && form.images.length > 1 && (
+                    <span className="absolute bottom-0 left-0 right-0 bg-[#01B18B] text-white text-[9px] font-medium text-center py-0.5">Hero</span>
+                  )}
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, images: [url, ...form.images.filter((u) => u !== url)] })}
+                      className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[9px] py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Set as hero
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, images: form.images.filter((u) => u !== url) })}

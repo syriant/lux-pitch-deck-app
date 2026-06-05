@@ -532,9 +532,12 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Images</label>
+            {createImages.length > 1 && (
+              <p className="text-[11px] text-gray-500 mb-1">The first image is the hero shown on the slide — hover to set it.</p>
+            )}
             <div className="flex gap-2 flex-wrap">
-              {createImages.map((url) => (
-                <div key={url} className="relative group w-16 h-16 rounded border border-gray-200 overflow-hidden">
+              {createImages.map((url, idx) => (
+                <div key={url} className={`relative group w-16 h-16 rounded border overflow-hidden ${idx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>
                   <button
                     type="button"
                     onClick={() => setViewingImage(url)}
@@ -543,6 +546,18 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                   >
                     <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
                   </button>
+                  {idx === 0 && createImages.length > 1 && (
+                    <span className="absolute bottom-0 left-0 right-0 bg-[#01B18B] text-white text-[8px] font-medium text-center py-0.5">Hero</span>
+                  )}
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCreateImages((prev) => [url, ...prev.filter((u) => u !== url)])}
+                      className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Set hero
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setCreateImages((prev) => prev.filter((u) => u !== url))}

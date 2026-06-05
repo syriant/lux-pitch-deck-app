@@ -176,9 +176,19 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
                   <div className="mt-3">
                     <Label>Images</Label>
                     <div className="flex flex-wrap items-center gap-2">
-                      {r.images.map((u) => (
-                        <div key={u} className="relative">
-                          <img src={uploadUrl(u) ?? ''} alt="" className="h-16 w-16 rounded object-cover border border-gray-200" />
+                      {r.images.map((u, imgIdx) => (
+                        <div key={u} className={`relative group h-16 w-16 rounded overflow-hidden border ${imgIdx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>
+                          <img src={uploadUrl(u) ?? ''} alt="" className="h-full w-full object-cover" />
+                          {imgIdx === 0 && r.images.length > 1 && (
+                            <span className="absolute bottom-0 left-0 right-0 bg-[#01B18B] text-white text-[8px] font-medium text-center py-0.5">Hero</span>
+                          )}
+                          {imgIdx > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => patch(i, { images: [u, ...r.images.filter((x) => x !== u)] })}
+                              className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >Set hero</button>
+                          )}
                           <button
                             type="button"
                             onClick={() => patch(i, { images: r.images.filter((x) => x !== u) })}
