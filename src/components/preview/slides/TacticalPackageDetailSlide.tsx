@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
-import { TIER_PALETTE, tierBadgeName, isShown } from './tactical-shared';
+import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee } from './tactical-shared';
 
 const NAVY = '#0D2447';
 const LIGHT_BG = '#F4F6FA';
@@ -88,6 +88,7 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
   const showExtraNight = isShown(hidden, 'extraNight');
   const showSurcharge = isShown(hidden, 'surchargePeriods');
   const showGuests = isShown(hidden, 'extraGuestPolicy') && guests.length > 0;
+  const feeBasis = extraGuestFeeBasis(deck?.customFields);
   const showIncl = isShown(hidden, 'inclusions');
   const showExtraNightIncl = isShown(hidden, 'extraNightInclusions') && extraNightIncl.length > 0;
   const rateCols = (showRoomType ? 1 : 0) + (showAllot ? 1 : 0) + (showOcc ? 1 : 0)
@@ -221,7 +222,7 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
                       <td className="py-1.5 px-2 border border-gray-200" style={{ color: DARK }}>{g.guest}</td>
                       <td className="py-1.5 px-2 text-center border border-gray-200" style={{ color: DARK }}>{g.age ?? ''}</td>
                       <td className="py-1.5 px-2 border border-gray-200" style={{ color: DARK }}>{g.inclusions ?? ''}</td>
-                      <td className="py-1.5 px-2 text-right border border-gray-200" style={{ color: DARK }}>{g.feeLabel ?? (g.feePerNight != null ? fmtNumber(g.feePerNight) : '')}</td>
+                      <td className="py-1.5 px-2 text-right border border-gray-200" style={{ color: DARK }}>{resolveGuestFee(g, feeBasis)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,7 +1,8 @@
 import { useState, useRef, type ChangeEvent } from 'react';
 import { parsePricingTool, type ParsedPricingTool } from '@/api/parser.api';
-import { type DeckPropertyFull, type FullDeck, type SetOptionRequest, setPropertyOptions, updateProperty, updateOption } from '@/api/decks.api';
+import { type DeckPropertyFull, type FullDeck, type SetOptionRequest, type TacticalDetails, setPropertyOptions, updateProperty, updateOption } from '@/api/decks.api';
 import { TacticalPackagesSection } from './TacticalPackagesSection';
+import { CampaignDatesEditor } from './CampaignDatesEditor';
 import { formatMoney } from '@/components/preview/currency';
 
 interface Step2Props {
@@ -91,6 +92,25 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
         const fallbackInclusionNames = result.inclusions.map((inc) => inc.assetName);
         const optInclusions = opt.inclusions.length > 0 ? opt.inclusions : fallbackInclusionNames;
 
+        // Tactical details (room-night forecast + extra guest policy) parsed
+        // from the Prices-Forecasting sheet. Extra guest surcharge carries both
+        // net and sell; the deck-wide basis toggle picks which to display.
+        const guest = opt.extraGuestSurcharge;
+        const tacticalDetails: TacticalDetails = {};
+        if (opt.roomNightForecast != null) tacticalDetails.roomNightForecast = opt.roomNightForecast;
+        // Per-option travel dates from this option's sheet (campaign dates have
+        // no source in the tool — entered manually per option).
+        if (opt.travelFrom) tacticalDetails.travelStart = opt.travelFrom;
+        if (opt.travelTo) tacticalDetails.travelEnd = opt.travelTo;
+        if (guest) {
+          tacticalDetails.extraGuestPolicy = [
+            { guest: 'Adult', age: '12+', inclusions: 'Breakfast', feePerNight: null, feeLabel: null, feePerNightNet: guest.adult.net, feePerNightSell: guest.adult.sell },
+            { guest: 'Child', age: '4 – 11', inclusions: 'Breakfast', feePerNight: null, feeLabel: null, feePerNightNet: guest.child.net, feePerNightSell: guest.child.sell },
+            { guest: 'Infant', age: '0 – 3', inclusions: 'Room Only', feePerNight: null, feeLabel: 'Free of Charge', feePerNightNet: null, feePerNightSell: null },
+          ];
+        }
+        const hasTactical = Object.keys(tacticalDetails).length > 0;
+
         // The tactical-package "rooms" table is per-option, not per-deal-row,
         // so it rides on the first row for this option. Slides + the wizard
         // editor read it off the first matching optionNumber row.
@@ -111,6 +131,7 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
             inclusions: optInclusions.length > 0 ? optInclusions : null,
             marketingAssets: null,
             rooms: di === 0 && opt.rooms.length > 0 ? opt.rooms : null,
+            tacticalDetails: di === 0 && hasTactical ? tacticalDetails : null,
           });
         }
       }
@@ -266,6 +287,8 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
           );
         })}
       </div>
+
+      <CampaignDatesEditor deck={deck} properties={properties} onDeckChange={onDeckChange} />
 
       {isTacticalTemplate(deck) && (
         <TacticalPackagesSection

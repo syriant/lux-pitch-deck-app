@@ -37,27 +37,13 @@ const DEFAULT_GUEST_ROWS: TacticalExtraGuestRow[] = [
 ];
 
 export function TacticalPackagesSection({ deck, properties, onDeckChange }: Props) {
-  // Local mirror of campaign/travel dates with debounce-via-blur save.
-  const [campaignStart, setCampaignStart] = useState(deck.campaignStart ?? '');
-  const [campaignEnd, setCampaignEnd] = useState(deck.campaignEnd ?? '');
-  const [travelStart, setTravelStart] = useState(deck.travelStart ?? '');
-  const [travelEnd, setTravelEnd] = useState(deck.travelEnd ?? '');
   const [openProperty, setOpenProperty] = useState<string | null>(properties[0]?.id ?? null);
   const [openPackage, setOpenPackage] = useState<string | null>(null);
 
-  useEffect(() => {
-    setCampaignStart(deck.campaignStart ?? '');
-    setCampaignEnd(deck.campaignEnd ?? '');
-    setTravelStart(deck.travelStart ?? '');
-    setTravelEnd(deck.travelEnd ?? '');
-  }, [deck.id, deck.campaignStart, deck.campaignEnd, deck.travelStart, deck.travelEnd]);
-
-  async function saveCampaign() {
+  const feeBasis = deck.customFields?.['tactical.extraGuestFeeBasis'] === 'net' ? 'net' : 'sell';
+  async function saveFeeBasis(basis: 'net' | 'sell') {
     await updateDeck(deck.id, {
-      campaignStart: campaignStart || null,
-      campaignEnd: campaignEnd || null,
-      travelStart: travelStart || null,
-      travelEnd: travelEnd || null,
+      customFields: { ...deck.customFields, 'tactical.extraGuestFeeBasis': basis },
     });
     onDeckChange();
   }
@@ -72,17 +58,22 @@ export function TacticalPackagesSection({ deck, properties, onDeckChange }: Prop
         </p>
       </div>
 
-      {/* Campaign Info */}
+      {/* Extra guest fee basis */}
       <div className="rounded-lg border border-gray-200 bg-white mb-4 overflow-hidden">
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-900">Campaign Info</h4>
-          <p className="text-xs text-gray-500">Shown across every tactical package slide.</p>
+          <h4 className="text-sm font-semibold text-gray-900">Extra Guest Fee</h4>
+          <p className="text-xs text-gray-500">Which Extra Guest Surcharge appears in the Extra Guest Policy table.</p>
         </div>
-        <div className="px-4 py-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <LabelledDate label="Campaign Start" value={campaignStart} onChange={setCampaignStart} onBlur={saveCampaign} />
-          <LabelledDate label="Campaign End" value={campaignEnd} onChange={setCampaignEnd} onBlur={saveCampaign} />
-          <LabelledDate label="Travel Start" value={travelStart} onChange={setTravelStart} onBlur={saveCampaign} />
-          <LabelledDate label="Travel End" value={travelEnd} onChange={setTravelEnd} onBlur={saveCampaign} />
+        <div className="px-4 py-4">
+          <label className="text-xs font-medium text-gray-700 block mb-1">Extra guest fee shown</label>
+          <select
+            className="w-full md:w-64 rounded border border-gray-300 px-2 py-1.5 text-sm"
+            value={feeBasis}
+            onChange={(e) => saveFeeBasis(e.target.value as 'net' | 'sell')}
+          >
+            <option value="sell">Sell price (guest pays)</option>
+            <option value="net">Net rate (hotel receives)</option>
+          </select>
         </div>
       </div>
 
@@ -130,21 +121,6 @@ export function TacticalPackagesSection({ deck, properties, onDeckChange }: Prop
         );
       })}
     </div>
-  );
-}
-
-function LabelledDate({ label, value, onChange, onBlur }: { label: string; value: string; onChange: (v: string) => void; onBlur: () => void }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-medium text-gray-700 block mb-1">{label}</span>
-      <input
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-      />
-    </label>
   );
 }
 

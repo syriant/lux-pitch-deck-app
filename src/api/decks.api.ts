@@ -67,8 +67,12 @@ export interface TacticalExtraGuestRow {
   guest: string;
   age: string | null;
   inclusions: string | null;
+  /** Manual override fee; when set, takes precedence over the net/sell pair. */
   feePerNight: number | null;
   feeLabel: string | null;
+  /** Parsed Extra Guest Surcharge — net (hotel receives) and sell (guest pays) AUD. */
+  feePerNightNet?: number | null;
+  feePerNightSell?: number | null;
 }
 
 export interface TacticalDetails {
@@ -78,6 +82,11 @@ export interface TacticalDetails {
   comparisonOverrides?: Record<string, string>;
   /** Per-package visibility for Single Page elements; element id → true = hidden. */
   hidden?: Record<string, boolean>;
+  /** Per-option campaign/travel dates (ISO); fall back to deck-level when unset. */
+  campaignStart?: string | null;
+  campaignEnd?: string | null;
+  travelStart?: string | null;
+  travelEnd?: string | null;
 }
 
 export interface CreateDeckRequest {

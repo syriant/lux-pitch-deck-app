@@ -143,6 +143,24 @@ export function isShown(hidden: Record<string, boolean> | undefined, id: string)
   return !hidden?.[id];
 }
 
+export type ExtraGuestFeeBasis = 'net' | 'sell';
+
+/** Deck-wide choice of which Extra Guest Surcharge to display; defaults to sell. */
+export function extraGuestFeeBasis(customFields: Record<string, string> | null | undefined): ExtraGuestFeeBasis {
+  return customFields?.['tactical.extraGuestFeeBasis'] === 'net' ? 'net' : 'sell';
+}
+
+/** Display text for an extra-guest fee: label > manual override > basis-selected net/sell. */
+export function resolveGuestFee(
+  row: { feePerNight: number | null; feeLabel: string | null; feePerNightNet?: number | null; feePerNightSell?: number | null },
+  basis: ExtraGuestFeeBasis,
+): string {
+  if (row.feeLabel) return row.feeLabel;
+  if (row.feePerNight != null) return row.feePerNight.toLocaleString();
+  const v = basis === 'net' ? row.feePerNightNet : row.feePerNightSell;
+  return v != null ? v.toLocaleString() : '';
+}
+
 export function rulesFromDeck(deck: FullDeck, prop: DeckPropertyFull | undefined) {
   if (!prop) return {} as Record<number, TierRule | undefined>;
   return findRulesByTier((deck.dealTierRules ?? []) as TierRule[], { grade: prop.grade, destination: prop.destination });

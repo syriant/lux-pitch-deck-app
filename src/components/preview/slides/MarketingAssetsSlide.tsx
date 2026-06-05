@@ -52,18 +52,33 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   );
   const optNums = uniqueOptions.map((o) => o.optionNumber);
 
+  // Per-option dates from the owner row in the option group, falling back to
+  // the legacy deck-level dates. The row collapses when all options match.
+  const optionDates = (optNum: number) => {
+    const grp: DeckOption[] = groups.get(optNum) ?? [];
+    const owner = grp.find((o) => {
+      const t = o.tacticalDetails;
+      return t && (t.campaignStart || t.campaignEnd || t.travelStart || t.travelEnd);
+    });
+    const t = owner?.tacticalDetails;
+    return {
+      campaign: fmtDateRange(t?.campaignStart ?? deck?.campaignStart ?? null, t?.campaignEnd ?? deck?.campaignEnd ?? null),
+      travel: fmtDateRange(t?.travelStart ?? deck?.travelStart ?? null, t?.travelEnd ?? deck?.travelEnd ?? null),
+    };
+  };
+
   // Build rows
   type Row = { key: string; label: string; cells: string[] };
   const rows: Row[] = [
     {
       key: 'period',
       label: 'Campaign period',
-      cells: uniqueOptions.map(() => fmtDateRange(deck?.campaignStart ?? null, deck?.campaignEnd ?? null)),
+      cells: uniqueOptions.map((o) => optionDates(o.optionNumber).campaign),
     },
     {
       key: 'travel',
       label: 'Travel dates',
-      cells: uniqueOptions.map(() => fmtDateRange(deck?.travelStart ?? null, deck?.travelEnd ?? null)),
+      cells: uniqueOptions.map((o) => optionDates(o.optionNumber).travel),
     },
     {
       key: 'allocation',
@@ -85,6 +100,15 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       cells: uniqueOptions.map(() => 'VCC'),
     },
   ];
+
+  // Drop the Campaign period row when empty for every option (no pricing-tool
+  // source; blank unless entered manually). Honour manual overrides.
+  const isRowEmpty = (row: Row): boolean =>
+    row.cells.every((cell, ci) => {
+      const v = (cf?.[`mktg.${propId}.${row.key}.opt${optNums[ci]}`] ?? cell ?? '').trim();
+      return v === '' || v === '—';
+    });
+  const visibleRows = rows.filter((row) => row.key !== 'period' || !isRowEmpty(row));
 
   const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`));
 
@@ -137,7 +161,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, ri) => {
+              {visibleRows.map((row, ri) => {
                 const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
                 const effective = row.cells.map((defaultCell, ci) => {
                   const fk = `mktg.${propId}.${row.key}.opt${optNums[ci]}`;

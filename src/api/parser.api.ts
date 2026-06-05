@@ -37,6 +37,13 @@ export interface ParsedPricingTool {
       extraNightRate: number | null;
       currency: string | null;
     }>;
+    roomNightForecast: number | null;
+    extraGuestSurcharge: {
+      adult: { net: number | null; sell: number | null };
+      child: { net: number | null; sell: number | null };
+    } | null;
+    travelFrom: string | null;
+    travelTo: string | null;
   }>;
   inclusions: Array<{
     assetName: string;
