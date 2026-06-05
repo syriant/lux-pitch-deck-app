@@ -23,6 +23,7 @@ const adminLinks: NavItem[] = [
   { label: 'Templates', path: '/admin/templates', icon: 'layout' },
   { label: 'Reach Stats', path: '/admin/reach-stats', icon: 'globe' },
   { label: 'Image Library', path: '/admin/image-library', icon: 'image' },
+  { label: 'LUX Image Check', path: '/admin/lux-image-check', icon: 'image' },
   { label: 'LLM Settings', path: '/admin/llm', icon: 'cpu' },
   { label: 'Users', path: '/admin/users', icon: 'users' },
 ];

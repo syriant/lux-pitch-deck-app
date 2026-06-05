@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
 import { updateDeck } from '@/api/decks.api';
-import { fetchHotelImages, fetchHotelLogos, fetchLuxImages, lookupLibraryByUrls, uploadToLibrary, type LibraryImage, type LuxOfferCandidate, type FetchStep } from '@/api/image-library.api';
+import { fetchHotelImages, fetchHotelLogos, fetchLuxImages, lookupLibraryByUrls, uploadToLibrary, approveLibraryImages, type LibraryImage, type LuxOfferCandidate, type FetchStep } from '@/api/image-library.api';
 import { Spinner } from '@/components/common/Spinner';
 
 interface Step3Props {
@@ -119,6 +119,9 @@ export function Step3Images({ deckId, coverImage, heroImage, logoImage, gallery:
   async function handleAddToGallery(urls: string[]) {
     const fresh = urls.filter((u) => !gallery.includes(u));
     if (fresh.length === 0) return;
+    // Approval: adding to a gallery is the explicit consent that promotes these
+    // fetched images into the browsable library.
+    await approveLibraryImages(fresh);
     const updated = [...gallery, ...fresh];
     await updateDeck(deckId, { gallery: updated });
     setGallery(updated);
@@ -519,7 +522,7 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
     setSelected(preselect);
   }, [existingUrls]);
 
-  const loadImages = useCallback(async (forceRefresh: boolean) => {
+  const loadImages = useCallback(async (forceRefresh: boolean, skipLux = false) => {
     setError('');
     const setBusy = forceRefresh ? setFetchingMore : setLoading;
     setBusy(true);
@@ -529,6 +532,7 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
         destination: destination ?? undefined,
         limit: 10,
         forceRefresh,
+        skipLux,
       });
       applyResult(result);
     } catch {
@@ -636,7 +640,7 @@ function FetchImagesModal({ hotelName, destination, existingUrls, onClose, onAdd
                     ))}
                   </div>
                   <button
-                    onClick={() => { setLuxCandidates(null); void loadImages(true); }}
+                    onClick={() => { setLuxCandidates(null); void loadImages(true, true); }}
                     disabled={pickingOfferId !== null || fetchingMore}
                     className="mt-2 text-xs text-gray-600 underline hover:text-gray-800 disabled:opacity-50"
                   >

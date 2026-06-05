@@ -34,13 +34,48 @@ export async function fetchHotelImages(args: {
   destination?: string;
   limit?: number;
   forceRefresh?: boolean;
+  skipLux?: boolean;
 }): Promise<FetchImagesResponse> {
   const res = await apiClient.post<FetchImagesResponse>('/image-library/fetch', {
     hotelName: args.hotelName,
     destination: args.destination,
     limit: args.limit ?? 10,
     forceRefresh: args.forceRefresh,
+    skipLux: args.skipLux,
   });
+  return res.data;
+}
+
+/** Approve fetched (pending) images so they join the browsable library. */
+export async function approveLibraryImages(urls: string[]): Promise<{ approved: number }> {
+  const res = await apiClient.post<{ approved: number }>('/image-library/approve', { urls });
+  return res.data;
+}
+
+export interface LuxDebugCandidate {
+  offerId: string;
+  name: string;
+  mainText: string;
+  secondaryText: string;
+  offerFound: boolean;
+  imageCount: number;
+  images: Array<{ id: string; title: string | null; thumbUrl: string }>;
+}
+
+export interface LuxDebugResult {
+  query: string;
+  matchedQuery: string | null;
+  candidateCount: number;
+  candidates: LuxDebugCandidate[];
+  raw: {
+    typeahead: { url: string; response: unknown };
+    offers: { url: string; response: unknown } | null;
+  };
+}
+
+/** Admin diagnostic: probe LUX for a search string (no library writes). */
+export async function luxImageDebug(query: string): Promise<LuxDebugResult> {
+  const res = await apiClient.post<LuxDebugResult>('/image-library/admin/lux-search', { query });
   return res.data;
 }
 
