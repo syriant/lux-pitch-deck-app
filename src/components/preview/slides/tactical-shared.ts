@@ -120,6 +120,29 @@ export function tierBadgeName(opt: DeckOption): string {
   return (opt.tierLabel ?? TIER_PALETTE[opt.optionNumber]?.badgeLabel ?? `OPTION ${opt.optionNumber}`).toUpperCase();
 }
 
+/**
+ * Toggleable elements on the Single Page (Tactical Package Detail) slide.
+ * Order is the order shown in the wizard's "Show on slide" controls. Every
+ * element renders unless `tacticalDetails.hidden[id]` is true.
+ */
+export const SINGLE_PAGE_ELEMENTS: Array<{ id: string; label: string }> = [
+  { id: 'forecast', label: 'Room night forecast' },
+  { id: 'roomType', label: 'Room Type column' },
+  { id: 'allotment', label: 'Allotment column' },
+  { id: 'occupancy', label: 'Occupancy column' },
+  { id: 'nettRates', label: 'Nett rate columns' },
+  { id: 'extraNight', label: 'Extra Night column' },
+  { id: 'surchargePeriods', label: 'Surcharge Periods' },
+  { id: 'extraGuestPolicy', label: 'Extra Guest Policy' },
+  { id: 'inclusions', label: 'Inclusions' },
+  { id: 'extraNightInclusions', label: 'Extra Night Inclusions' },
+];
+
+/** True when the element should render (i.e. not flagged hidden). */
+export function isShown(hidden: Record<string, boolean> | undefined, id: string): boolean {
+  return !hidden?.[id];
+}
+
 export function rulesFromDeck(deck: FullDeck, prop: DeckPropertyFull | undefined) {
   if (!prop) return {} as Record<number, TierRule | undefined>;
   return findRulesByTier((deck.dealTierRules ?? []) as TierRule[], { grade: prop.grade, destination: prop.destination });

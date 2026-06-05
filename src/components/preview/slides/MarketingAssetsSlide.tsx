@@ -11,6 +11,14 @@ interface MarketingAssetsSlideProps {
   onFieldChange?: FieldChangeHandler;
 }
 
+function fmtDateRange(start: string | null, end: string | null): string {
+  if (!start && !end) return '—';
+  const s = start ? new Date(start).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const e = end ? new Date(end).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  if (s && e) return `${s} – ${e}`;
+  return s || e || '—';
+}
+
 function getUniqueOptions(options: DeckOption[]): DeckOption[] {
   const seen = new Set<number>();
   return options.filter((o) => {
@@ -50,12 +58,12 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
     {
       key: 'period',
       label: 'Campaign period',
-      cells: uniqueOptions.map(() => '8–10 weeks'),
+      cells: uniqueOptions.map(() => fmtDateRange(deck?.campaignStart ?? null, deck?.campaignEnd ?? null)),
     },
     {
       key: 'travel',
       label: 'Travel dates',
-      cells: uniqueOptions.map(() => '12 months – blackout dates apply'),
+      cells: uniqueOptions.map(() => fmtDateRange(deck?.travelStart ?? null, deck?.travelEnd ?? null)),
     },
     {
       key: 'allocation',

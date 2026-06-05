@@ -12,6 +12,7 @@ import {
 import {
   TIER_PALETTE,
   uniqueOptionsByNumber,
+  SINGLE_PAGE_ELEMENTS,
 } from '@/components/preview/slides/tactical-shared';
 
 interface Props {
@@ -244,6 +245,29 @@ function PackageCard({
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
               />
             </label>
+          </div>
+
+          {/* Show on slide — per-package element visibility (all on by default) */}
+          <div>
+            <span className="text-xs font-medium text-gray-700 block mb-1">Show on slide</span>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              {SINGLE_PAGE_ELEMENTS.map((el) => (
+                <label key={el.id} className="flex items-center gap-2 text-xs text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={!details.hidden?.[el.id]}
+                    onChange={(e) => {
+                      const hidden = { ...(details.hidden ?? {}) };
+                      if (e.target.checked) delete hidden[el.id];
+                      else hidden[el.id] = true;
+                      saveDetails({ ...details, hidden });
+                    }}
+                    className="h-3.5 w-3.5 accent-[#01B18B]"
+                  />
+                  {el.label}
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Rooms table */}

@@ -1,6 +1,7 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
-import { TIER_PALETTE, tierBadgeName } from './tactical-shared';
+import { TIER_PALETTE, tierBadgeName, isShown } from './tactical-shared';
 
 const NAVY = '#0D2447';
 const LIGHT_BG = '#F4F6FA';
@@ -11,14 +12,6 @@ interface Props {
   option?: DeckOption;
   deck?: FullDeck;
   onFieldChange?: FieldChangeHandler;
-}
-
-function fmtDateRange(start: string | null, end: string | null): string {
-  if (!start && !end) return '—';
-  const s = start ? new Date(start).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const e = end ? new Date(end).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  if (s && e) return `${s} – ${e}`;
-  return s || e || '—';
 }
 
 function fmtNumber(n: number | null | undefined): string {
@@ -44,6 +37,25 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
   const hotelName = prop?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  // Auto-fit: when the body content would overflow the fixed slide height
+  // (expansive rooms/surcharges/inclusions), shrink it uniformly rather than
+  // clipping. transform:scale doesn't affect scrollHeight, so measuring is
+  // stable. Hooks must run before the early return below.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const sig = opt
+    ? `${opt.id}|${(opt.rooms ?? []).length}|${(opt.surcharges ?? []).length}|${(opt.tacticalDetails?.extraGuestPolicy ?? []).length}|${(opt.inclusions ?? []).length}|${(opt.tacticalDetails?.extraNightInclusions ?? []).length}|${JSON.stringify(opt.tacticalDetails?.hidden ?? {})}`
+    : '';
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    const content = contentRef.current;
+    if (!body || !content) return;
+    const avail = body.clientHeight;
+    const needed = content.scrollHeight;
+    setScale(needed > avail && needed > 0 ? Math.max(0.5, avail / needed) : 1);
+  }, [sig]);
+
   if (!opt || !prop) {
     return (
       <div className="h-full w-full flex items-center justify-center text-gray-400" style={{ backgroundColor: LIGHT_BG }}>
@@ -66,6 +78,23 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
   const forecast = opt.tacticalDetails?.roomNightForecast;
   const currency = rooms[0]?.currency ?? '';
 
+  // Per-package element visibility (default shown).
+  const hidden = opt.tacticalDetails?.hidden;
+  const showForecast = isShown(hidden, 'forecast');
+  const showRoomType = isShown(hidden, 'roomType');
+  const showAllot = isShown(hidden, 'allotment');
+  const showOcc = isShown(hidden, 'occupancy');
+  const showNettRates = isShown(hidden, 'nettRates');
+  const showExtraNight = isShown(hidden, 'extraNight');
+  const showSurcharge = isShown(hidden, 'surchargePeriods');
+  const showGuests = isShown(hidden, 'extraGuestPolicy') && guests.length > 0;
+  const showIncl = isShown(hidden, 'inclusions');
+  const showExtraNightIncl = isShown(hidden, 'extraNightInclusions') && extraNightIncl.length > 0;
+  const rateCols = (showRoomType ? 1 : 0) + (showAllot ? 1 : 0) + (showOcc ? 1 : 0)
+    + (showNettRates ? nightCounts.length : 0) + (showExtraNight ? 1 : 0);
+  const showRates = rateCols > 0;
+  const showRightCol = showIncl || showExtraNightIncl;
+
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: LIGHT_BG }}>
       {/* Header band */}
@@ -78,7 +107,7 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
             ◆ {tierBadgeName(opt)} TACTICAL PACKAGE
           </div>
         </div>
-        {forecast != null && (
+        {showForecast && forecast != null && (
           <div className="absolute right-[4%] top-1/2 -translate-y-1/2 text-right">
             <div className="text-[10px] uppercase tracking-wider" style={{ color: '#A0A8B8' }}>
               Room night forecast
@@ -90,58 +119,42 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
         )}
       </div>
 
-      {/* Date pills */}
-      <div className="flex gap-3 px-[4%] py-3">
-        <div className="flex items-stretch flex-1 max-w-[45%]">
-          <div className="w-1.5" style={{ backgroundColor: accent }} />
-          <div className="px-3 py-1.5 bg-white flex-1">
-            <div className="text-[8px] uppercase tracking-wider text-gray-500 font-bold">Campaign Dates</div>
-            <div className="text-[11px] font-bold" style={{ color: DARK }}>
-              {fmtDateRange(deck?.campaignStart ?? null, deck?.campaignEnd ?? null)}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-stretch flex-1 max-w-[45%]">
-          <div className="w-1.5" style={{ backgroundColor: accent }} />
-          <div className="px-3 py-1.5 bg-white flex-1">
-            <div className="text-[8px] uppercase tracking-wider text-gray-500 font-bold">Travel Period</div>
-            <div className="text-[11px] font-bold" style={{ color: DARK }}>
-              {fmtDateRange(deck?.travelStart ?? null, deck?.travelEnd ?? null)}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Body: left tables + right inclusions */}
-      <div className="flex-1 flex gap-3 px-[4%] pb-2 overflow-hidden">
+      <div ref={bodyRef} className="flex-1 px-[4%] pt-8 pb-2 overflow-hidden">
+        <div
+          ref={contentRef}
+          className="flex gap-3"
+          style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}
+        >
         {/* Left column — 60% */}
-        <div className="flex flex-col gap-3" style={{ flexBasis: '58%' }}>
+        <div className="flex flex-col gap-3" style={{ flexBasis: showRightCol ? '58%' : '100%' }}>
           {/* Nett Rates */}
+          {showRates && (
           <div>
             <div className="text-[9px] font-bold text-gray-600 mb-1 tracking-widest">NETT RATES PER PACKAGE</div>
             <table className="w-full text-[9px] border-collapse">
               <thead>
                 <tr>
-                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Room Type</th>
-                  <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Allot.</th>
-                  <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Occ.</th>
-                  {nightCounts.map((n) => (
+                  {showRoomType && <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Room Type</th>}
+                  {showAllot && <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Allot.</th>}
+                  {showOcc && <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Occ.</th>}
+                  {showNettRates && nightCounts.map((n) => (
                     <th key={n} className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>
                       {n} Nights{currency ? ` (${currency})` : ''}
                     </th>
                   ))}
-                  <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Extra Night{currency ? ` (${currency})` : ''}</th>
+                  {showExtraNight && <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Extra Night{currency ? ` (${currency})` : ''}</th>}
                 </tr>
               </thead>
               <tbody>
                 {rooms.length === 0 ? (
-                  <tr><td colSpan={4 + nightCounts.length} className="py-2 text-center text-gray-400 border border-gray-200">No rooms configured</td></tr>
+                  <tr><td colSpan={rateCols} className="py-2 text-center text-gray-400 border border-gray-200">No rooms configured</td></tr>
                 ) : rooms.map((r, i) => (
                   <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#EDF1F7]'}>
-                    <td className="py-1.5 px-2 border border-gray-200" style={{ color: DARK }}>{r.roomType}</td>
-                    <td className="py-1.5 px-2 text-center border border-gray-200" style={{ color: DARK }}>{r.allotment ?? ''}</td>
-                    <td className="py-1.5 px-2 text-center border border-gray-200" style={{ color: DARK }}>{r.occupancy ?? ''}</td>
-                    {nightCounts.map((n) => {
+                    {showRoomType && <td className="py-1.5 px-2 border border-gray-200" style={{ color: DARK }}>{r.roomType}</td>}
+                    {showAllot && <td className="py-1.5 px-2 text-center border border-gray-200" style={{ color: DARK }}>{r.allotment ?? ''}</td>}
+                    {showOcc && <td className="py-1.5 px-2 text-center border border-gray-200" style={{ color: DARK }}>{r.occupancy ?? ''}</td>}
+                    {showNettRates && nightCounts.map((n) => {
                       const nr = r.nightRates?.find((x) => x.nights === n);
                       return (
                         <td key={n} className="py-1.5 px-2 text-right border border-gray-200" style={{ color: DARK }}>
@@ -149,14 +162,16 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
                         </td>
                       );
                     })}
-                    <td className="py-1.5 px-2 text-right border border-gray-200" style={{ color: DARK }}>{fmtNumber(r.extraNightRate)}</td>
+                    {showExtraNight && <td className="py-1.5 px-2 text-right border border-gray-200" style={{ color: DARK }}>{fmtNumber(r.extraNightRate)}</td>}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Surcharge Periods */}
+          {showSurcharge && (
           <div>
             <div className="text-[9px] font-bold text-gray-600 mb-1 tracking-widest">SURCHARGE PERIODS</div>
             <table className="w-full text-[9px] border-collapse">
@@ -185,9 +200,10 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
               </tbody>
             </table>
           </div>
+          )}
 
           {/* Extra Guest Policy */}
-          {guests.length > 0 && (
+          {showGuests && (
             <div>
               <div className="text-[9px] font-bold text-gray-600 mb-1 tracking-widest">EXTRA GUEST POLICY</div>
               <table className="w-full text-[9px] border-collapse">
@@ -215,7 +231,9 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
         </div>
 
         {/* Right column — 40% */}
+        {showRightCol && (
         <div className="flex gap-2" style={{ flexBasis: '40%' }}>
+          {showIncl && (
           <div className="flex-1 flex flex-col">
             <div className="px-3 py-1.5 text-white text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: accent }}>
               INCLUSIONS
@@ -231,7 +249,8 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
               ))}
             </div>
           </div>
-          {extraNightIncl.length > 0 && (
+          )}
+          {showExtraNightIncl && (
             <div className="flex-1 flex flex-col">
               <div className="px-3 py-1.5 text-white text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: accent }}>
                 EXTRA NIGHTS
@@ -246,6 +265,8 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
               </div>
             </div>
           )}
+        </div>
+        )}
         </div>
       </div>
 

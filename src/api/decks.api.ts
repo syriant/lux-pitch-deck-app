@@ -76,6 +76,8 @@ export interface TacticalDetails {
   extraGuestPolicy?: TacticalExtraGuestRow[];
   extraNightInclusions?: string[];
   comparisonOverrides?: Record<string, string>;
+  /** Per-package visibility for Single Page elements; element id → true = hidden. */
+  hidden?: Record<string, boolean>;
 }
 
 export interface CreateDeckRequest {
