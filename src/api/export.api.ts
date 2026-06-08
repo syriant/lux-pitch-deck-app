@@ -29,6 +29,24 @@ export async function exportPdf(
   URL.revokeObjectURL(url);
 }
 
+export interface SalesforceUploadResult {
+  opportunityId: string;
+  opportunityName: string | null;
+  recordUrl: string | null;
+  contentDocumentId: string;
+  filename: string;
+  /** true when an existing attachment was overwritten (new version) rather than newly created. */
+  updated: boolean;
+}
+
+/** Render the deck to PDF and attach it to its linked Salesforce Opportunity's Files. */
+export async function exportToSalesforce(deckId: string): Promise<SalesforceUploadResult> {
+  const res = await apiClient.post<SalesforceUploadResult>(`/export/${deckId}/salesforce`, {}, {
+    timeout: 180_000,
+  });
+  return res.data;
+}
+
 export async function exportPptx(deckId: string): Promise<void> {
   const res = await apiClient.post(`/export/${deckId}/pptx`, {}, {
     responseType: 'blob',

@@ -8,7 +8,8 @@ import { updateCaseStudy } from '@/api/case-studies.api';
 import { buildSlideList, type SlideDefinition } from '@/components/preview/slide-types';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
-import { exportPptx, exportPdf } from '@/api/export.api';
+import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
+import { getSalesforceStatus } from '@/api/salesforce.api';
 import { AppShell } from '@/components/layout/AppShell';
 
 export type FieldChangeHandler = (
@@ -31,6 +32,38 @@ export function DeckPreview() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingPdfCompressed, setExportingPdfCompressed] = useState(false);
   const [hiddenSlides, setHiddenSlides] = useState<string[]>([]);
+  const [sfConfigured, setSfConfigured] = useState(false);
+  const [sfUploading, setSfUploading] = useState(false);
+  const [sfConfirmOpen, setSfConfirmOpen] = useState(false);
+  const [sfResult, setSfResult] = useState<{ ok: boolean; text: string; url?: string | null } | null>(null);
+
+  useEffect(() => {
+    getSalesforceStatus().then((s) => setSfConfigured(s.configured)).catch(() => setSfConfigured(false));
+  }, []);
+
+  const sfOppId = deck?.salesforceOpportunityId ?? null;
+  const sfAlreadyUploaded = !!(sfOppId && deck?.customFields?.[`salesforce.contentDocumentId.${sfOppId}`]);
+
+  async function runSalesforceUpload() {
+    if (!id) return;
+    setSfConfirmOpen(false);
+    setSfUploading(true);
+    setSfResult(null);
+    try {
+      const r = await exportToSalesforce(id);
+      setSfResult({
+        ok: true,
+        text: `${r.updated ? 'Updated' : 'Attached'} ${r.filename} ${r.updated ? 'in' : 'on'} ${r.opportunityName ?? 'the opportunity'}`,
+        url: r.recordUrl,
+      });
+      // Reflect the stored document id locally so a subsequent send overwrites it.
+      setDeck((prev) => prev ? { ...prev, customFields: { ...prev.customFields, [`salesforce.contentDocumentId.${r.opportunityId}`]: r.contentDocumentId } } : prev);
+    } catch {
+      setSfResult({ ok: false, text: 'Failed to send to Salesforce' });
+    } finally {
+      setSfUploading(false);
+    }
+  }
 
   // Keep ref in sync for use in callbacks
   useEffect(() => { deckRef.current = deck; }, [deck]);
@@ -326,7 +359,16 @@ export function DeckPreview() {
         {/* Bottom bar */}
         <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 shrink-0">
           <div className="text-sm text-[#7E8188]">
-            {slides.length} slides
+            {sfResult ? (
+              <span className={sfResult.ok ? 'text-[#01806a]' : 'text-red-600'}>
+                {sfResult.text}
+                {sfResult.ok && sfResult.url && (
+                  <> · <a href={sfResult.url} target="_blank" rel="noreferrer" className="underline">View in Salesforce</a></>
+                )}
+              </span>
+            ) : (
+              <>{slides.length} slides</>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -382,6 +424,26 @@ export function DeckPreview() {
               )}
               {exportingPdfCompressed ? 'Generating…' : 'Export Compressed PDF'}
             </button>
+            {sfOppId && sfConfigured && (
+              <button
+                onClick={() => {
+                  if (sfUploading) return;
+                  if (sfAlreadyUploaded) setSfConfirmOpen(true);
+                  else void runSalesforceUpload();
+                }}
+                disabled={sfUploading}
+                title="Render to PDF and attach it to the linked Salesforce opportunity"
+                className="rounded-md border border-[#01B18B] px-4 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5"
+              >
+                {sfUploading && (
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {sfUploading ? 'Sending…' : sfAlreadyUploaded ? 'Update in Salesforce' : 'Send to Salesforce'}
+              </button>
+            )}
             <button
               onClick={async () => {
                 if (!id || exporting) return;
@@ -402,6 +464,32 @@ export function DeckPreview() {
           </div>
         </div>
       </div>
+
+      {sfConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">Overwrite Salesforce file?</h3>
+            <p className="mb-5 text-sm text-gray-600">
+              A PDF is already attached to this opportunity. Sending again overwrites it with the
+              current deck as a new version — the previous version stays in Salesforce&apos;s file history.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setSfConfirmOpen(false)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void runSalesforceUpload()}
+                className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
+              >
+                Overwrite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
