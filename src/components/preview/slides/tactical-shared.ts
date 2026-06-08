@@ -143,6 +143,17 @@ export function isShown(hidden: Record<string, boolean> | undefined, id: string)
   return !hidden?.[id];
 }
 
+/** customFields key for a package's table text size — keyed per option so each slide is independent. */
+export function tacticalTableSizeKey(optionId: string): string {
+  return `tactical.tableSize.${optionId}`;
+}
+
+/** Per-package table text size for the Single Page slide (default 9). */
+export function tacticalTableSize(customFields: Record<string, string> | null | undefined, optionId: string): number {
+  const n = Number(customFields?.[tacticalTableSizeKey(optionId)]);
+  return Number.isFinite(n) && n > 0 ? Math.min(16, Math.max(6, n)) : 9;
+}
+
 export type ExtraGuestFeeBasis = 'net' | 'sell';
 
 /** Deck-wide choice of which Extra Guest Surcharge to display; defaults to sell. */

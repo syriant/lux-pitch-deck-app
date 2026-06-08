@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
-import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee } from './tactical-shared';
+import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee, tacticalTableSize, tacticalTableSizeKey } from './tactical-shared';
+import { FontSizeControl } from '../FontSizeControl';
 
 const NAVY = '#0D2447';
 const LIGHT_BG = '#F4F6FA';
@@ -31,7 +32,7 @@ function splitSurchargeRange(raw: string | undefined | null): { from: string; to
   return { from: raw.trim(), to: '' };
 }
 
-export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
+export function TacticalPackageDetailSlide({ property, option, deck, onFieldChange }: Props) {
   const prop = property ?? deck?.properties[0];
   const opt = option ?? prop?.options[0];
   const hotelName = prop?.propertyName ?? deck?.name ?? '';
@@ -89,6 +90,8 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
   const showSurcharge = isShown(hidden, 'surchargePeriods');
   const showGuests = isShown(hidden, 'extraGuestPolicy') && guests.length > 0;
   const feeBasis = extraGuestFeeBasis(deck?.customFields);
+  // Per-package table text size, adjustable inline on the slide (default 9).
+  const tablePx = tacticalTableSize(deck?.customFields, opt.id);
   const showIncl = isShown(hidden, 'inclusions');
   const showExtraNightIncl = isShown(hidden, 'extraNightInclusions') && extraNightIncl.length > 0;
   const rateCols = (showRoomType ? 1 : 0) + (showAllot ? 1 : 0) + (showOcc ? 1 : 0)
@@ -121,7 +124,13 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
       </div>
 
       {/* Body: left tables + right inclusions */}
-      <div ref={bodyRef} className="flex-1 px-[4%] pt-8 pb-2 overflow-hidden">
+      <div ref={bodyRef} className="group relative flex-1 px-[4%] pt-8 pb-2 overflow-hidden">
+        {onFieldChange && (
+          <div className="absolute top-1 right-[4%] z-20 flex items-center gap-1 rounded bg-black/60 px-2 py-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="text-[10px] text-white/70">Table text</span>
+            <FontSizeControl fieldKey={tacticalTableSizeKey(opt.id)} size={tablePx} min={6} max={16} onFieldChange={onFieldChange} />
+          </div>
+        )}
         <div
           ref={contentRef}
           className="flex gap-3"
@@ -132,8 +141,8 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
           {/* Nett Rates */}
           {showRates && (
           <div>
-            <div className="text-[9px] font-bold text-gray-600 mb-1 tracking-widest">NETT RATES PER PACKAGE</div>
-            <table className="w-full text-[9px] border-collapse">
+            <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>NETT RATES PER PACKAGE</div>
+            <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
               <thead>
                 <tr>
                   {showRoomType && <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Room Type</th>}
@@ -174,8 +183,8 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
           {/* Surcharge Periods */}
           {showSurcharge && (
           <div>
-            <div className="text-[9px] font-bold text-gray-600 mb-1 tracking-widest">SURCHARGE PERIODS</div>
-            <table className="w-full text-[9px] border-collapse">
+            <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>SURCHARGE PERIODS</div>
+            <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
               <thead>
                 <tr>
                   <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>From</th>
@@ -206,8 +215,8 @@ export function TacticalPackageDetailSlide({ property, option, deck }: Props) {
           {/* Extra Guest Policy */}
           {showGuests && (
             <div>
-              <div className="text-[9px] font-bold text-gray-600 mb-1 tracking-widest">EXTRA GUEST POLICY</div>
-              <table className="w-full text-[9px] border-collapse">
+              <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>EXTRA GUEST POLICY</div>
+              <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
                 <thead>
                   <tr>
                     <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Guest</th>
