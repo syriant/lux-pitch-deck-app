@@ -39,20 +39,32 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
           className="font-bold"
           style={{ color: GREEN }}
         />
-        {onFieldChange && hasOptions && cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`)) && (
-          <button
-            type="button"
-            onClick={async () => {
-              const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`));
-              for (const k of keysToRemove) {
-                await onFieldChange('custom', '', k, '');
-              }
-            }}
-            className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap ml-2"
-            title="Reset table text to match current deal options"
-          >
-            Refresh from options
-          </button>
+        {onFieldChange && hasOptions && (
+          <div className="flex items-center gap-2 ml-2">
+            <button
+              type="button"
+              onClick={() => onFieldChange('custom', '', 'deal.showSellRates', cf['deal.showSellRates'] === 'true' ? 'false' : 'true')}
+              className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+              title="Show or hide a Sell rate row for partners (off by default)"
+            >
+              {cf['deal.showSellRates'] === 'true' ? 'Hide sell rates' : 'Show sell rates'}
+            </button>
+            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`)) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`));
+                  for (const k of keysToRemove) {
+                    await onFieldChange('custom', '', k, '');
+                  }
+                }}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Reset table text to match current deal options"
+              >
+                Refresh from options
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -92,6 +104,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
 function OptionsTable({ property, customFields, onFieldChange }: { property: DeckPropertyFull; customFields?: Record<string, string>; onFieldChange?: FieldChangeHandler }) {
   const groups = groupByOption(property.options);
   const optNums = Array.from(groups.keys()).sort();
+  const showSell = customFields?.['deal.showSellRates'] === 'true';
 
   const optionLabels = optNums.map((num) => {
     const first = groups.get(num)![0];
@@ -118,7 +131,7 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
   // option column even when every row is unticked (renders empty).
   rows.push({
     key: 'rates',
-    label: 'Rate',
+    label: 'NETT rate',
     cells: optNums.map((num) => {
       const rooms = groups.get(num)!.filter((r) => r.selected);
       return rooms.map((r) => {
@@ -130,6 +143,25 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
       }).join('\n');
     }),
   });
+
+  // Sell rate — optional, off by default (toggle in the slide header). Mirrors
+  // the NETT row but uses the sell price so PCMs can choose to show partners both.
+  if (showSell) {
+    rows.push({
+      key: 'sellrates',
+      label: 'Sell rate',
+      cells: optNums.map((num) => {
+        const rooms = groups.get(num)!.filter((r) => r.selected);
+        return rooms.map((r) => {
+          const price = formatMoney(r.sellPrice, property.currency) ?? '?';
+          const roomLabel = r.roomType ?? 'Room';
+          return r.nights && r.nights > 1
+            ? `${roomLabel} ${r.nights}N – ${price}`
+            : `${roomLabel} – ${price} per night`;
+        }).join('\n');
+      }),
+    });
+  }
 
   // Surcharges
   if (property.options.some((o) => o.surcharges && o.surcharges.length > 0)) {
