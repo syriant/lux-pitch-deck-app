@@ -14,7 +14,7 @@ function isPositioned(cf: Record<string, string>, fieldKey: string): boolean {
   return x !== undefined && x !== '' && y !== undefined && y !== '';
 }
 
-const LOGO_SIZE_DEFAULT = 35;
+const LOGO_SIZE_DEFAULT = 21;
 const LOGO_SIZE_MIN = 8;
 const LOGO_SIZE_MAX = 80;
 const LOGO_SIZE_STEP = 2;

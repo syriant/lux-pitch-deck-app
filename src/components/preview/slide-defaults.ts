@@ -34,7 +34,7 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
   // ─── Differentiators ─────────────────────────────────────────────────
   // {hotelName} placeholder is replaced at render time with the property's name.
   'diff.headline': {
-    value: "By leveraging Luxury Escapes' global member base, curated campaigns, and powerful marketing reach {hotelName} can attract premium travellers, generate incremental demand, and strengthen market share",
+    value: "Attract premium travellers and grow market share for {hotelName} with Luxury Escapes' global reach.",
     size: 28,
   },
   // Fallback items when deck has no linked differentiators
