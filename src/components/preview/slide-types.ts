@@ -134,6 +134,12 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
             }
             const opts: typeof prop.options = [];
             for (const rows of byOpt.values()) {
+              // A tier only earns a package-detail slide when at least one of
+              // its rows is selected — mirrors the side-by-side, which leaves an
+              // unselected tier's column empty. Without this, a tier partially
+              // filled in the pricing tool but never selected (e.g. option 3)
+              // still produced a full slide with auto-pulled rates.
+              if (!rows.some((r) => r.selected)) continue;
               const withTactical = rows.find(
                 (r) => (r.rooms != null && r.rooms.length > 0)
                   || (r.tacticalDetails != null && Object.keys(r.tacticalDetails).length > 0),
