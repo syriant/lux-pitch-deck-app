@@ -24,8 +24,10 @@ export interface CaseStudy {
   tags: string[] | null;
   compSetTags: string[] | null;
   dealId: string | null;
+  sourcePdfUrl: string | null;
   locale: string;
   createdBy: string;
+  createdByName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +63,7 @@ export interface CreateCaseStudyRequest {
   tags?: string[];
   compSetTags?: string[];
   dealId?: string;
+  sourcePdfUrl?: string;
 }
 
 export interface UpdateCaseStudyRequest {
@@ -84,6 +87,7 @@ export interface UpdateCaseStudyRequest {
   tags?: string[] | null;
   compSetTags?: string[] | null;
   dealId?: string | null;
+  sourcePdfUrl?: string | null;
 }
 
 export async function getCaseStudies(params?: {
@@ -139,6 +143,7 @@ export interface CaseStudyDraft {
   narrative: string | null;
   tags: string[] | null;
   images: string[];
+  sourcePdfUrl: string | null;
   destinationMatched: boolean;
   duplicateCandidates: DuplicateCandidate[];
   llm: {
@@ -174,6 +179,7 @@ export interface CaseStudySummaryDraft {
   bookings: number | null;
   pcmNotes: string | null;
   images: string[];
+  sourcePdfUrl: string | null;
   destinationMatched: boolean;
   duplicateCandidates: DuplicateCandidate[];
 }
@@ -195,6 +201,26 @@ export async function parseCaseStudySummaryPdf(file: File): Promise<CaseStudySum
   const form = new FormData();
   form.append('file', file);
   const res = await apiClient.post<CaseStudySummaryResult>('/case-studies/from-summary-pdf', form, {
+    timeout: 180000,
+  });
+  return res.data;
+}
+
+/**
+ * Unified upload: the API detects whether the PDF is a single-hotel deck or a
+ * multi-hotel summary and returns the matching payload. Exactly one of
+ * draft/summary is populated, keyed by documentType.
+ */
+export interface CaseStudyAutoResult {
+  documentType: 'single' | 'summary';
+  draft: CaseStudyDraft | null;
+  summary: CaseStudySummaryResult | null;
+}
+
+export async function parseCaseStudyPdfAuto(file: File): Promise<CaseStudyAutoResult> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await apiClient.post<CaseStudyAutoResult>('/case-studies/from-pdf-auto', form, {
     timeout: 180000,
   });
   return res.data;

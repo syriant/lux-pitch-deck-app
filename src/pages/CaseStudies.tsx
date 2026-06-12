@@ -4,8 +4,7 @@ import {
   createCaseStudy,
   updateCaseStudy,
   deleteCaseStudy,
-  parseCaseStudyPdf,
-  parseCaseStudySummaryPdf,
+  parseCaseStudyPdfAuto,
   type CaseStudy,
   type CaseStudyDraft,
   type CaseStudySummaryDraft,
@@ -37,13 +36,14 @@ interface FormData {
   narrative: string;
   tags: string;
   images: string[];
+  sourcePdfUrl: string | null;
 }
 
 const emptyForm: FormData = {
   title: '', hotelName: '', destination: '', propertyType: '', dealId: '',
   roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
   packagesSold: '', upgradePercentage: '',
-  narrative: '', tags: '', images: [],
+  narrative: '', tags: '', images: [], sourcePdfUrl: null,
 };
 
 export function CaseStudies() {
@@ -61,7 +61,6 @@ export function CaseStudies() {
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
   const [metricsMessage, setMetricsMessage] = useState('');
   const [parsingPdf, setParsingPdf] = useState(false);
-  const [parsingSummary, setParsingSummary] = useState(false);
   const [summary, setSummary] = useState<{ drafts: CaseStudySummaryDraft[]; warnings: string[] } | null>(null);
   const [pdfMessage, setPdfMessage] = useState('');
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
@@ -125,6 +124,7 @@ export function CaseStudies() {
       narrative: item.narrative ?? '',
       tags: item.tags?.join(', ') ?? '',
       images: item.images ?? [],
+      sourcePdfUrl: item.sourcePdfUrl,
     });
     setEditingId(item.id);
     setMetricsMessage('');
@@ -195,6 +195,7 @@ export function CaseStudies() {
       narrative: form.narrative || undefined,
       tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
       images,
+      sourcePdfUrl: form.sourcePdfUrl ?? undefined,
     };
   }
 
@@ -243,56 +244,55 @@ export function CaseStudies() {
     }
   }
 
-  async function handleSummaryUpload(file: File) {
-    setParsingSummary(true);
-    setPdfMessage('');
-    setError('');
-    try {
-      const res = await parseCaseStudySummaryPdf(file);
-      if (res.drafts.length === 0) {
-        setPdfMessage('No property cards were found in that PDF.');
-        return;
-      }
-      setSummary({ drafts: res.drafts, warnings: res.warnings });
-    } catch {
-      setError('Failed to parse case study summary PDF');
-    } finally {
-      setParsingSummary(false);
+  function applyDraft(draft: CaseStudyDraft) {
+    setForm({
+      title: draft.title ?? '',
+      hotelName: draft.hotelName ?? '',
+      destination: draft.destination ?? '',
+      propertyType: draft.propertyType ?? '',
+      dealId: '',
+      roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
+      packagesSold: '', upgradePercentage: '',
+      narrative: draft.narrative ?? '',
+      tags: draft.tags?.join(', ') ?? '',
+      images: draft.images,
+      sourcePdfUrl: draft.sourcePdfUrl,
+    });
+    setEditingId(null);
+    setShowForm(true);
+    setMetricsMessage('');
+    const parts: string[] = [];
+    parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
+    if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
+    if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
+    if (draft.duplicateCandidates.length > 0) {
+      parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
     }
+    if (!draft.destinationMatched && draft.destination) {
+      parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
+    }
+    setPdfMessage(parts.join(' · '));
   }
 
-  async function handlePdfUpload(file: File) {
+  // One button: the API decides whether the PDF is a single-hotel deck (opens
+  // the create form) or a multi-hotel summary (opens the per-card review).
+  async function handleAutoUpload(file: File) {
     setParsingPdf(true);
     setPdfMessage('');
     setError('');
     try {
-      const draft: CaseStudyDraft = await parseCaseStudyPdf(file);
-      setForm({
-        title: draft.title ?? '',
-        hotelName: draft.hotelName ?? '',
-        destination: draft.destination ?? '',
-        propertyType: draft.propertyType ?? '',
-        dealId: '',
-        roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
-        packagesSold: '', upgradePercentage: '',
-        narrative: draft.narrative ?? '',
-        tags: draft.tags?.join(', ') ?? '',
-        images: draft.images,
-      });
-      setEditingId(null);
-      setShowForm(true);
-      setMetricsMessage('');
-      const parts: string[] = [];
-      parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
-      if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
-      if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
-      if (draft.duplicateCandidates.length > 0) {
-        parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
+      const res = await parseCaseStudyPdfAuto(file);
+      if (res.documentType === 'summary' && res.summary) {
+        if (res.summary.drafts.length === 0) {
+          setPdfMessage('No property cards were found in that PDF.');
+          return;
+        }
+        setSummary({ drafts: res.summary.drafts, warnings: res.summary.warnings });
+      } else if (res.draft) {
+        applyDraft(res.draft);
+      } else {
+        setPdfMessage('Nothing could be extracted from that PDF.');
       }
-      if (!draft.destinationMatched && draft.destination) {
-        parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
-      }
-      setPdfMessage(parts.join(' · '));
     } catch (err: unknown) {
       const resp = (err as { response?: { status?: number; data?: { message?: string | string[] } } })?.response;
       const raw = resp?.data?.message;
@@ -331,7 +331,7 @@ export function CaseStudies() {
         <div className="flex gap-2">
           <label className={`rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] cursor-pointer inline-flex items-center gap-2 ${parsingPdf ? 'opacity-50 pointer-events-none' : ''}`}>
             {parsingPdf ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
-            {parsingPdf ? 'Parsing…' : 'Upload Pitch Deck PDF'}
+            {parsingPdf ? 'Parsing…' : 'Upload PDF'}
             <input
               type="file"
               accept="application/pdf,.pdf"
@@ -339,21 +339,7 @@ export function CaseStudies() {
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 e.target.value = '';
-                if (file) handlePdfUpload(file);
-              }}
-            />
-          </label>
-          <label className={`rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] cursor-pointer inline-flex items-center gap-2 ${parsingSummary ? 'opacity-50 pointer-events-none' : ''}`}>
-            {parsingSummary ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
-            {parsingSummary ? 'Parsing…' : 'Upload Case Study Summary'}
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (file) handleSummaryUpload(file);
+                if (file) handleAutoUpload(file);
               }}
             />
           </label>
@@ -597,6 +583,9 @@ export function CaseStudies() {
                   <td className="py-3 pr-4">
                     <div className="font-medium text-gray-900">{item.hotelName}</div>
                     <div className="text-xs text-gray-500">{item.title}</div>
+                    {item.createdByName && (
+                      <div className="text-xs text-gray-400">Added by {item.createdByName}</div>
+                    )}
                   </td>
                   <td className="py-3 pr-4 text-gray-600">{item.destination ?? '-'}</td>
                   <td className="py-3 pr-4 text-right font-mono text-gray-700">{formatNum(item.roomNights?.toString() ?? null)}</td>

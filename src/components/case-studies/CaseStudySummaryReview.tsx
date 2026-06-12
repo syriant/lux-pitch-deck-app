@@ -21,6 +21,7 @@ interface RowState {
   bookings: string;
   pcmNotes: string;
   images: string[];
+  sourcePdfUrl: string | null;
   status: 'pending' | 'creating' | 'created' | 'error';
   error: string;
   duplicates: DuplicateCandidate[] | null;
@@ -39,6 +40,7 @@ function draftToRow(d: CaseStudySummaryDraft): RowState {
     bookings: d.bookings != null ? String(d.bookings) : '',
     pcmNotes: d.pcmNotes ?? '',
     images: d.images ?? [],
+    sourcePdfUrl: d.sourcePdfUrl,
     status: 'pending',
     error: '',
     duplicates: d.duplicateCandidates.length > 0 ? d.duplicateCandidates : null,
@@ -79,6 +81,7 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
       bookings: r.bookings ? parseInt(r.bookings) : undefined,
       pcmNotes: r.pcmNotes.trim() || undefined,
       images: r.images.length > 0 ? r.images : undefined,
+      sourcePdfUrl: r.sourcePdfUrl ?? undefined,
     };
   }
 

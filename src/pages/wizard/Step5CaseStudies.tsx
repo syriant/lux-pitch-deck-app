@@ -2,8 +2,7 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import {
   getCaseStudies,
   createCaseStudy,
-  parseCaseStudyPdf,
-  parseCaseStudySummaryPdf,
+  parseCaseStudyPdfAuto,
   type CaseStudy,
   type CaseStudyDraft,
   type CaseStudySummaryDraft,
@@ -39,6 +38,7 @@ interface InlineForm {
   leadTime: string;
   bookings: string;
   narrative: string;
+  sourcePdfUrl: string | null;
 }
 
 const emptyForm: InlineForm = {
@@ -54,6 +54,7 @@ const emptyForm: InlineForm = {
   leadTime: '',
   bookings: '',
   narrative: '',
+  sourcePdfUrl: null,
 };
 
 export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Props) {
@@ -79,25 +80,9 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
   const [destinationsLoaded, setDestinationsLoaded] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
-  const [parsingSummary, setParsingSummary] = useState(false);
   const [summary, setSummary] = useState<{ drafts: CaseStudySummaryDraft[]; warnings: string[] } | null>(null);
 
-  async function handleSummaryUpload(file: File) {
-    setParsingSummary(true);
-    setError('');
-    try {
-      const res = await parseCaseStudySummaryPdf(file);
-      if (res.drafts.length === 0) {
-        setError('No property cards were found in that PDF.');
-        return;
-      }
-      setSummary({ drafts: res.drafts, warnings: res.warnings });
-    } catch {
-      setError('Failed to parse case study summary PDF');
-    } finally {
-      setParsingSummary(false);
-    }
-  }
+  // handleAutoUpload (below) replaces the separate single/summary handlers.
   const [pdfMessage, setPdfMessage] = useState('');
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
@@ -206,6 +191,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
       narrative: createForm.narrative || undefined,
       images: images.length > 0 ? images : undefined,
+      sourcePdfUrl: createForm.sourcePdfUrl ?? undefined,
     };
   }
 
@@ -262,34 +248,51 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     }
   }
 
-  async function handlePdfUpload(file: File) {
+  function applyDraft(draft: CaseStudyDraft) {
+    setCreateForm({
+      ...emptyForm,
+      title: draft.title ?? '',
+      hotelName: draft.hotelName ?? '',
+      destination: draft.destination ?? '',
+      propertyType: draft.propertyType ?? '',
+      narrative: draft.narrative ?? '',
+      tags: draft.tags?.join(', ') ?? '',
+      sourcePdfUrl: draft.sourcePdfUrl,
+    });
+    setCreateImages(draft.images);
+    setShowCreateForm(true);
+    const parts: string[] = [];
+    parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
+    if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
+    if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
+    if (draft.duplicateCandidates.length > 0) {
+      parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
+    }
+    if (!draft.destinationMatched && draft.destination) {
+      parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
+    }
+    setPdfMessage(parts.join(' · '));
+  }
+
+  // One button: the API classifies the PDF and we open either the create form
+  // (single hotel) or the per-card summary review (multiple hotels).
+  async function handleAutoUpload(file: File) {
     setParsingPdf(true);
     setPdfMessage('');
     setError('');
     try {
-      const draft: CaseStudyDraft = await parseCaseStudyPdf(file);
-      setCreateForm({
-        ...emptyForm,
-        title: draft.title ?? '',
-        hotelName: draft.hotelName ?? '',
-        destination: draft.destination ?? '',
-        propertyType: draft.propertyType ?? '',
-        narrative: draft.narrative ?? '',
-        tags: draft.tags?.join(', ') ?? '',
-      });
-      setCreateImages(draft.images);
-      setShowCreateForm(true);
-      const parts: string[] = [];
-      parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
-      if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
-      if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
-      if (draft.duplicateCandidates.length > 0) {
-        parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
+      const res = await parseCaseStudyPdfAuto(file);
+      if (res.documentType === 'summary' && res.summary) {
+        if (res.summary.drafts.length === 0) {
+          setError('No property cards were found in that PDF.');
+          return;
+        }
+        setSummary({ drafts: res.summary.drafts, warnings: res.summary.warnings });
+      } else if (res.draft) {
+        applyDraft(res.draft);
+      } else {
+        setError('Nothing could be extracted from that PDF.');
       }
-      if (!draft.destinationMatched && draft.destination) {
-        parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
-      }
-      setPdfMessage(parts.join(' · '));
     } catch (err: unknown) {
       const resp = (err as { response?: { status?: number; data?: { message?: string | string[] } } })?.response;
       const raw = resp?.data?.message;
@@ -376,21 +379,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
             onChange={(e) => {
               const file = e.target.files?.[0];
               e.target.value = '';
-              if (file) handlePdfUpload(file);
-            }}
-          />
-        </label>
-        <label className={`rounded-md border border-[#01B18B] px-4 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] shrink-0 cursor-pointer inline-flex items-center gap-2 ${parsingSummary ? 'opacity-50 pointer-events-none' : ''}`}>
-          {parsingSummary ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
-          {parsingSummary ? 'Parsing…' : 'Upload Summary'}
-          <input
-            type="file"
-            accept="application/pdf,.pdf"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = '';
-              if (file) handleSummaryUpload(file);
+              if (file) handleAutoUpload(file);
             }}
           />
         </label>
