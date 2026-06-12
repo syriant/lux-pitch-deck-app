@@ -217,13 +217,21 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                     {optNums.map((num, ci) => {
                       const rep = groups.get(num)![0];
                       const included = rep.marketingAssets?.[channel] === true;
+                      const cellKey = `mktgAssets.${property!.id}.${slugify(channel)}.opt${num}`;
                       return (
                         <td
                           key={ci}
                           className={`align-middle text-center ${rowBg}`}
                           style={{ borderLeft: '2px solid white', padding: cellPad }}
                         >
-                          {included ? <CheckIcon cls={iconCls} /> : <CrossIcon cls={iconCls} />}
+                          <MarketingAssetCell
+                            included={included}
+                            fieldKey={cellKey}
+                            customFields={cf}
+                            defaultSize={fontPx}
+                            onFieldChange={onFieldChange}
+                            iconCls={iconCls}
+                          />
                         </td>
                       );
                     })}
@@ -253,4 +261,56 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// A marketing-assets grid cell. Defaults to the ✓/✕ icon (driven by the
+// option's marketingAssets flag). Once a PCM gives it text it becomes the full
+// rich-text editor — size, alignment, decoration and multi-line wrap — via
+// SlideRichText, keyed per channel+option so the override flows to the PPTX/PDF
+// export. Clicking the icon seeds an editable glyph; clearing all text reverts
+// to the icon. Edit affordances only render when onFieldChange is set (i.e. not
+// in the print/export path).
+function MarketingAssetCell({
+  included,
+  fieldKey,
+  customFields,
+  defaultSize,
+  onFieldChange,
+  iconCls,
+}: {
+  included: boolean;
+  fieldKey: string;
+  customFields?: Record<string, string>;
+  defaultSize: number;
+  onFieldChange?: FieldChangeHandler;
+  iconCls: string;
+}) {
+  const raw = customFields?.[fieldKey];
+  const hasOverride = !!(raw && raw.trim() && raw.trim() !== '<br>');
+
+  if (hasOverride) {
+    return (
+      <SlideRichText
+        fieldKey={fieldKey}
+        defaultValue=""
+        defaultSize={defaultSize}
+        customFields={customFields}
+        onFieldChange={onFieldChange}
+        style={{ textAlign: 'center' }}
+      />
+    );
+  }
+
+  const icon = included ? <CheckIcon cls={iconCls} /> : <CrossIcon cls={iconCls} />;
+  if (!onFieldChange) return icon;
+  return (
+    <button
+      type="button"
+      title="Click to replace the tick/cross with editable text"
+      onClick={() => onFieldChange('custom', '', fieldKey, included ? '✓' : '✕')}
+      className="w-full cursor-pointer rounded hover:bg-black/5 inline-flex items-center justify-center"
+    >
+      {icon}
+    </button>
+  );
 }
