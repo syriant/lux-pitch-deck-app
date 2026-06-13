@@ -214,6 +214,24 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           </div>
           )}
 
+          {/* Blackout Dates */}
+          {opt.blackoutDates && opt.blackoutDates.length > 0 && (
+            <div>
+              <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>BLACKOUT DATES</div>
+              <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
+                <tbody>
+                  {opt.blackoutDates.map((b, i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#EDF1F7]'}>
+                      <td className="py-1.5 px-2 border border-gray-200" style={{ color: DARK }}>
+                        {b.to && b.to !== b.from ? `${b.from} – ${b.to}` : b.from}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* Extra Guest Policy */}
           {showGuests && (
             <div>

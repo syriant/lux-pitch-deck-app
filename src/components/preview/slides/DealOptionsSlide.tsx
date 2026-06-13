@@ -30,6 +30,11 @@ function fmtDateRange(start: string | null, end: string | null): string {
   return s || e || '—';
 }
 
+function fmtBlackouts(bd: Array<{ from: string; to: string }> | null): string {
+  if (!bd || bd.length === 0) return '';
+  return bd.map((b) => (b.to && b.to !== b.from ? `${b.from} – ${b.to}` : b.from)).join('\n');
+}
+
 export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsSlideProps) {
   const hasOptions = property && property.options.length > 0;
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
@@ -207,6 +212,12 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
         ).join('\n') ?? '-';
       }),
     });
+  }
+
+  // Blackout dates — per option, editable inline; hidden when empty for all (#20).
+  const blackoutCells = optNums.map((num) => fmtBlackouts(groups.get(num)![0].blackoutDates));
+  if (blackoutCells.some((c) => c.trim() !== '')) {
+    rows.push({ key: 'blackout', label: 'Blackout dates', cells: blackoutCells });
   }
 
   return (
