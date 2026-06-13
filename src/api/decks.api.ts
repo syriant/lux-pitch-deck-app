@@ -9,6 +9,8 @@ export interface Deck {
   heroImage: string | null;
   createdBy: string;
   createdByName: string | null;
+  templateId: string | null;
+  templateName: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;

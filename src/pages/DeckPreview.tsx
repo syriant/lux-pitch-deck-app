@@ -5,7 +5,9 @@ import {
   type FullDeck,
 } from '@/api/decks.api';
 import { updateCaseStudy } from '@/api/case-studies.api';
-import { buildSlideList, type SlideDefinition } from '@/components/preview/slide-types';
+import { buildSlideList, parseCustomPages, type SlideDefinition } from '@/components/preview/slide-types';
+import { fileToSlideImages } from '@/components/preview/file-to-slide-images';
+import { uploadImage } from '@/api/upload.api';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
@@ -31,6 +33,7 @@ export function DeckPreview() {
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingPdfCompressed, setExportingPdfCompressed] = useState(false);
+  const [addingPage, setAddingPage] = useState(false);
   const [hiddenSlides, setHiddenSlides] = useState<string[]>([]);
   const [sfConfigured, setSfConfigured] = useState(false);
   const [sfUploading, setSfUploading] = useState(false);
@@ -216,6 +219,56 @@ export function DeckPreview() {
     });
   }, [id]);
 
+  // Persist the custom-pages list into customFields (same pattern as hiddenSlides).
+  const persistCustomPages = useCallback((pages: Array<{ id: string; imageKey: string; label?: string }>) => {
+    if (!id) return;
+    const base = deckRef.current;
+    const current = base?.customFields ?? {};
+    const updated = { ...current, customPages: JSON.stringify(pages) };
+    const nextDeck = base ? { ...base, customFields: updated } : null;
+    setDeck(nextDeck);
+    if (base) deckRef.current = nextDeck;
+    if (nextDeck) setSlides(buildSlideList(nextDeck));
+    updateDeckApi(id, { customFields: updated }).catch(() => console.error('Failed to persist custom pages'));
+  }, [id]);
+
+  // Upload a one-pager (PDF or image). PDFs are rasterized to 16:9 image(s) in
+  // the browser; each page becomes a custom-page slide appended to the deck.
+  const handleAddOnePager = useCallback(async (file: File) => {
+    if (!id) return;
+    setAddingPage(true);
+    setError('');
+    try {
+      const blobs = await fileToSlideImages(file);
+      const ext = '.jpg';
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const newPages: Array<{ id: string; imageKey: string; label?: string }> = [];
+      for (let i = 0; i < blobs.length; i++) {
+        const imgFile = new File([blobs[i]], `${baseName}-${i + 1}${ext}`, { type: 'image/jpeg' });
+        const { url } = await uploadImage(imgFile);
+        newPages.push({
+          id: crypto.randomUUID(),
+          imageKey: url,
+          label: blobs.length > 1 ? `${baseName} (${i + 1})` : baseName,
+        });
+      }
+      const existing = parseCustomPages(deckRef.current ?? ({} as FullDeck));
+      persistCustomPages([...existing, ...newPages]);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to add one-pager. Make sure it is a PDF or image.');
+    } finally {
+      setAddingPage(false);
+    }
+  }, [id, persistCustomPages]);
+
+  const handleRemoveCustomPage = useCallback((slideId: string) => {
+    const pageId = slideId.replace(/^custom-page-/, '');
+    const existing = parseCustomPages(deckRef.current ?? ({} as FullDeck));
+    persistCustomPages(existing.filter((p) => p.id !== pageId));
+    setActiveIndex((prev) => Math.max(0, prev - 1));
+  }, [persistCustomPages]);
+
   const handleGalleryAdd = useCallback(async (url: string) => {
     if (!id) return;
     // Use ref to get latest gallery, not stale closure
@@ -236,9 +289,32 @@ export function DeckPreview() {
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
 
-      if (id && deck?.templateId) {
+      if (!id) return next;
+
+      // Persist custom-page positions (their index in the final list) whenever
+      // any are present, so a drag of either a base slide or a page sticks.
+      if (next.some((s) => s.type === 'custom-page')) {
+        const pages = next
+          .map((s, idx) => ({ s, idx }))
+          .filter(({ s }) => s.type === 'custom-page')
+          .map(({ s, idx }) => ({
+            id: s.id.replace(/^custom-page-/, ''),
+            imageKey: s.customImageKey ?? '',
+            label: s.label,
+            position: idx,
+          }));
+        const current = deckRef.current?.customFields ?? {};
+        const updatedCf = { ...current, customPages: JSON.stringify(pages) };
+        setDeck((d) => (d ? { ...d, customFields: updatedCf } : d));
+        if (deckRef.current) deckRef.current = { ...deckRef.current, customFields: updatedCf };
+        updateDeckApi(id, { customFields: updatedCf }).catch(() => console.error('Failed to persist custom pages'));
+      }
+
+      // Persist base slide order (excluding custom pages) when template-driven.
+      if (deck?.templateId) {
         const seen = new Set<string>();
         const slideOrder = next.reduce<Array<{ type: string; label: string; required?: boolean; perProperty?: boolean }>>((acc, s) => {
+          if (s.type === 'custom-page') return acc; // not part of slideOrder
           const baseType = s.type;
           if (seen.has(baseType)) return acc;
           seen.add(baseType);
@@ -344,6 +420,17 @@ export function DeckPreview() {
                     </button>
                   </div>
                 )}
+                {activeSlide.type === 'custom-page' && (
+                  <div className="mb-3 flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
+                    <span className="text-gray-600">Uploaded one-pager — drag it in the slide strip to reposition.</span>
+                    <button
+                      onClick={() => handleRemoveCustomPage(activeSlide.id)}
+                      className="rounded border border-red-300 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                    >
+                      Remove page
+                    </button>
+                  </div>
+                )}
                 <div className={isActiveHidden ? 'opacity-40 grayscale' : ''}>
                   <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
                 </div>
@@ -371,6 +458,19 @@ export function DeckPreview() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <label className={`rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50 cursor-pointer ${addingPage ? 'opacity-50 pointer-events-none' : ''}`} title="Add a one-pager (PDF or image) as an extra page">
+              {addingPage ? 'Adding…' : '+ One-pager'}
+              <input
+                type="file"
+                accept="application/pdf,.pdf,image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) handleAddOnePager(file);
+                }}
+              />
+            </label>
             <button
               onClick={() => navigate(`/decks/${id}/edit`)}
               className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50"

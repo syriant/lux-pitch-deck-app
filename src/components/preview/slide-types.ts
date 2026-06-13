@@ -16,7 +16,8 @@ export type SlideType =
   | 'market-challenges'
   | 'tactical-investment-overview'
   | 'tactical-amplification'
-  | 'tactical-package-detail';
+  | 'tactical-package-detail'
+  | 'custom-page';
 
 export interface SlideDefinition {
   id: string;
@@ -29,6 +30,30 @@ export interface SlideDefinition {
   marketingAssetsChannels?: string[];
   marketingAssetsChunkIndex?: number;
   removable?: boolean;
+  /** Uploaded full-bleed image URL for a 'custom-page' slide. */
+  customImageKey?: string;
+}
+
+/** A PCM-uploaded extra page (one-pager). */
+export interface CustomPage {
+  id: string;
+  imageKey: string;
+  label?: string;
+  /** Index in the final slide list (set when the PCM drags it); undefined = end. */
+  position?: number;
+}
+
+/** Parse the deck's custom pages from customFields['customPages'] (JSON). */
+export function parseCustomPages(deck: FullDeck): CustomPage[] {
+  const raw = deck.customFields?.['customPages'];
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((p): p is CustomPage => !!p && typeof p.id === 'string' && typeof p.imageKey === 'string');
+  } catch {
+    return [];
+  }
 }
 
 // Marketing Assets grid is capped at 2 slides (mirror of the API's
@@ -90,13 +115,32 @@ export function computeMarketingAssetChannels(
 }
 
 export function buildSlideList(deck: FullDeck): SlideDefinition[] {
-  // If deck has a template-driven slideOrder, use it
-  if (deck.slideOrder && deck.slideOrder.length > 0) {
-    return buildFromSlideOrder(deck);
-  }
+  // If deck has a template-driven slideOrder, use it; else the hardcoded layout
+  // (backwards compat for decks without templates).
+  const base = deck.slideOrder && deck.slideOrder.length > 0
+    ? buildFromSlideOrder(deck)
+    : buildHardcodedList(deck);
 
-  // Fallback: hardcoded layout (backwards compat for decks without templates)
-  return buildHardcodedList(deck);
+  // PCM-uploaded one-pagers are interleaved at their stored position (index in
+  // the final list); pages with no position go to the end.
+  const pages = parseCustomPages(deck);
+  if (pages.length === 0) return base;
+  const result = [...base];
+  const ordered = pages
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => (a.p.position ?? Number.MAX_SAFE_INTEGER) - (b.p.position ?? Number.MAX_SAFE_INTEGER));
+  for (const { p, i } of ordered) {
+    const slide: SlideDefinition = {
+      id: `custom-page-${p.id}`,
+      type: 'custom-page',
+      label: p.label ?? `Custom Page ${i + 1}`,
+      customImageKey: p.imageKey,
+      removable: true,
+    };
+    const pos = p.position == null ? result.length : Math.min(Math.max(p.position, 0), result.length);
+    result.splice(pos, 0, slide);
+  }
+  return result;
 }
 
 function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
@@ -119,10 +163,14 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
                 property: prop,
                 caseStudies: chunks[ci],
                 caseStudyChunkIndex: ci,
-                removable: entry.removable,
+                // Always hidable — e.g. when a case-study one-pager PDF is
+                // uploaded instead (independent of the template's removable flag).
+                removable: true,
               });
             }
-          } else if (slideType === 'tactical-package-detail' && entry.perOption) {
+          } else if (slideType === 'tactical-package-detail') {
+            // Always per-option (one page per package), regardless of the
+            // entry's perOption flag — older templates omit it.
             // Same rooms-aware pick as uniqueOptionsByNumber — rows sharing
             // an optionNumber hold tactical data sparsely, so we must prefer
             // the row that carries it.

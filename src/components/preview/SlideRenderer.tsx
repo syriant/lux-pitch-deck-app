@@ -21,6 +21,7 @@ import { MarketChallengesSlide } from './slides/MarketChallengesSlide';
 import { TacticalInvestmentOverviewSlide } from './slides/TacticalInvestmentOverviewSlide';
 import { TacticalAmplificationSlide } from './slides/TacticalAmplificationSlide';
 import { TacticalPackageDetailSlide } from './slides/TacticalPackageDetailSlide';
+import { CustomPageSlide } from './slides/CustomPageSlide';
 
 interface SlideRendererProps {
   slide: SlideDefinition;
@@ -112,6 +113,8 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
       return <TacticalAmplificationSlide property={slide.property} deck={deck} onFieldChange={onFieldChange} />;
     case 'tactical-package-detail':
       return <TacticalPackageDetailSlide property={slide.property} option={slide.option} deck={deck} onFieldChange={onFieldChange} />;
+    case 'custom-page':
+      return <CustomPageSlide imageKey={slide.customImageKey} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center text-gray-400">

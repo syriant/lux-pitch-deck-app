@@ -198,6 +198,7 @@ export function Dashboard() {
               <tr className="border-b border-gray-200 text-left text-sm font-medium text-[#7E8188]">
                 <th className="pb-3 pr-4">Name</th>
                 <th className="pb-3 pr-4">Status</th>
+                <th className="pb-3 pr-4">Template</th>
                 <th className="pb-3 pr-4">Created By</th>
                 <th className="pb-3 pr-4">Created</th>
                 <th className="pb-3 pr-4">Updated</th>
@@ -226,6 +227,7 @@ export function Dashboard() {
                         {deck.status}
                       </span>
                     </td>
+                    <td className="py-3 pr-4 text-gray-600">{deck.templateName ?? '-'}</td>
                     <td className="py-3 pr-4 text-gray-600">{deck.createdByName ?? '-'}</td>
                     <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.createdAt)}</td>
                     <td className="py-3 pr-4 text-[#7E8188]">{formatDate(deck.updatedAt)}</td>
