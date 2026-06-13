@@ -3,6 +3,7 @@ import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/dec
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee, tacticalTableSize, tacticalTableSizeKey } from './tactical-shared';
 import { FontSizeControl } from '../FontSizeControl';
+import { SlideRichText } from '../SlideRichText';
 
 const NAVY = '#0D2447';
 const LIGHT_BG = '#F4F6FA';
@@ -37,6 +38,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
   const opt = option ?? prop?.options[0];
   const hotelName = prop?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const cf = { ...deck?.templateDefaults, ...deck?.customFields };
 
   // Auto-fit: when the body content would overflow the fixed slide height
   // (expansive rooms/surcharges/inclusions), shrink it uniformly rather than
@@ -278,6 +280,16 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
         </div>
         )}
         </div>
+      </div>
+
+      {/* Rates footnote/clause — shared with the side-by-side (deal.disclaimer) */}
+      <div className="px-[4%] pb-1">
+        <SlideRichText
+          fieldKey="deal.disclaimer"
+          customFields={cf}
+          onFieldChange={onFieldChange}
+          style={{ color: '#333' }}
+        />
       </div>
 
       {/* Footer */}
