@@ -22,6 +22,14 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
   return map;
 }
 
+function fmtDateRange(start: string | null, end: string | null): string {
+  if (!start && !end) return '—';
+  const s = start ? new Date(start).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const e = end ? new Date(end).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  if (s && e) return `${s} – ${e}`;
+  return s || e || '—';
+}
+
 export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsSlideProps) {
   const hasOptions = property && property.options.length > 0;
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
@@ -76,7 +84,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
           </div>
         </div>
       ) : (
-        <OptionsTable property={property} customFields={cf} onFieldChange={onFieldChange} />
+        <OptionsTable property={property} deck={deck} customFields={cf} onFieldChange={onFieldChange} />
       )}
 
       {/* Rates disclaimer + footer bar */}
@@ -101,7 +109,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   );
 }
 
-function OptionsTable({ property, customFields, onFieldChange }: { property: DeckPropertyFull; customFields?: Record<string, string>; onFieldChange?: FieldChangeHandler }) {
+function OptionsTable({ property, deck, customFields, onFieldChange }: { property: DeckPropertyFull; deck?: FullDeck; customFields?: Record<string, string>; onFieldChange?: FieldChangeHandler }) {
   const groups = groupByOption(property.options);
   const optNums = Array.from(groups.keys()).sort();
   const showSell = customFields?.['deal.showSellRates'] === 'true';
@@ -111,9 +119,33 @@ function OptionsTable({ property, customFields, onFieldChange }: { property: Dec
     return first.tierLabel ?? `Option ${num === 1 ? 'One' : num === 2 ? 'Two' : 'Three'}`;
   });
 
+  // Per-option campaign/travel dates — owner-row tactical dates with deck-level
+  // fallback, matching the one-page (MarketingAssets) layout.
+  const optionDates = (optNum: number) => {
+    const grp = groups.get(optNum) ?? [];
+    const owner = grp.find((o) => {
+      const t = o.tacticalDetails;
+      return t && (t.campaignStart || t.campaignEnd || t.travelStart || t.travelEnd);
+    });
+    const t = owner?.tacticalDetails;
+    return {
+      campaign: fmtDateRange(t?.campaignStart ?? deck?.campaignStart ?? null, t?.campaignEnd ?? deck?.campaignEnd ?? null),
+      travel: fmtDateRange(t?.travelStart ?? deck?.travelStart ?? null, t?.travelEnd ?? deck?.travelEnd ?? null),
+    };
+  };
+
   // Build rows
   type Row = { key: string; label: string; cells: string[] };
   const rows: Row[] = [];
+
+  // Campaign period + Travel dates (#18 — also on the side-by-side now). The
+  // Campaign period row is dropped when empty for every option.
+  const periodCells = optNums.map((num) => optionDates(num).campaign);
+  const travelCells = optNums.map((num) => optionDates(num).travel);
+  if (periodCells.some((c) => c && c !== '—')) {
+    rows.push({ key: 'period', label: 'Campaign period', cells: periodCells });
+  }
+  rows.push({ key: 'travel', label: 'Travel dates', cells: travelCells });
 
   // Inclusions row
   rows.push({
