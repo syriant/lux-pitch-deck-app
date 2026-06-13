@@ -11,6 +11,7 @@ import { ImageLibrary } from './pages/admin/ImageLibrary';
 import { LuxImageCheck } from './pages/admin/LuxImageCheck';
 import { LlmSettings } from './pages/admin/LlmSettings';
 import { ReachStats } from './pages/admin/ReachStats';
+import { BrandStats } from './pages/admin/BrandStats';
 import { DeckWizard } from './pages/wizard/DeckWizard';
 import { DeckPreview } from './pages/DeckPreview';
 import { DeckPrint } from './pages/DeckPrint';
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
       { path: '/admin/lux-image-check', element: <LuxImageCheck /> },
       { path: '/admin/llm', element: <LlmSettings /> },
       { path: '/admin/reach-stats', element: <ReachStats /> },
+      { path: '/admin/brand-stats', element: <BrandStats /> },
       { path: '/admin/parser-test', element: <ParserTest /> },
     ],
   },

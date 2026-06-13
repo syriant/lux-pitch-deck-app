@@ -80,9 +80,20 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
           ...result.surcharges.seasonal
             .filter((s) => s.optionNumber === opt.optionNumber)
             .map((s) => ({ name: s.dates, amount: s.supplement ?? 0, period: s.period })),
+          // Day-of-week surcharges carry up to three seasonal values
+          // (all-year / high / shoulder). Emit a labelled entry per non-zero
+          // value, named by the day, so the deck shows e.g. "Saturday – £35"
+          // and "Saturday (high season) – £50" rather than a single generic
+          // "Day of week – £0.00" that drops high/shoulder.
           ...result.surcharges.dayOfWeek
             .filter((s) => s.optionNumber === opt.optionNumber)
-            .map((s) => ({ name: s.day, amount: s.allYear, period: 'Day of week' })),
+            .flatMap((s) => {
+              const entries: { name: string; amount: number; period: string }[] = [];
+              if (s.allYear) entries.push({ name: s.day, amount: s.allYear, period: s.day });
+              if (s.high) entries.push({ name: s.day, amount: s.high, period: `${s.day} (high season)` });
+              if (s.shoulder) entries.push({ name: s.day, amount: s.shoulder, period: `${s.day} (shoulder)` });
+              return entries;
+            }),
         ];
 
         // Per-option inclusions (parsed from each option's block in the Hotel

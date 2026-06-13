@@ -22,6 +22,7 @@ const adminLinks: NavItem[] = [
   { label: 'Deal Tiers', path: '/admin/deal-tiers', icon: 'layers' },
   { label: 'Templates', path: '/admin/templates', icon: 'layout' },
   { label: 'Reach Stats', path: '/admin/reach-stats', icon: 'globe' },
+  { label: 'Brand Stats', path: '/admin/brand-stats', icon: 'star' },
   { label: 'Image Library', path: '/admin/image-library', icon: 'image' },
   { label: 'LUX Image Check', path: '/admin/lux-image-check', icon: 'image' },
   { label: 'LLM Settings', path: '/admin/llm', icon: 'cpu' },

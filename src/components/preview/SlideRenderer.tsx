@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { type FullDeck } from '@/api/decks.api';
+import { getBrandStats } from '@/api/brand-stats.api';
 import { type SlideDefinition } from './slide-types';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { DeckRenderContext } from './DeckRenderContext';
@@ -34,13 +36,22 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd 
   // Resolve placeholder values from the slide's active property (for per-property
   // slides) or the deck's first property (for global slides). Used by SlideRichText
   // to substitute {hotelName} / {destination} etc. in templated text at render time.
+  // Admin-editable brand figures (e.g. {facebookMembers}) substituted alongside
+  // {hotelName}/{destination}. Cached across slides via React Query.
+  const { data: brandStats } = useQuery({
+    queryKey: ['brand-stats'],
+    queryFn: getBrandStats,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const placeholders = useMemo<Record<string, string>>(() => {
     const property = slide.property ?? deck.properties[0];
     return {
       hotelName: property?.propertyName ?? deck.name ?? '',
       destination: property?.destination ?? '',
+      ...Object.fromEntries((brandStats ?? []).map((b) => [b.key, b.value])),
     };
-  }, [slide.property, deck.properties, deck.name]);
+  }, [slide.property, deck.properties, deck.name, brandStats]);
 
   const style = scale
     ? {
