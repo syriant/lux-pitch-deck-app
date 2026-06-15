@@ -41,6 +41,10 @@ export interface CustomPage {
   label?: string;
   /** Index in the final slide list (set when the PCM drags it); undefined = end. */
   position?: number;
+  /** Original uploaded file (PDF/image), kept so pages can be recreated. */
+  sourceUrl?: string;
+  /** 1-based page number within the source PDF this page was rendered from. */
+  sourcePage?: number;
 }
 
 /** Parse the deck's custom pages from customFields['customPages'] (JSON). */

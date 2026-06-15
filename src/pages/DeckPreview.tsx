@@ -7,7 +7,7 @@ import {
 import { updateCaseStudy } from '@/api/case-studies.api';
 import { buildSlideList, parseCustomPages, type SlideDefinition } from '@/components/preview/slide-types';
 import { fileToSlideImages } from '@/components/preview/file-to-slide-images';
-import { uploadImage } from '@/api/upload.api';
+import { uploadImage, uploadDocument } from '@/api/upload.api';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
@@ -239,10 +239,13 @@ export function DeckPreview() {
     setAddingPage(true);
     setError('');
     try {
+      // Keep the original upload (PDF/image) so pages can be recreated later.
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const { url: sourceUrl } = await uploadDocument(file);
       const blobs = await fileToSlideImages(file);
       const ext = '.jpg';
       const baseName = file.name.replace(/\.[^.]+$/, '');
-      const newPages: Array<{ id: string; imageKey: string; label?: string }> = [];
+      const newPages: Array<{ id: string; imageKey: string; label?: string; sourceUrl: string; sourcePage?: number }> = [];
       for (let i = 0; i < blobs.length; i++) {
         const imgFile = new File([blobs[i]], `${baseName}-${i + 1}${ext}`, { type: 'image/jpeg' });
         const { url } = await uploadImage(imgFile);
@@ -250,6 +253,8 @@ export function DeckPreview() {
           id: crypto.randomUUID(),
           imageKey: url,
           label: blobs.length > 1 ? `${baseName} (${i + 1})` : baseName,
+          sourceUrl,
+          sourcePage: isPdf ? i + 1 : undefined,
         });
       }
       const existing = parseCustomPages(deckRef.current ?? ({} as FullDeck));
@@ -294,15 +299,23 @@ export function DeckPreview() {
       // Persist custom-page positions (their index in the final list) whenever
       // any are present, so a drag of either a base slide or a page sticks.
       if (next.some((s) => s.type === 'custom-page')) {
+        // Preserve each page's stored fields (sourceUrl/sourcePage) by id; only
+        // the position changes on a drag.
+        const byId = new Map(parseCustomPages(deckRef.current ?? ({} as FullDeck)).map((p) => [p.id, p]));
         const pages = next
           .map((s, idx) => ({ s, idx }))
           .filter(({ s }) => s.type === 'custom-page')
-          .map(({ s, idx }) => ({
-            id: s.id.replace(/^custom-page-/, ''),
-            imageKey: s.customImageKey ?? '',
-            label: s.label,
-            position: idx,
-          }));
+          .map(({ s, idx }) => {
+            const pid = s.id.replace(/^custom-page-/, '');
+            const prev = byId.get(pid);
+            return {
+              ...prev,
+              id: pid,
+              imageKey: s.customImageKey ?? prev?.imageKey ?? '',
+              label: s.label,
+              position: idx,
+            };
+          });
         const current = deckRef.current?.customFields ?? {};
         const updatedCf = { ...current, customPages: JSON.stringify(pages) };
         setDeck((d) => (d ? { ...d, customFields: updatedCf } : d));

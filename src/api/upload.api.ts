@@ -12,6 +12,14 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   return res.data;
 }
 
+/** Store an original source document (PDF or image) for later recreation. */
+export async function uploadDocument(file: File): Promise<UploadResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await apiClient.post<UploadResult>('/upload/document', formData);
+  return res.data;
+}
+
 /** Build a full URL for an uploaded file path (e.g. /uploads/abc.jpg) */
 export function uploadUrl(path: string | null | undefined): string | null {
   if (!path) return null;
