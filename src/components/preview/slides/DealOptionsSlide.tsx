@@ -208,7 +208,9 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       cells: optNums.map((num) => {
         const first = groups.get(num)![0];
         return first.surcharges?.map((s) =>
-          `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toFixed(2)} per night`
+          s.amount == null
+            ? `${s.period ?? s.name}`
+            : `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toFixed(2)} per night`
         ).join('\n') ?? '-';
       }),
     });

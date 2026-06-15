@@ -77,9 +77,13 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
       const options: SetOptionRequest[] = [];
       for (const opt of result.options) {
         const optSurcharges = [
+          // Seasonal rows. Some carry an explicit supplement (v5 "Period" block);
+          // others are High/Shoulder month ranges whose per-night amount lives in
+          // the day-of-week rows below — those keep a null amount so the deck
+          // shows the months as context rather than a misleading "£0.00".
           ...result.surcharges.seasonal
             .filter((s) => s.optionNumber === opt.optionNumber)
-            .map((s) => ({ name: s.dates, amount: s.supplement ?? 0, period: s.period })),
+            .map((s) => ({ name: s.dates, amount: s.supplement, period: s.period })),
           // Day-of-week surcharges carry up to three seasonal values
           // (all-year / high / shoulder). Emit a labelled entry per non-zero
           // value, named by the day, so the deck shows e.g. "Saturday – £35"
@@ -109,10 +113,15 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
         const guest = opt.extraGuestSurcharge;
         const tacticalDetails: TacticalDetails = {};
         if (opt.roomNightForecast != null) tacticalDetails.roomNightForecast = opt.roomNightForecast;
-        // Per-option travel dates from this option's sheet (campaign dates have
-        // no source in the tool — entered manually per option).
-        if (opt.travelFrom) tacticalDetails.travelStart = opt.travelFrom;
-        if (opt.travelTo) tacticalDetails.travelEnd = opt.travelTo;
+        // Per-option travel dates from this option's sheet. Older tools (v4.0/
+        // v3.4) don't have per-option Prices-Forecasting sheets, so fall back to
+        // the deck-level travel range so the campaign-dates editor pre-fills
+        // instead of showing an empty range. Campaign dates have no source in the
+        // tool — entered manually per option.
+        const travelStart = opt.travelFrom ?? result.metadata.travelFrom;
+        const travelEnd = opt.travelTo ?? result.metadata.travelTo;
+        if (travelStart) tacticalDetails.travelStart = travelStart;
+        if (travelEnd) tacticalDetails.travelEnd = travelEnd;
         if (guest) {
           tacticalDetails.extraGuestPolicy = [
             { guest: 'Adult', age: '12+', inclusions: 'Breakfast', feePerNight: null, feeLabel: null, feePerNightNet: guest.adult.net, feePerNightSell: guest.adult.sell },
