@@ -433,17 +433,32 @@ export function DeckPreview() {
                     </button>
                   </div>
                 )}
-                {activeSlide.type === 'custom-page' && (
-                  <div className="mb-3 flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
-                    <span className="text-gray-600">Uploaded one-pager — drag it in the slide strip to reposition.</span>
-                    <button
-                      onClick={() => handleRemoveCustomPage(activeSlide.id)}
-                      className="rounded border border-red-300 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
-                    >
-                      Remove page
-                    </button>
-                  </div>
-                )}
+                {activeSlide.type === 'custom-page' && (() => {
+                  const source = parseCustomPages(deck).find((p) => `custom-page-${p.id}` === activeSlide.id)?.sourceUrl;
+                  return (
+                    <div className="mb-3 flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-4 py-2 text-sm">
+                      <span className="text-gray-600">Uploaded one-pager — drag it in the slide strip to reposition.</span>
+                      <div className="flex items-center gap-3">
+                        {source && (
+                          <a
+                            href={source}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-medium text-[#01B18B] hover:underline"
+                          >
+                            Download original
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleRemoveCustomPage(activeSlide.id)}
+                          className="rounded border border-red-300 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                        >
+                          Remove page
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className={isActiveHidden ? 'opacity-40 grayscale' : ''}>
                   <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
                 </div>
