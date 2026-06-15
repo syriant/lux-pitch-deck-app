@@ -114,7 +114,7 @@ function renderSlideContent(slide: SlideDefinition, deck: FullDeck, onFieldChang
     case 'tactical-package-detail':
       return <TacticalPackageDetailSlide property={slide.property} option={slide.option} deck={deck} onFieldChange={onFieldChange} />;
     case 'custom-page':
-      return <CustomPageSlide imageKey={slide.customImageKey} />;
+      return <CustomPageSlide imageKey={slide.customImageKey} deck={deck} />;
     default:
       return (
         <div className="h-full w-full flex items-center justify-center text-gray-400">
