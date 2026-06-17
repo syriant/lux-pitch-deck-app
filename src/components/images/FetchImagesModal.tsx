@@ -69,7 +69,7 @@ export function FetchImagesModal({ hotelName, destination, existingUrls, onClose
   const [adding, setAdding] = useState(false);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [luxCandidates, setLuxCandidates] = useState<LuxOfferCandidate[] | null>(null);
-  const [pickingOfferId, setPickingOfferId] = useState<string | null>(null);
+  const [pickingRef, setPickingRef] = useState<string | null>(null);
 
   const applyResult = useCallback((result: Awaited<ReturnType<typeof fetchHotelImages>>) => {
     setImages(result.images);
@@ -103,14 +103,14 @@ export function FetchImagesModal({ hotelName, destination, existingUrls, onClose
     loadImages(false);
   }, [loadImages]);
 
-  async function pickLuxCandidate(offerId: string) {
-    setPickingOfferId(offerId);
+  async function pickLuxCandidate(ref: string) {
+    setPickingRef(ref);
     setError('');
     try {
       await fetchLuxImages({
         hotelName,
         destination: destination ?? undefined,
-        offerId,
+        ref,
         limit: 10,
       });
       const result = await fetchHotelImages({
@@ -122,7 +122,7 @@ export function FetchImagesModal({ hotelName, destination, existingUrls, onClose
     } catch {
       setError('Failed to fetch images from LUX');
     } finally {
-      setPickingOfferId(null);
+      setPickingRef(null);
     }
   }
 
@@ -156,11 +156,11 @@ export function FetchImagesModal({ hotelName, destination, existingUrls, onClose
         </div>
 
         <div className="relative flex-1 overflow-y-auto p-6">
-          {(fetchingMore || pickingOfferId !== null) && (
+          {(fetchingMore || pickingRef !== null) && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/85 backdrop-blur-sm">
               <Spinner className="text-[#01B18B]" />
               <p className="text-sm text-gray-700">
-                {pickingOfferId !== null ? 'Fetching high-res images from LUX…' : 'Fetching from LUX and Google…'}
+                {pickingRef !== null ? 'Fetching high-res images from LUX…' : 'Fetching from LUX and Google…'}
               </p>
               <p className="text-xs text-gray-500">This can take 20–40 seconds while we download and cache full-resolution photos.</p>
             </div>
@@ -182,21 +182,21 @@ export function FetchImagesModal({ hotelName, destination, existingUrls, onClose
                   <div className="space-y-1.5">
                     {luxCandidates.map((cand) => (
                       <button
-                        key={cand.offerId}
+                        key={cand.ref}
                         type="button"
-                        onClick={() => pickLuxCandidate(cand.offerId)}
-                        disabled={pickingOfferId !== null}
+                        onClick={() => pickLuxCandidate(cand.ref)}
+                        disabled={pickingRef !== null}
                         className="w-full rounded-md border border-[#01B18B]/40 bg-white px-3 py-2 text-left text-xs hover:bg-[#E6F9F5] disabled:opacity-50"
                       >
                         <div className="font-medium text-gray-900">{cand.mainText}</div>
                         <div className="text-gray-500">{cand.secondaryText}</div>
-                        {pickingOfferId === cand.offerId && <div className="mt-1 text-[#01B18B]">Fetching images…</div>}
+                        {pickingRef === cand.ref && <div className="mt-1 text-[#01B18B]">Fetching images…</div>}
                       </button>
                     ))}
                   </div>
                   <button
                     onClick={() => { setLuxCandidates(null); void loadImages(true, true); }}
-                    disabled={pickingOfferId !== null || fetchingMore}
+                    disabled={pickingRef !== null || fetchingMore}
                     className="mt-2 text-xs text-gray-600 underline hover:text-gray-800 disabled:opacity-50"
                   >
                     Skip LUX — search Google instead

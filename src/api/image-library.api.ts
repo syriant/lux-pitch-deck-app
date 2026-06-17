@@ -11,7 +11,10 @@ export interface LibraryImage {
 }
 
 export interface LuxOfferCandidate {
-  offerId: string;
+  /** Selection token for the disambiguation round-trip (`offer:<id>` or `property:<uuid>`). */
+  ref: string;
+  offerId: string | null;
+  propertyId: string | null;
   name: string;
   mainText: string;
   secondaryText: string;
@@ -53,11 +56,14 @@ export async function approveLibraryImages(urls: string[]): Promise<{ approved: 
 }
 
 export interface LuxDebugCandidate {
-  offerId: string;
+  ref: string;
+  offerId: string | null;
+  propertyId: string | null;
   name: string;
   mainText: string;
   secondaryText: string;
   offerFound: boolean;
+  source: 'offer' | 'property';
   imageCount: number;
   images: Array<{ id: string; title: string | null; thumbUrl: string }>;
 }
@@ -87,13 +93,13 @@ export interface FetchLuxResponse {
 export async function fetchLuxImages(args: {
   hotelName: string;
   destination?: string;
-  offerId: string;
+  ref: string;
   limit?: number;
 }): Promise<FetchLuxResponse> {
   const res = await apiClient.post<FetchLuxResponse>('/image-library/fetch-lux', {
     hotelName: args.hotelName,
     destination: args.destination,
-    offerId: args.offerId,
+    ref: args.ref,
     limit: args.limit ?? 10,
   });
   return res.data;

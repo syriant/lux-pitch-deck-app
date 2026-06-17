@@ -61,7 +61,7 @@ export function LuxImageCheck() {
           </div>
 
           {result.candidates.map((cand) => (
-            <CandidateCard key={cand.offerId} cand={cand} />
+            <CandidateCard key={cand.ref} cand={cand} />
           ))}
 
           <RawBlock label="Raw typeahead response" url={result.raw.typeahead.url} data={result.raw.typeahead.response} />
@@ -82,14 +82,16 @@ function CandidateCard({ cand }: { cand: LuxDebugCandidate }) {
         <div>
           <div className="font-medium text-gray-900">{cand.mainText}</div>
           <div className="text-sm text-gray-500">{cand.secondaryText}</div>
-          <div className="mt-1 text-xs text-gray-400">offerId: {cand.offerId}</div>
+          <div className="mt-1 text-xs text-gray-400">
+            {cand.source === 'property' ? `propertyId: ${cand.propertyId}` : `offerId: ${cand.offerId}`}
+          </div>
         </div>
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
             noImages ? 'bg-red-100 text-red-700' : 'bg-[#E6F9F5] text-[#01806a]'
           }`}
         >
-          {!cand.offerFound ? 'Offer not found' : noImages ? 'No images' : `${cand.imageCount} image${cand.imageCount === 1 ? '' : 's'}`}
+          {!cand.offerFound ? (cand.source === 'property' ? 'Property not found' : 'Offer not found') : noImages ? 'No images' : `${cand.imageCount} image${cand.imageCount === 1 ? '' : 's'}`}
         </span>
       </div>
 
