@@ -10,9 +10,11 @@ import {
 } from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
+import { fetchTableauMetrics } from '@/api/tableau.api';
 import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
 import { uploadUrl } from '@/api/upload.api';
-import { ingestBase64Images } from '@/api/image-library.api';
+import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
+import { FetchImagesModal } from '@/components/images/FetchImagesModal';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
@@ -31,12 +33,15 @@ interface InlineForm {
   destination: string;
   propertyType: string;
   tags: string;
+  dealId: string;
   roomNights: string;
   revenue: string;
   adr: string;
   alos: string;
   leadTime: string;
   bookings: string;
+  packagesSold: string;
+  upgradePercentage: string;
   narrative: string;
   sourcePdfUrl: string | null;
 }
@@ -47,12 +52,15 @@ const emptyForm: InlineForm = {
   destination: '',
   propertyType: '',
   tags: '',
+  dealId: '',
   roomNights: '',
   revenue: '',
   adr: '',
   alos: '',
   leadTime: '',
   bookings: '',
+  packagesSold: '',
+  upgradePercentage: '',
   narrative: '',
   sourcePdfUrl: null,
 };
@@ -85,6 +93,46 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   // handleAutoUpload (below) replaces the separate single/summary handlers.
   const [pdfMessage, setPdfMessage] = useState('');
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [showFetch, setShowFetch] = useState(false);
+  const [imagesNote, setImagesNote] = useState('');
+  const [fetchingMetrics, setFetchingMetrics] = useState(false);
+  const [metricsMessage, setMetricsMessage] = useState('');
+
+  // Tableau metrics lookup for the inline create form (parity with the standalone form).
+  async function fetchCreateMetrics() {
+    if (!createForm.dealId.trim()) return;
+    setFetchingMetrics(true);
+    setMetricsMessage('');
+    try {
+      const m = await fetchTableauMetrics(createForm.dealId.trim());
+      setCreateForm((prev) => ({
+        ...prev,
+        roomNights: m.roomNights?.toString() ?? prev.roomNights,
+        revenue: m.revenue?.toString() ?? prev.revenue,
+        adr: m.adr?.toString() ?? prev.adr,
+        alos: m.alos?.toString() ?? prev.alos,
+        leadTime: m.leadTime?.toString() ?? prev.leadTime,
+        bookings: m.bookings?.toString() ?? prev.bookings,
+        packagesSold: m.packagesSold?.toString() ?? prev.packagesSold,
+        upgradePercentage: m.upgradePercentage?.toString() ?? prev.upgradePercentage,
+      }));
+      setMetricsMessage('Metrics populated from Tableau');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      setMetricsMessage(status === 503
+        ? 'Tableau is not configured yet — enter metrics manually'
+        : 'Failed to fetch metrics from Tableau');
+    } finally {
+      setFetchingMetrics(false);
+    }
+  }
+
+  // Pull clean hotel photos from LUX/Google; adding to the case study approves them.
+  async function addFetchedImages(urls: string[]) {
+    await approveLibraryImages(urls).catch(() => {});
+    setCreateImages((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))]);
+    setShowFetch(false);
+  }
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
 
@@ -154,6 +202,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     setCreateForm(emptyForm);
     setCreateImages([]);
     setPdfMessage('');
+    setImagesNote('');
+    setMetricsMessage('');
     setShowCreateForm(true);
   }
 
@@ -183,12 +233,15 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       destination: createForm.destination || undefined,
       propertyType: createForm.propertyType || undefined,
       tags: tags.length > 0 ? tags : undefined,
+      dealId: createForm.dealId.trim() || undefined,
       roomNights: createForm.roomNights ? Number(createForm.roomNights) : undefined,
       revenue: createForm.revenue ? Number(createForm.revenue) : undefined,
       adr: createForm.adr ? Number(createForm.adr) : undefined,
       alos: createForm.alos ? Number(createForm.alos) : undefined,
       leadTime: createForm.leadTime ? Number(createForm.leadTime) : undefined,
       bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
+      packagesSold: createForm.packagesSold ? Number(createForm.packagesSold) : undefined,
+      upgradePercentage: createForm.upgradePercentage ? Number(createForm.upgradePercentage) : undefined,
       narrative: createForm.narrative || undefined,
       images: images.length > 0 ? images : undefined,
       sourcePdfUrl: createForm.sourcePdfUrl ?? undefined,
@@ -215,6 +268,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       setCreateForm(emptyForm);
       setCreateImages([]);
       setPdfMessage('');
+      setImagesNote('');
+      setMetricsMessage('');
     } catch (err: unknown) {
       const resp = (err as { response?: { status?: number; data?: { candidates?: DuplicateCandidate[] } } })?.response;
       if (resp?.status === 409 && resp.data?.candidates) {
@@ -241,6 +296,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       setCreateForm(emptyForm);
       setCreateImages([]);
       setPdfMessage('');
+      setImagesNote('');
+      setMetricsMessage('');
     } catch {
       setError('Failed to create case study');
     } finally {
@@ -257,14 +314,29 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
       propertyType: draft.propertyType ?? '',
       narrative: draft.narrative ?? '',
       tags: draft.tags?.join(', ') ?? '',
+      roomNights: draft.roomNights != null ? String(draft.roomNights) : '',
+      revenue: draft.revenue != null ? String(draft.revenue) : '',
+      adr: draft.adr != null ? String(draft.adr) : '',
+      alos: draft.alos != null ? String(draft.alos) : '',
+      leadTime: draft.leadTime != null ? String(draft.leadTime) : '',
+      bookings: draft.bookings != null ? String(draft.bookings) : '',
+      packagesSold: draft.packagesSold != null ? String(draft.packagesSold) : '',
+      upgradePercentage: draft.upgradePercentage != null ? String(draft.upgradePercentage) : '',
       sourcePdfUrl: draft.sourcePdfUrl,
     });
     setCreateImages(draft.images);
     setShowCreateForm(true);
+    const imageWarnings = draft.warnings.filter((w) => /image|photo/i.test(w));
+    const otherWarnings = draft.warnings.filter((w) => !/image|photo/i.test(w));
+    setImagesNote(
+      draft.images.length === 0
+        ? (imageWarnings[0] ?? 'No photos were found in the PDF — use “Fetch hotel photos” or upload to add images.')
+        : '',
+    );
     const parts: string[] = [];
     parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
     if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
-    if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
+    if (otherWarnings.length > 0) parts.push(otherWarnings.join(' '));
     if (draft.duplicateCandidates.length > 0) {
       parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
     }
@@ -279,6 +351,8 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   async function handleAutoUpload(file: File) {
     setParsingPdf(true);
     setPdfMessage('');
+    setImagesNote('');
+    setMetricsMessage('');
     setError('');
     try {
       const res = await parseCaseStudyPdfAuto(file);
@@ -458,6 +532,27 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
               />
             </div>
           </div>
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Deal ID</label>
+              <input
+                type="text"
+                value={createForm.dealId}
+                onChange={(e) => setCreateForm({ ...createForm, dealId: e.target.value })}
+                placeholder="offer_opportunity_bk or name"
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={fetchCreateMetrics}
+              disabled={!createForm.dealId.trim() || fetchingMetrics}
+              className="rounded-md border border-[#01B18B] px-3 py-1.5 text-xs text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-50 whitespace-nowrap"
+            >
+              {fetchingMetrics ? 'Fetching…' : 'Fetch metrics'}
+            </button>
+          </div>
+          {metricsMessage && <p className="text-[11px] text-gray-500">{metricsMessage}</p>}
           <div className="grid grid-cols-5 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Room Nights</label>
@@ -508,6 +603,34 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                 className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Lead time (days)</label>
+              <input
+                type="number"
+                value={createForm.leadTime}
+                onChange={(e) => setCreateForm({ ...createForm, leadTime: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Packages sold</label>
+              <input
+                type="number"
+                value={createForm.packagesSold}
+                onChange={(e) => setCreateForm({ ...createForm, packagesSold: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Upgrade %</label>
+              <input
+                type="number"
+                step="0.01"
+                value={createForm.upgradePercentage}
+                onChange={(e) => setCreateForm({ ...createForm, upgradePercentage: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
+              />
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Narrative</label>
@@ -521,6 +644,9 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Images</label>
+            {imagesNote && createImages.length === 0 && (
+              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">{imagesNote}</p>
+            )}
             {createImages.length > 1 && (
               <p className="text-[11px] text-gray-500 mb-1">The first image is the hero shown on the slide — hover to set it.</p>
             )}
@@ -565,6 +691,15 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                 size="sm"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setShowFetch(true)}
+              disabled={!createForm.hotelName.trim()}
+              title={createForm.hotelName.trim() ? '' : 'Enter a hotel name first'}
+              className="text-xs text-[#01B18B] hover:text-[#009977] underline disabled:opacity-50 disabled:no-underline"
+            >
+              Fetch hotel photos (LUX / Google)
+            </button>
           </div>
           <div className="flex gap-2">
             <button
@@ -653,6 +788,17 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           {saving ? 'Saving...' : 'Next: Marketing Assets'}
         </button>
       </div>
+
+      {showFetch && (
+        <FetchImagesModal
+          hotelName={createForm.hotelName}
+          destination={createForm.destination || null}
+          existingUrls={new Set(createImages)}
+          onClose={() => setShowFetch(false)}
+          onAdd={addFetchedImages}
+          addTargetLabel="case study"
+        />
+      )}
 
       {viewingImage && (
         <div

@@ -13,10 +13,11 @@ import {
 import { fetchTableauMetrics } from '@/api/tableau.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadUrl } from '@/api/upload.api';
-import { ingestBase64Images } from '@/api/image-library.api';
+import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
+import { FetchImagesModal } from '@/components/images/FetchImagesModal';
 import { CaseStudySummaryReview } from '@/components/case-studies/CaseStudySummaryReview';
 
 interface FormData {
@@ -66,6 +67,18 @@ export function CaseStudies() {
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [showFetch, setShowFetch] = useState(false);
+  // Why the PDF yielded no images (flattened slides / none present), shown in the
+  // images section. Cleared once the form has images or a non-PDF form opens.
+  const [imagesNote, setImagesNote] = useState('');
+
+  // Pull clean hotel photos from LUX/Google. Adding to the case study is the
+  // explicit approval that promotes pending fetched images into the library.
+  async function addFetchedImages(urls: string[]) {
+    await approveLibraryImages(urls).catch(() => {});
+    setForm((prev) => ({ ...prev, images: [...prev.images, ...urls.filter((u) => !prev.images.includes(u))] }));
+    setShowFetch(false);
+  }
 
   useEffect(() => {
     getDestinations()
@@ -103,6 +116,7 @@ export function CaseStudies() {
     setForm({ ...emptyForm });
     setEditingId(null);
     setMetricsMessage('');
+    setImagesNote('');
     setShowForm(true);
   }
 
@@ -128,6 +142,7 @@ export function CaseStudies() {
     });
     setEditingId(item.id);
     setMetricsMessage('');
+    setImagesNote('');
     setShowForm(true);
   }
 
@@ -251,8 +266,14 @@ export function CaseStudies() {
       destination: draft.destination ?? '',
       propertyType: draft.propertyType ?? '',
       dealId: '',
-      roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
-      packagesSold: '', upgradePercentage: '',
+      roomNights: draft.roomNights != null ? String(draft.roomNights) : '',
+      revenue: draft.revenue != null ? String(draft.revenue) : '',
+      adr: draft.adr != null ? String(draft.adr) : '',
+      alos: draft.alos != null ? String(draft.alos) : '',
+      leadTime: draft.leadTime != null ? String(draft.leadTime) : '',
+      bookings: draft.bookings != null ? String(draft.bookings) : '',
+      packagesSold: draft.packagesSold != null ? String(draft.packagesSold) : '',
+      upgradePercentage: draft.upgradePercentage != null ? String(draft.upgradePercentage) : '',
       narrative: draft.narrative ?? '',
       tags: draft.tags?.join(', ') ?? '',
       images: draft.images,
@@ -261,10 +282,20 @@ export function CaseStudies() {
     setEditingId(null);
     setShowForm(true);
     setMetricsMessage('');
+    // Image-related warnings belong in the images section; everything else goes
+    // in the general banner.
+    const imageWarnings = draft.warnings.filter((w) => /image|photo/i.test(w));
+    const otherWarnings = draft.warnings.filter((w) => !/image|photo/i.test(w));
+    setImagesNote(
+      draft.images.length === 0
+        ? (imageWarnings[0] ?? 'No photos were found in the PDF — use “Fetch hotel photos” or upload to add images.')
+        : '',
+    );
+
     const parts: string[] = [];
     parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
     if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
-    if (draft.warnings.length > 0) parts.push(draft.warnings.join(' '));
+    if (otherWarnings.length > 0) parts.push(otherWarnings.join(' '));
     if (draft.duplicateCandidates.length > 0) {
       parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
     }
@@ -279,6 +310,7 @@ export function CaseStudies() {
   async function handleAutoUpload(file: File) {
     setParsingPdf(true);
     setPdfMessage('');
+    setImagesNote('');
     setError('');
     try {
       const res = await parseCaseStudyPdfAuto(file);
@@ -489,6 +521,9 @@ export function CaseStudies() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+            {imagesNote && form.images.length === 0 && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">{imagesNote}</p>
+            )}
             {form.images.length > 1 && (
               <p className="text-xs text-gray-500 mb-1">The first image is the hero shown on the case study slide — hover an image to set it.</p>
             )}
@@ -532,6 +567,15 @@ export function CaseStudies() {
                 onError={(msg) => setError(msg)}
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setShowFetch(true)}
+              disabled={!form.hotelName.trim()}
+              title={form.hotelName.trim() ? '' : 'Enter a hotel name first'}
+              className="text-xs text-[#01B18B] hover:text-[#009977] underline disabled:opacity-50 disabled:no-underline"
+            >
+              Fetch hotel photos (LUX / Google)
+            </button>
           </div>
 
           <div className="flex gap-3">
@@ -628,6 +672,17 @@ export function CaseStudies() {
             </div>
           </div>
         </div>
+      )}
+
+      {showFetch && (
+        <FetchImagesModal
+          hotelName={form.hotelName}
+          destination={form.destination || null}
+          existingUrls={new Set(form.images)}
+          onClose={() => setShowFetch(false)}
+          onAdd={addFetchedImages}
+          addTargetLabel="case study"
+        />
       )}
 
       {viewingImage && (

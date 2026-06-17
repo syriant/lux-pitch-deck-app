@@ -6,6 +6,7 @@ import {
   type DuplicateCandidate,
 } from '@/api/case-studies.api';
 import { approveLibraryImages } from '@/api/image-library.api';
+import { fetchTableauMetrics } from '@/api/tableau.api';
 import { uploadUrl } from '@/api/upload.api';
 import { FetchImagesModal } from '@/components/images/FetchImagesModal';
 
@@ -16,9 +17,17 @@ interface RowState {
   propertyType: string;
   narrative: string;
   tags: string;
+  dealId: string;
+  metricsMessage: string;
+  fetchingMetrics: boolean;
   roomNights: string;
   revenue: string;
   bookings: string;
+  adr: string;
+  alos: string;
+  leadTime: string;
+  packagesSold: string;
+  upgradePercentage: string;
   pcmNotes: string;
   images: string[];
   sourcePdfUrl: string | null;
@@ -35,9 +44,17 @@ function draftToRow(d: CaseStudySummaryDraft): RowState {
     propertyType: d.propertyType ?? '',
     narrative: d.narrative ?? '',
     tags: d.tags?.join(', ') ?? '',
+    dealId: '',
+    metricsMessage: '',
+    fetchingMetrics: false,
     roomNights: d.roomNights != null ? String(d.roomNights) : '',
     revenue: d.revenue != null ? String(d.revenue) : '',
     bookings: d.bookings != null ? String(d.bookings) : '',
+    adr: d.adr != null ? String(d.adr) : '',
+    alos: d.alos != null ? String(d.alos) : '',
+    leadTime: d.leadTime != null ? String(d.leadTime) : '',
+    packagesSold: d.packagesSold != null ? String(d.packagesSold) : '',
+    upgradePercentage: d.upgradePercentage != null ? String(d.upgradePercentage) : '',
     pcmNotes: d.pcmNotes ?? '',
     images: d.images ?? [],
     sourcePdfUrl: d.sourcePdfUrl,
@@ -68,6 +85,37 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...p } : r)));
   }
 
+  // Tableau metrics lookup per card — mirrors the single-hotel form so imports
+  // are consistent regardless of source.
+  async function fetchMetrics(i: number) {
+    const r = rows[i];
+    if (!r.dealId.trim()) return;
+    patch(i, { fetchingMetrics: true, metricsMessage: '' });
+    try {
+      const m = await fetchTableauMetrics(r.dealId.trim());
+      patch(i, {
+        fetchingMetrics: false,
+        metricsMessage: 'Metrics populated from Tableau',
+        roomNights: m.roomNights?.toString() ?? r.roomNights,
+        revenue: m.revenue?.toString() ?? r.revenue,
+        bookings: m.bookings?.toString() ?? r.bookings,
+        adr: m.adr?.toString() ?? r.adr,
+        alos: m.alos?.toString() ?? r.alos,
+        leadTime: m.leadTime?.toString() ?? r.leadTime,
+        packagesSold: m.packagesSold?.toString() ?? r.packagesSold,
+        upgradePercentage: m.upgradePercentage?.toString() ?? r.upgradePercentage,
+      });
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      patch(i, {
+        fetchingMetrics: false,
+        metricsMessage: status === 503
+          ? 'Tableau is not configured yet — enter metrics manually'
+          : 'Failed to fetch metrics from Tableau',
+      });
+    }
+  }
+
   function buildPayload(r: RowState) {
     return {
       title: r.title.trim(),
@@ -76,9 +124,15 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
       propertyType: r.propertyType.trim() || undefined,
       narrative: r.narrative.trim() || undefined,
       tags: r.tags ? r.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+      dealId: r.dealId.trim() || undefined,
       roomNights: r.roomNights ? parseInt(r.roomNights) : undefined,
       revenue: r.revenue ? parseFloat(r.revenue) : undefined,
       bookings: r.bookings ? parseInt(r.bookings) : undefined,
+      adr: r.adr ? parseFloat(r.adr) : undefined,
+      alos: r.alos ? parseFloat(r.alos) : undefined,
+      leadTime: r.leadTime ? parseInt(r.leadTime) : undefined,
+      packagesSold: r.packagesSold ? parseInt(r.packagesSold) : undefined,
+      upgradePercentage: r.upgradePercentage ? parseFloat(r.upgradePercentage) : undefined,
       pcmNotes: r.pcmNotes.trim() || undefined,
       images: r.images.length > 0 ? r.images : undefined,
       sourcePdfUrl: r.sourcePdfUrl ?? undefined,
@@ -154,8 +208,27 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
                     <Field label="Room nights" value={r.roomNights} onChange={(v) => patch(i, { roomNights: v })} />
                     <Field label="Revenue" value={r.revenue} onChange={(v) => patch(i, { revenue: v })} />
                     <Field label="Bookings" value={r.bookings} onChange={(v) => patch(i, { bookings: v })} />
+                    <Field label="ADR" value={r.adr} onChange={(v) => patch(i, { adr: v })} />
+                    <Field label="ALOS (nights)" value={r.alos} onChange={(v) => patch(i, { alos: v })} />
+                    <Field label="Lead time (days)" value={r.leadTime} onChange={(v) => patch(i, { leadTime: v })} />
+                    <Field label="Packages sold" value={r.packagesSold} onChange={(v) => patch(i, { packagesSold: v })} />
+                    <Field label="Upgrade %" value={r.upgradePercentage} onChange={(v) => patch(i, { upgradePercentage: v })} />
                     <Field label="Tags (comma-separated)" value={r.tags} onChange={(v) => patch(i, { tags: v })} />
                   </div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <div className="flex-1">
+                      <Field label="Deal ID" value={r.dealId} onChange={(v) => patch(i, { dealId: v })} />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fetchMetrics(i)}
+                      disabled={!r.dealId.trim() || r.fetchingMetrics}
+                      className="rounded-md border border-[#01B18B] px-3 py-2 text-xs text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {r.fetchingMetrics ? 'Fetching…' : 'Fetch metrics'}
+                    </button>
+                  </div>
+                  {r.metricsMessage && <p className="text-xs text-gray-500 mt-1">{r.metricsMessage}</p>}
                   <div className="mt-3">
                     <Label>Narrative</Label>
                     <textarea
@@ -178,6 +251,11 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
                   {/* Images */}
                   <div className="mt-3">
                     <Label>Images</Label>
+                    {r.images.length === 0 && (
+                      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">
+                        Photos aren’t pulled from a multi-hotel summary PDF (they can’t be matched to a specific hotel) — use “Find images” to add photos for this hotel.
+                      </p>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                       {r.images.map((u, imgIdx) => (
                         <div key={u} className={`relative group h-16 w-16 rounded overflow-hidden border ${imgIdx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>

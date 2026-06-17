@@ -142,6 +142,14 @@ export interface CaseStudyDraft {
   propertyType: string | null;
   narrative: string | null;
   tags: string[] | null;
+  roomNights: number | null;
+  revenue: number | null;
+  bookings: number | null;
+  adr: number | null;
+  alos: number | null;
+  leadTime: number | null;
+  packagesSold: number | null;
+  upgradePercentage: number | null;
   images: string[];
   sourcePdfUrl: string | null;
   destinationMatched: boolean;
@@ -177,6 +185,11 @@ export interface CaseStudySummaryDraft {
   roomNights: number | null;
   revenue: number | null;
   bookings: number | null;
+  adr: number | null;
+  alos: number | null;
+  leadTime: number | null;
+  packagesSold: number | null;
+  upgradePercentage: number | null;
   pcmNotes: string | null;
   images: string[];
   sourcePdfUrl: string | null;
