@@ -20,7 +20,7 @@ export interface SlideDefault {
 export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
   // ─── Cover ───────────────────────────────────────────────────────────
   'cover.hookText': {
-    value: "There are more travelers than ever. And they've never been harder to reach.",
+    value: "There are more travellers than ever. And they've never been harder to reach.",
     size: 45,
   },
 
@@ -83,7 +83,7 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
   'demo.segment.0': { value: 'Couples at the peak of their careers with a high disposable income', size: 14 },
   'demo.segment.1': { value: 'Young families with a desire for premium experiences', size: 14 },
   'demo.segment.2': { value: 'Empty-nesters spoiling themselves with luxurious holidays', size: 14 },
-  'demo.segment.3': { value: 'Avid travelers taking 2-4 trips a year', size: 14 },
+  'demo.segment.3': { value: 'Avid travellers taking 2-4 trips a year', size: 14 },
   'demo.audienceTitle': { value: 'Access our loyal audience:', size: 20 },
   'demo.stat1': {
     value: "95% of our members weren't planning to stay at the hotel they booked and 63% weren't planning on visiting the destination until we put it in front of them.",

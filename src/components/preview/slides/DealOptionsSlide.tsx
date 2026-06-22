@@ -37,6 +37,10 @@ function fmtBlackouts(bd: Array<{ from: string; to: string }> | null): string {
 
 export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsSlideProps) {
   const hasOptions = property && property.options.length > 0;
+  // Forecast is sourced from the pricing tool and only present for some
+  // properties (e.g. limited Reef Sleep WSY data), so only offer the toggle
+  // when at least one option actually carries a room-night forecast.
+  const hasForecast = !!property && property.options.some((o) => o.tacticalDetails?.roomNightForecast != null);
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -62,6 +66,16 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
             >
               {cf['deal.showSellRates'] === 'true' ? 'Hide sell rates' : 'Show sell rates'}
             </button>
+            {hasForecast && (
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', 'deal.showForecast', cf['deal.showForecast'] === 'true' ? 'false' : 'true')}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Show or hide a Room night forecast row (from the pricing tool; off by default)"
+              >
+                {cf['deal.showForecast'] === 'true' ? 'Hide forecast' : 'Show forecast'}
+              </button>
+            )}
             {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`)) && (
               <button
                 type="button"
@@ -118,6 +132,15 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   const groups = groupByOption(property.options);
   const optNums = Array.from(groups.keys()).sort();
   const showSell = customFields?.['deal.showSellRates'] === 'true';
+  const showForecast = customFields?.['deal.showForecast'] === 'true';
+
+  // Per-option room-night forecast — owner row carries the parsed value.
+  const optionForecast = (optNum: number): string => {
+    const grp = groups.get(optNum) ?? [];
+    const owner = grp.find((o) => o.tacticalDetails?.roomNightForecast != null);
+    const n = owner?.tacticalDetails?.roomNightForecast;
+    return n != null ? `${n.toLocaleString()} room nights` : '';
+  };
 
   const optionLabels = optNums.map((num) => {
     const first = groups.get(num)![0];
@@ -151,6 +174,15 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     rows.push({ key: 'period', label: 'Campaign period', cells: periodCells });
   }
   rows.push({ key: 'travel', label: 'Travel dates', cells: travelCells });
+
+  // Room night forecast (#— from the pricing tool). Opt-in via the slide
+  // header toggle; only rendered when a forecast was parsed for some option.
+  if (showForecast) {
+    const forecastCells = optNums.map((num) => optionForecast(num));
+    if (forecastCells.some((c) => c !== '')) {
+      rows.push({ key: 'forecast', label: 'Room night forecast', cells: forecastCells });
+    }
+  }
 
   // Inclusions row
   rows.push({
@@ -210,7 +242,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
         return first.surcharges?.map((s) =>
           s.amount == null
             ? `${s.period ?? s.name}`
-            : `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toFixed(2)} per night`
+            : `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toLocaleString()} per night`
         ).join('\n') ?? '-';
       }),
     });

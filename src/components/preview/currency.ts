@@ -31,6 +31,11 @@ export function currencySymbol(currency?: string | null): string {
  * Format a money value with its currency symbol (e.g. 400 + EUR → "€400").
  * Returns null for empty/non-numeric input so callers can show their own
  * placeholder.
+ *
+ * Package prices are shown as whole dollars to match the pricing tool: source
+ * cells are whole numbers, but derived NETT rates (sell × margin) can carry
+ * cents (e.g. 1059 × 0.79 = 836.61). We round those off so the deck never
+ * surfaces decimals the partner didn't enter.
  */
 export function formatMoney(
   value: number | string | null | undefined,
@@ -39,5 +44,5 @@ export function formatMoney(
   if (value === null || value === undefined || value === '') return null;
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n)) return null;
-  return `${currencySymbol(currency)}${n.toLocaleString()}`;
+  return `${currencySymbol(currency)}${Math.round(n).toLocaleString()}`;
 }

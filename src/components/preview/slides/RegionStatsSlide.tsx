@@ -59,7 +59,7 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
           {/* Narrative */}
           <SlideRichText
             fieldKey={`region.${propKey}.narrative`}
-            defaultValue="Last year, {destination} wasn't actively promoted. This year, consistent campaigns drove a 197% increase in production, showing the impact of keeping the destination top of mind and inspiring travelers to choose {destination} for their next getaway"
+            defaultValue="Last year, {destination} wasn't actively promoted. This year, consistent campaigns drove a 197% increase in production, showing the impact of keeping the destination top of mind and inspiring travellers to choose {destination} for their next getaway"
             defaultSize={15}
             customFields={cf}
             onFieldChange={onFieldChange}
