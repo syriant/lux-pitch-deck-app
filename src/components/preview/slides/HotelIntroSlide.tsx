@@ -1,5 +1,6 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { useSlideEditorContext } from '../SlideEditorContext';
@@ -27,7 +28,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   const hotelName = property?.propertyName ?? deck.name;
   const destination = property?.destination ?? '';
   const heroImgUrl = uploadUrl(deck.heroImage);
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   // SlideRichText handles {destination}/{hotelName} substitution automatically via DeckRenderContext.
   // Special case: when destination is empty (real deck without one), substitute the
@@ -36,8 +37,14 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   const isTemplateEditor = editorContext.allowedKeys !== undefined;
 
   const cf: Record<string, string> = { ...deck.templateDefaults, ...deck.customFields };
-  if (!isTemplateEditor && !destination) {
-    cf['hotelIntro.valueProp'] = NO_DESTINATION_FALLBACK;
+  // When there's no destination the factory default ("…demand in {destination}…")
+  // reads awkwardly, so fall back to a generic sentence — but only when the field
+  // has no authored value or translation (the overlay puts the active locale's
+  // translation into customFields), and translate the fallback itself. Previously
+  // this overwrote the key unconditionally, clobbering translations.
+  const locale = deck?.renderLocale;
+  if (!isTemplateEditor && !destination && !cf['hotelIntro.valueProp']) {
+    cf['hotelIntro.valueProp'] = t(NO_DESTINATION_FALLBACK, locale);
   }
 
   const valuePropPositioned = isPositioned(cf, VALUE_PROP_FIELD_KEY);
@@ -93,7 +100,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

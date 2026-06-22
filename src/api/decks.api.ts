@@ -269,6 +269,12 @@ export interface FullDeck {
   name: string;
   status: string;
   locale: string;
+  /**
+   * SYR-70: the language the deck is currently rendered in (preview/print),
+   * distinct from `locale` (the deck's source language). Used by fixed-label
+   * translation (labels.ts `t()`); customFields content is handled by the overlay.
+   */
+  renderLocale?: string;
   coverImage: string | null;
   heroImage: string | null;
   logoImage: string | null;

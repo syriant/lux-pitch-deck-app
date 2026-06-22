@@ -2,6 +2,7 @@ import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/dec
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
 import { formatMoney, currencySymbol } from '../currency';
+import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -43,7 +44,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   const hasForecast = !!property && property.options.some((o) => o.tacticalDetails?.roomNightForecast != null);
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
@@ -98,8 +99,8 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
       {!hasOptions ? (
         <div className="flex-1 mx-[5%] mb-[5%] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm text-gray-400">No deal options configured</p>
-            <p className="text-[10px] text-gray-300 mt-1">Upload a pricing tool in the wizard (Step 2)</p>
+            <p className="text-sm text-gray-400">{t('No deal options configured', deck?.renderLocale)}</p>
+            <p className="text-[10px] text-gray-300 mt-1">{t('Upload a pricing tool in the wizard (Step 2)', deck?.renderLocale)}</p>
           </div>
         </div>
       ) : (
@@ -118,7 +119,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />
@@ -133,18 +134,19 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   const optNums = Array.from(groups.keys()).sort();
   const showSell = customFields?.['deal.showSellRates'] === 'true';
   const showForecast = customFields?.['deal.showForecast'] === 'true';
+  const locale = deck?.renderLocale;
 
   // Per-option room-night forecast — owner row carries the parsed value.
   const optionForecast = (optNum: number): string => {
     const grp = groups.get(optNum) ?? [];
     const owner = grp.find((o) => o.tacticalDetails?.roomNightForecast != null);
     const n = owner?.tacticalDetails?.roomNightForecast;
-    return n != null ? `${n.toLocaleString()} room nights` : '';
+    return n != null ? `${n.toLocaleString()} ${t('room nights', locale)}` : '';
   };
 
   const optionLabels = optNums.map((num) => {
     const first = groups.get(num)![0];
-    return first.tierLabel ?? `Option ${num === 1 ? 'One' : num === 2 ? 'Two' : 'Three'}`;
+    return first.tierLabel ?? optionColumnLabel(num, locale);
   });
 
   // Per-option campaign/travel dates — owner-row tactical dates with deck-level
@@ -152,13 +154,13 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   const optionDates = (optNum: number) => {
     const grp = groups.get(optNum) ?? [];
     const owner = grp.find((o) => {
-      const t = o.tacticalDetails;
-      return t && (t.campaignStart || t.campaignEnd || t.travelStart || t.travelEnd);
+      const td = o.tacticalDetails;
+      return td && (td.campaignStart || td.campaignEnd || td.travelStart || td.travelEnd);
     });
-    const t = owner?.tacticalDetails;
+    const td = owner?.tacticalDetails;
     return {
-      campaign: fmtDateRange(t?.campaignStart ?? deck?.campaignStart ?? null, t?.campaignEnd ?? deck?.campaignEnd ?? null),
-      travel: fmtDateRange(t?.travelStart ?? deck?.travelStart ?? null, t?.travelEnd ?? deck?.travelEnd ?? null),
+      campaign: fmtDateRange(td?.campaignStart ?? deck?.campaignStart ?? null, td?.campaignEnd ?? deck?.campaignEnd ?? null),
+      travel: fmtDateRange(td?.travelStart ?? deck?.travelStart ?? null, td?.travelEnd ?? deck?.travelEnd ?? null),
     };
   };
 
@@ -205,10 +207,10 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       const rooms = groups.get(num)!.filter((r) => r.selected);
       return rooms.map((r) => {
         const price = formatMoney(r.costPrice, property.currency) ?? '?';
-        const roomLabel = r.roomType ?? 'Room';
+        const roomLabel = r.roomType ?? t('Room', locale);
         return r.nights && r.nights > 1
           ? `${roomLabel} ${r.nights}N – ${price}`
-          : `${roomLabel} – ${price} per night`;
+          : `${roomLabel} – ${price} ${t('per night', locale)}`;
       }).join('\n');
     }),
   });
@@ -242,7 +244,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
         return first.surcharges?.map((s) =>
           s.amount == null
             ? `${s.period ?? s.name}`
-            : `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toLocaleString()} per night`
+            : `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toLocaleString()} ${t('per night', locale)}`
         ).join('\n') ?? '-';
       }),
     });
@@ -286,7 +288,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
             return (
               <tr key={ri} className="border-b border-gray-200">
                 <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
-                  {row.label}
+                  {t(row.label, locale)}
                 </td>
                 {allSame ? (
                   <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>

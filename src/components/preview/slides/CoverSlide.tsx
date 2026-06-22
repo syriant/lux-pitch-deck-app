@@ -1,5 +1,6 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
 import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
@@ -49,7 +50,7 @@ interface CoverSlideProps {
 export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
   const property = deck.properties[0];
   const hotelName = property?.propertyName ?? deck.name;
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const coverImgUrl = uploadUrl(deck.coverImage);
   const logoImgUrl = uploadUrl(deck.logoImage);
   const quarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}${String(new Date().getFullYear()).slice(2)}`;
@@ -209,7 +210,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
             ) : (
               <span className="text-xs font-bold text-gray-900">{hotelName}</span>
             )}
-            <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+            <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
           </div>
           <div className="flex items-center gap-3">
             <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

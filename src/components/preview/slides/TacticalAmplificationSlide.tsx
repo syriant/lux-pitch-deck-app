@@ -8,6 +8,7 @@ import {
   rulesFromDeck,
   uniqueOptionsByNumber,
 } from './tactical-shared';
+import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -41,8 +42,9 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
   const prop = property ?? deck?.properties[0];
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
+  const locale = deck?.renderLocale;
   const options = prop ? uniqueOptionsByNumber(prop.options) : [];
   const rulesByTier = rulesFromDeck(deck as FullDeck, prop);
 
@@ -66,8 +68,8 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
       {!prop || options.length === 0 ? (
         <div className="flex-1 mx-[5%] mb-[5%] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm text-gray-400">No tactical packages configured</p>
-            <p className="text-[10px] text-gray-300 mt-1">Configure tactical packages in Step 2</p>
+            <p className="text-sm text-gray-400">{t('No tactical packages configured', deck?.renderLocale)}</p>
+            <p className="text-[10px] text-gray-300 mt-1">{t('Configure tactical packages in Step 2', deck?.renderLocale)}</p>
           </div>
         </div>
       ) : (
@@ -86,7 +88,7 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
                     className="p-3 text-center font-bold text-white"
                     style={{ backgroundColor: GREEN, borderLeft: '2px solid white' }}
                   >
-                    {(opt.tierLabel ?? `Option ${opt.optionNumber}`).toUpperCase()}
+                    {(opt.tierLabel ?? optionColumnLabel(opt.optionNumber, locale)).toUpperCase()}
                   </th>
                 ))}
               </tr>
@@ -97,7 +99,7 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
                 return (
                   <tr key={row.key}>
                     <td className={`p-3 align-middle font-bold text-right ${rowBg}`} style={{ color: GREEN }}>
-                      {row.label}
+                      {t(row.label, locale)}
                     </td>
                     {options.map((opt, ci) => {
                       const value = resolveComparisonCell(opt, rulesByTier[opt.optionNumber], row);
@@ -129,7 +131,7 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70 mt-auto">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

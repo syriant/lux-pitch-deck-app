@@ -1,5 +1,6 @@
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
@@ -38,7 +39,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
     : [0, 1, 2, 3].map((i) => ({ key: `default-${i}` }));
 
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const cf = { ...deck.templateDefaults, ...deck.customFields };
 
   const headlinePositioned = isPositioned(cf, HEADLINE_FIELD_KEY);
@@ -130,7 +131,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

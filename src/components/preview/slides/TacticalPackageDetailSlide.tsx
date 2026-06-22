@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee, tacticalTableSize, tacticalTableSizeKey } from './tactical-shared';
+import { t, dateLocaleTag } from '../labels';
 import { FontSizeControl } from '../FontSizeControl';
 import { SlideRichText } from '../SlideRichText';
 
@@ -36,8 +37,9 @@ function splitSurchargeRange(raw: string | undefined | null): { from: string; to
 export function TacticalPackageDetailSlide({ property, option, deck, onFieldChange }: Props) {
   const prop = property ?? deck?.properties[0];
   const opt = option ?? prop?.options[0];
+  const locale = deck?.renderLocale;
   const hotelName = prop?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
 
   // Auto-fit: when the body content would overflow the fixed slide height
@@ -62,7 +64,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
   if (!opt || !prop) {
     return (
       <div className="h-full w-full flex items-center justify-center text-gray-400" style={{ backgroundColor: LIGHT_BG }}>
-        Tactical package not configured
+        {t('Tactical package not configured', locale)}
       </div>
     );
   }
@@ -110,13 +112,13 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
             className="px-4 py-2 text-white font-bold text-sm tracking-wide"
             style={{ backgroundColor: accent }}
           >
-            ◆ {tierBadgeName(opt)} TACTICAL PACKAGE
+            ◆ {t(tierBadgeName(opt), locale)} {t('TACTICAL PACKAGE', locale)}
           </div>
         </div>
         {showForecast && forecast != null && (
           <div className="absolute right-[4%] top-1/2 -translate-y-1/2 text-right">
             <div className="text-[10px] uppercase tracking-wider" style={{ color: '#A0A8B8' }}>
-              Room night forecast
+              {t('Room night forecast', locale)}
             </div>
             <div className="text-3xl font-bold" style={{ color: accent }}>
               {fmtNumber(forecast)}
@@ -143,24 +145,24 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           {/* Nett Rates */}
           {showRates && (
           <div>
-            <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>NETT RATES PER PACKAGE</div>
+            <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>{t('NETT RATES PER PACKAGE', locale)}</div>
             <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
               <thead>
                 <tr>
-                  {showRoomType && <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Room Type</th>}
-                  {showAllot && <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Allot.</th>}
-                  {showOcc && <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Occ.</th>}
+                  {showRoomType && <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Room Type', locale)}</th>}
+                  {showAllot && <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Allot.', locale)}</th>}
+                  {showOcc && <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Occ.', locale)}</th>}
                   {showNettRates && nightCounts.map((n) => (
                     <th key={n} className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>
-                      {n} Nights{currency ? ` (${currency})` : ''}
+                      {n} {t('Nights', locale)}{currency ? ` (${currency})` : ''}
                     </th>
                   ))}
-                  {showExtraNight && <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Extra Night{currency ? ` (${currency})` : ''}</th>}
+                  {showExtraNight && <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Extra Night', locale)}{currency ? ` (${currency})` : ''}</th>}
                 </tr>
               </thead>
               <tbody>
                 {rooms.length === 0 ? (
-                  <tr><td colSpan={rateCols} className="py-2 text-center text-gray-400 border border-gray-200">No rooms configured</td></tr>
+                  <tr><td colSpan={rateCols} className="py-2 text-center text-gray-400 border border-gray-200">{t('No rooms configured', deck?.renderLocale)}</td></tr>
                 ) : rooms.map((r, i) => (
                   <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#EDF1F7]'}>
                     {showRoomType && <td className="py-1.5 px-2 border border-gray-200" style={{ color: DARK }}>{r.roomType}</td>}
@@ -185,19 +187,19 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           {/* Surcharge Periods */}
           {showSurcharge && (
           <div>
-            <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>SURCHARGE PERIODS</div>
+            <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>{t('SURCHARGE PERIODS', locale)}</div>
             <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
               <thead>
                 <tr>
-                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>From</th>
-                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>To</th>
-                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Period</th>
-                  <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Per Night{currency ? ` (${currency})` : ''}</th>
+                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('From', locale)}</th>
+                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('To', locale)}</th>
+                  <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Period', locale)}</th>
+                  <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Per Night', locale)}{currency ? ` (${currency})` : ''}</th>
                 </tr>
               </thead>
               <tbody>
                 {surcharges.length === 0 ? (
-                  <tr><td colSpan={4} className="py-2 text-center text-gray-400 border border-gray-200">No surcharges</td></tr>
+                  <tr><td colSpan={4} className="py-2 text-center text-gray-400 border border-gray-200">{t('No surcharges', deck?.renderLocale)}</td></tr>
                 ) : surcharges.map((s, i) => {
                   const { from, to } = splitSurchargeRange(s.name);
                   return (
@@ -217,7 +219,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           {/* Blackout Dates */}
           {opt.blackoutDates && opt.blackoutDates.length > 0 && (
             <div>
-              <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>BLACKOUT DATES</div>
+              <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>{t('BLACKOUT DATES', locale)}</div>
               <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
                 <tbody>
                   {opt.blackoutDates.map((b, i) => (
@@ -235,14 +237,14 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           {/* Extra Guest Policy */}
           {showGuests && (
             <div>
-              <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>EXTRA GUEST POLICY</div>
+              <div className="font-bold text-gray-600 mb-1 tracking-widest" style={{ fontSize: tablePx }}>{t('EXTRA GUEST POLICY', locale)}</div>
               <table className="w-full border-collapse" style={{ fontSize: tablePx }}>
                 <thead>
                   <tr>
-                    <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Guest</th>
-                    <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Age</th>
-                    <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Inclusions</th>
-                    <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>Fee per Night{currency ? ` (${currency})` : ''}</th>
+                    <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Guest', locale)}</th>
+                    <th className="py-1.5 px-2 text-center font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Age', locale)}</th>
+                    <th className="py-1.5 px-2 text-left font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Inclusions', locale)}</th>
+                    <th className="py-1.5 px-2 text-right font-bold border border-gray-200 bg-white" style={{ color: DARK }}>{t('Fee per Night', locale)}{currency ? ` (${currency})` : ''}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -266,11 +268,11 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           {showIncl && (
           <div className="flex-1 flex flex-col">
             <div className="px-3 py-1.5 text-white text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: accent }}>
-              INCLUSIONS
+              {t('INCLUSIONS', locale)}
             </div>
             <div className="flex-1 bg-white p-2 overflow-hidden">
               {inclusions4.length === 0 ? (
-                <div className="text-[10px] text-gray-400 text-center py-2">No inclusions</div>
+                <div className="text-[10px] text-gray-400 text-center py-2">{t('No inclusions', deck?.renderLocale)}</div>
               ) : inclusions4.map((item, i) => (
                 <div key={i} className="flex items-center gap-2 py-0.5">
                   <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: accent }} />
@@ -283,7 +285,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           {showExtraNightIncl && (
             <div className="flex-1 flex flex-col">
               <div className="px-3 py-1.5 text-white text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: accent }}>
-                EXTRA NIGHTS
+                {t('EXTRA NIGHTS', locale)}
               </div>
               <div className="flex-1 bg-white p-2 overflow-hidden">
                 {extraNightIncl.map((item, i) => (
@@ -314,7 +316,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70 mt-auto">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

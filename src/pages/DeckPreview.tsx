@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getFullDeck, updateDeck as updateDeckApi, updateProperty, setDeckObjectives, updateOption,
@@ -10,6 +10,7 @@ import { fileToSlideImages } from '@/components/preview/file-to-slide-images';
 import { uploadImage, uploadDocument } from '@/api/upload.api';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, localeFieldKey, applyLocaleOverlay } from '@/components/preview/i18n';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
 import { getSalesforceStatus } from '@/api/salesforce.api';
 import { AppShell } from '@/components/layout/AppShell';
@@ -28,6 +29,7 @@ export function DeckPreview() {
   const deckRef = useRef<FullDeck | null>(null);
   const [slides, setSlides] = useState<SlideDefinition[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activeLocale, setActiveLocale] = useState(DEFAULT_LOCALE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -46,6 +48,17 @@ export function DeckPreview() {
 
   const sfOppId = deck?.salesforceOpportunityId ?? null;
   const sfAlreadyUploaded = !!(sfOppId && deck?.customFields?.[`salesforce.contentDocumentId.${sfOppId}`]);
+
+  // Deck as seen through the active language: English base with the locale's
+  // translations overlaid (per-deck content), plus `renderLocale` so fixed
+  // labels (labels.ts `t()`) translate too. Entity data is untouched; English
+  // is a pass-through.
+  const localizedDeck = useMemo(
+    () => (deck
+      ? { ...deck, customFields: applyLocaleOverlay(deck.customFields, activeLocale), renderLocale: activeLocale }
+      : deck),
+    [deck, activeLocale],
+  );
 
   async function runSalesforceUpload() {
     if (!id) return;
@@ -165,7 +178,10 @@ export function DeckPreview() {
           });
         } else if (entityType === 'custom') {
           const current = deckRef.current?.customFields ?? {};
-          const updated = { ...current, [field]: value };
+          // English writes to the bare key (canonical source); a non-English
+          // active locale writes to its prefixed key so English is preserved.
+          const persistKey = activeLocale === DEFAULT_LOCALE ? field : localeFieldKey(activeLocale, field);
+          const updated = { ...current, [persistKey]: value };
           setDeck((prev) => {
             if (!prev) return prev;
             return { ...prev, customFields: updated };
@@ -198,7 +214,7 @@ export function DeckPreview() {
         return prev;
       });
     },
-    [deck, id],
+    [deck, id, activeLocale],
   );
 
   const handleToggleHidden = useCallback(async (slideId: string) => {
@@ -460,7 +476,7 @@ export function DeckPreview() {
                   );
                 })()}
                 <div className={isActiveHidden ? 'opacity-40 grayscale' : ''}>
-                  <SlideRenderer slide={activeSlide} deck={deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
+                  <SlideRenderer slide={activeSlide} deck={localizedDeck ?? deck} onFieldChange={handleFieldChange} onGalleryAdd={handleGalleryAdd} />
                 </div>
                 <div className="mt-3 text-center text-xs text-gray-400">
                   {activeIndex + 1} / {slides.length} — {activeSlide.label}
@@ -486,6 +502,18 @@ export function DeckPreview() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <select
+              value={activeLocale}
+              onChange={(e) => setActiveLocale(e.target.value)}
+              title="Preview & export language. English is the source; other languages are editable translations saved alongside it."
+              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50 cursor-pointer"
+            >
+              {SUPPORTED_LOCALES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.code === DEFAULT_LOCALE ? `${l.label} (source)` : l.label}
+                </option>
+              ))}
+            </select>
             <label className={`rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50 cursor-pointer ${addingPage ? 'opacity-50 pointer-events-none' : ''}`} title="Add a one-pager (PDF or image) as an extra page">
               {addingPage ? 'Adding…' : '+ One-pager'}
               <input
@@ -510,7 +538,7 @@ export function DeckPreview() {
                 if (!id || exportingPdf) return;
                 setExportingPdf(true);
                 try {
-                  await exportPdf(id);
+                  await exportPdf(id, { locale: activeLocale });
                 } catch {
                   console.error('PDF export failed');
                 } finally {
@@ -533,7 +561,7 @@ export function DeckPreview() {
                 if (!id || exportingPdfCompressed) return;
                 setExportingPdfCompressed(true);
                 try {
-                  await exportPdf(id, { compressed: true });
+                  await exportPdf(id, { compressed: true, locale: activeLocale });
                 } catch {
                   console.error('Compressed PDF export failed');
                 } finally {
@@ -577,7 +605,7 @@ export function DeckPreview() {
                 if (!id || exporting) return;
                 setExporting(true);
                 try {
-                  await exportPptx(id);
+                  await exportPptx(id, { locale: activeLocale });
                 } catch {
                   console.error('Export failed');
                 } finally {

@@ -8,6 +8,7 @@ import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { SLIDE_DEFAULTS } from '../slide-defaults';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+import { t, dateLocaleTag } from '../labels';
 
 const TITLE_FIELD_KEY = 'reach.title';
 const SUBTITLE_FIELD_KEY = 'reach.subtitle';
@@ -45,6 +46,7 @@ function drawMapWithLabels(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement,
   reachByRegion: Record<string, string>,
+  locale?: string,
 ): void {
   const maybeCtx = canvas.getContext('2d');
   if (!maybeCtx) return;
@@ -78,7 +80,7 @@ function drawMapWithLabels(
   const sx = iw / SRC_W;
   const sy = ih / SRC_H;
 
-  function drawLabel(name: string, key: string, cx: number, cy: number) {
+  function drawLabel(key: string, cx: number, cy: number) {
     const x = ix + cx * sx;
     const y = iy + cy * sy;
     const fullKey = `reach.${key}`;
@@ -86,8 +88,8 @@ function drawMapWithLabels(
     const nameSize = Math.max(12, Math.round(20 * sx));
     const countSize = Math.max(16, Math.round(30 * sx));
 
-    // Name lines
-    const lines = name.split('\n');
+    // Name lines — translate via key; wrap on whitespace (English names break on \n).
+    const lines = t(key, locale).split(/\n|\s+/);
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.font = `${nameSize}px Arial, sans-serif`;
     ctx.textAlign = 'center';
@@ -109,7 +111,7 @@ function drawMapWithLabels(
 
   // Draw circle labels
   for (const label of CIRCLE_LABELS) {
-    drawLabel(label.name, label.key, label.cx, label.cy);
+    drawLabel(label.key, label.cx, label.cy);
   }
 
   // Africa has no circle in the image — hidden for now
@@ -117,8 +119,9 @@ function drawMapWithLabels(
 
 export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProps) {
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
+  const locale = deck?.renderLocale;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const bgImgUrl = cf?.['image.reach'] ? uploadUrl(cf['image.reach']) : null;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -144,9 +147,9 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
 
   const redraw = useCallback(() => {
     if (canvasRef.current && imgRef.current) {
-      drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion);
+      drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion, locale);
     }
-  }, [reachByRegion]);
+  }, [reachByRegion, locale]);
 
   useEffect(() => {
     const img = new Image();
@@ -248,7 +251,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

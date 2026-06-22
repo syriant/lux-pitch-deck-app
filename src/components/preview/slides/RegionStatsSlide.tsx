@@ -3,6 +3,7 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { t, dateLocaleTag } from '../labels';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -24,11 +25,12 @@ const metrics = [
 ];
 
 export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }: RegionStatsSlideProps) {
-  const destination = property?.destination ?? property?.propertyName ?? 'Your Destination';
+  const locale = deck?.renderLocale;
+  const destination = property?.destination ?? property?.propertyName ?? t('Your Destination', locale);
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const propKey = property?.id ?? 'empty';
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="h-full w-full flex flex-col bg-white">
@@ -83,7 +85,7 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
                     style={{ color: '#000' }}
                   />
                   {m.label && (
-                    <div className="text-[14px] leading-snug mt-0.5" style={{ color: '#444' }}>{m.label}</div>
+                    <div className="text-[14px] leading-snug mt-0.5" style={{ color: '#444' }}>{t(m.label, locale)}</div>
                   )}
                 </div>
               </div>
@@ -92,7 +94,7 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
 
           {/* Market Coverage */}
           <div className="mt-3 pt-2">
-            <p className="text-[15px] font-semibold underline mb-1" style={{ color: '#000' }}>Market Coverage</p>
+            <p className="text-[15px] font-semibold underline mb-1" style={{ color: '#000' }}>{t('Market Coverage', locale)}</p>
             <div className="flex items-start gap-1.5">
               <span className="text-[14px]" style={{ color: '#333' }}>•</span>
               <SlideRichText
@@ -124,7 +126,7 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

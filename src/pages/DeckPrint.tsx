@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { getFullDeck, type FullDeck } from '@/api/decks.api';
 import { buildSlideList, type SlideDefinition } from '@/components/preview/slide-types';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
+import { applyLocaleOverlay, DEFAULT_LOCALE } from '@/components/preview/i18n';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
@@ -51,6 +52,11 @@ export function DeckPrint() {
     return <div id="print-loading">Loading...</div>;
   }
 
+  // Render in the requested language (Puppeteer passes ?locale=). English base
+  // with the locale's translations overlaid; en is a pass-through.
+  const locale = searchParams.get('locale') || DEFAULT_LOCALE;
+  const printDeck = { ...deck, customFields: applyLocaleOverlay(deck.customFields, locale), renderLocale: locale };
+
   return (
     <>
       {/* Reset body styles for print */}
@@ -88,7 +94,7 @@ export function DeckPrint() {
               position: 'relative',
             }}
           >
-            <SlideRenderer slide={slide} deck={deck} />
+            <SlideRenderer slide={slide} deck={printDeck} />
           </div>
         ))}
       </div>

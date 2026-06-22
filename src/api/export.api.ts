@@ -2,10 +2,13 @@ import { apiClient } from './client';
 
 export async function exportPdf(
   deckId: string,
-  opts: { compressed?: boolean } = {},
+  opts: { compressed?: boolean; locale?: string } = {},
 ): Promise<void> {
+  const params: Record<string, string> = {};
+  if (opts.compressed) params.compressed = 'true';
+  if (opts.locale && opts.locale !== 'en') params.locale = opts.locale;
   const res = await apiClient.post(`/export/${deckId}/pdf`, {}, {
-    params: opts.compressed ? { compressed: 'true' } : undefined,
+    params: Object.keys(params).length ? params : undefined,
     responseType: 'blob',
     timeout: 120_000,
   });
@@ -47,8 +50,9 @@ export async function exportToSalesforce(deckId: string): Promise<SalesforceUplo
   return res.data;
 }
 
-export async function exportPptx(deckId: string): Promise<void> {
+export async function exportPptx(deckId: string, opts: { locale?: string } = {}): Promise<void> {
   const res = await apiClient.post(`/export/${deckId}/pptx`, {}, {
+    params: opts.locale && opts.locale !== 'en' ? { locale: opts.locale } : undefined,
     responseType: 'blob',
   });
 

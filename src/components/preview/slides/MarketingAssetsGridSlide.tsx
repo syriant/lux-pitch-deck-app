@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { t, dateLocaleTag } from '../labels';
 import { getDealTierRules, type DealTierRule } from '@/api/deal-tiers.api';
 import { SlideRichText } from '../SlideRichText';
 
@@ -86,7 +87,7 @@ function CrossIcon({ cls = 'w-8 h-8' }: { cls?: string }) {
 export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChannels, onFieldChange }: MarketingAssetsGridSlideProps) {
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   const { data: rules = [], isLoading } = useQuery<DealTierRule[]>({
     queryKey: ['deal-tier-rules'],
@@ -141,20 +142,20 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
 
       {isLoading ? (
         <div className="flex-1 mx-[5%] mb-[5%] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-          <p className="text-sm text-gray-400">Loading deal tier rules...</p>
+          <p className="text-sm text-gray-400">{t('Loading deal tier rules...', deck?.renderLocale)}</p>
         </div>
       ) : !hasOptions ? (
         <div className="flex-1 mx-[5%] mb-[5%] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm text-gray-400">No deal options configured</p>
-            <p className="text-[10px] text-gray-300 mt-1">Upload a pricing tool in the wizard (Step 2)</p>
+            <p className="text-sm text-gray-400">{t('No deal options configured', deck?.renderLocale)}</p>
+            <p className="text-[10px] text-gray-300 mt-1">{t('Upload a pricing tool in the wizard (Step 2)', deck?.renderLocale)}</p>
           </div>
         </div>
       ) : channels.length === 0 ? (
         <div className="flex-1 mx-[5%] mb-[5%] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm text-gray-400">No marketing assets selected</p>
-            <p className="text-[10px] text-gray-300 mt-1">Tick assets per option in Step 6, or set the property's grade and destination if no entitlements load</p>
+            <p className="text-sm text-gray-400">{t('No marketing assets selected', deck?.renderLocale)}</p>
+            <p className="text-[10px] text-gray-300 mt-1">{t("Tick assets per option in Step 6, or set the property's grade and destination if no entitlements load", deck?.renderLocale)}</p>
           </div>
         </div>
       ) : (
@@ -249,7 +250,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70 mt-auto">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

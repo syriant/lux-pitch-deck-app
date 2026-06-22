@@ -1,6 +1,7 @@
 import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
+import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -44,11 +45,12 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const hasAssets = uniqueOptions.some((o) => o.marketingAssets && Object.values(o.marketingAssets).some(Boolean));
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const propId = property?.id ?? 'empty';
+  const locale = deck?.renderLocale;
 
   const optionLabels = uniqueOptions.map((o) =>
-    o.tierLabel ?? `Option ${o.optionNumber === 1 ? 'One' : o.optionNumber === 2 ? 'Two' : 'Three'}`
+    o.tierLabel ?? optionColumnLabel(o.optionNumber, locale)
   );
   const optNums = uniqueOptions.map((o) => o.optionNumber);
 
@@ -57,13 +59,13 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const optionDates = (optNum: number) => {
     const grp: DeckOption[] = groups.get(optNum) ?? [];
     const owner = grp.find((o) => {
-      const t = o.tacticalDetails;
-      return t && (t.campaignStart || t.campaignEnd || t.travelStart || t.travelEnd);
+      const td = o.tacticalDetails;
+      return td && (td.campaignStart || td.campaignEnd || td.travelStart || td.travelEnd);
     });
-    const t = owner?.tacticalDetails;
+    const td = owner?.tacticalDetails;
     return {
-      campaign: fmtDateRange(t?.campaignStart ?? deck?.campaignStart ?? null, t?.campaignEnd ?? deck?.campaignEnd ?? null),
-      travel: fmtDateRange(t?.travelStart ?? deck?.travelStart ?? null, t?.travelEnd ?? deck?.travelEnd ?? null),
+      campaign: fmtDateRange(td?.campaignStart ?? deck?.campaignStart ?? null, td?.campaignEnd ?? deck?.campaignEnd ?? null),
+      travel: fmtDateRange(td?.travelStart ?? deck?.travelStart ?? null, td?.travelEnd ?? deck?.travelEnd ?? null),
     };
   };
 
@@ -86,10 +88,10 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       cells: uniqueOptions.map((o) => {
         const rooms = groups.get(o.optionNumber) ?? [o];
         return rooms.map((r: { roomType: string | null; allocation: string | null }) => {
-          const room = r.roomType ?? 'Room';
-          if (!r.allocation) return `${room} – ? rooms per night`;
+          const room = r.roomType ?? t('Room', locale);
+          if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;
           return /^\d+$/.test(r.allocation)
-            ? `${room} – ${r.allocation} rooms per night`
+            ? `${room} – ${r.allocation} ${t('rooms per night', locale)}`
             : `${room} – ${r.allocation}`;
         }).join('<br>');
       }),
@@ -97,7 +99,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
     {
       key: 'payment',
       label: 'Payment',
-      cells: uniqueOptions.map(() => 'VCC'),
+      cells: uniqueOptions.map(() => t('VCC', locale)),
     },
   ];
 
@@ -143,8 +145,8 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       {!hasAssets && uniqueOptions.length === 0 ? (
         <div className="flex-1 mx-[5%] mb-[5%] rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
           <div className="text-center">
-            <p className="text-sm text-gray-400">No marketing assets configured</p>
-            <p className="text-[10px] text-gray-300 mt-1">Assets are auto-recommended from deal tier rules (Step 6)</p>
+            <p className="text-sm text-gray-400">{t('No marketing assets configured', deck?.renderLocale)}</p>
+            <p className="text-[10px] text-gray-300 mt-1">{t('Assets are auto-recommended from deal tier rules (Step 6)', deck?.renderLocale)}</p>
           </div>
         </div>
       ) : (
@@ -175,7 +177,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                 return (
                   <tr key={row.key} className="border-b border-gray-200">
                     <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
-                      {row.label}
+                      {t(row.label, locale)}
                     </td>
                     {allSame ? (
                       <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>
@@ -222,7 +224,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

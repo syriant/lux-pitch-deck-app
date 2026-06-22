@@ -1,5 +1,6 @@
 import { type DeckObjective, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 
@@ -20,7 +21,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
   const hasObjectives = objectives.length > 0;
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
@@ -50,8 +51,8 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
         <div className="flex-1 flex flex-col justify-center">
           {!hasObjectives ? (
             <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
-              <p className="text-sm text-gray-400">No objectives set</p>
-              <p className="text-[10px] text-gray-300 mt-1">Add objectives in the wizard (Step 4)</p>
+              <p className="text-sm text-gray-400">{t('No objectives set', deck?.renderLocale)}</p>
+              <p className="text-[10px] text-gray-300 mt-1">{t('Add objectives in the wizard (Step 4)', deck?.renderLocale)}</p>
             </div>
           ) : (
             <>
@@ -107,7 +108,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
       <div className="flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />

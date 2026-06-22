@@ -1,5 +1,6 @@
 import { type DeckCaseStudyLink, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
+import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { uploadUrl } from '@/api/upload.api';
@@ -75,7 +76,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
   const hasCaseStudies = caseStudies && caseStudies.length > 0;
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
-  const date = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+  const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   // Per-slide image key so each case study slide can have its own background
   const imageFieldKey = slideId ? `image.caseStudy.${slideId}` : 'image.caseStudy';
   const swapped = cf?.['caseStudy.swapped'] === 'true';
@@ -127,8 +128,8 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
         {!hasCaseStudies ? (
           <div className="absolute top-[10%] right-[5%] w-[40%]">
             <div className="bg-white/90 rounded-lg p-6 shadow-sm">
-              <p className="text-sm text-gray-400">No case studies linked yet</p>
-              <p className="text-[10px] text-gray-300 mt-1">Add case studies in the wizard (Step 5)</p>
+              <p className="text-sm text-gray-400">{t('No case studies linked yet', deck?.renderLocale)}</p>
+              <p className="text-[10px] text-gray-300 mt-1">{t('Add case studies in the wizard (Step 5)', deck?.renderLocale)}</p>
             </div>
           </div>
         ) : (
@@ -171,7 +172,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
       <div className="relative flex items-center justify-between px-[3%] py-2 bg-white/70">
         <div className="flex items-baseline gap-1">
           <span className="text-xs font-bold text-gray-900">{hotelName}</span>
-          <span className="text-[10px] text-gray-600 ml-1"><strong>updated</strong> {date}</span>
+          <span className="text-[10px] text-gray-600 ml-1"><strong>{t('updated', deck?.renderLocale)}</strong> {date}</span>
         </div>
         <div className="flex items-center gap-3">
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-3.5 invert" />
