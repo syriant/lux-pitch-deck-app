@@ -3,9 +3,11 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { uploadUrl } from '@/api/upload.api';
 
 const GREEN = '#00b2a0';
+const TITLE_FIELD_KEY = 'caseStudy.heading';
 
 interface CaseStudySlideProps {
   slideId?: string;
@@ -83,6 +85,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
   const cards = hasCaseStudies ? caseStudies.slice(0, 2) : [];
   const leftCard = swapped ? cards[1] : cards[0];
   const rightCard = swapped ? cards[0] : cards[1];
+  const titlePositioned = !!(cf[`${TITLE_FIELD_KEY}.x`] && cf[`${TITLE_FIELD_KEY}.y`]);
 
   return (
     <div className="relative h-full w-full overflow-hidden flex flex-col">
@@ -99,7 +102,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
       />
 
       {/* Content area */}
-      <div className="relative flex-1">
+      <div data-slide-root="true" className="relative flex-1">
         {/* Background image picker — top-left */}
         {onFieldChange && onGalleryAdd && (
           <div className="absolute top-2 left-2 z-20">
@@ -115,15 +118,35 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
           </div>
         )}
 
-        {/* "Case Studies" title — bottom-left */}
-        <div className="absolute bottom-[8%] left-[4%] z-10">
-          <h2
-            className="text-[42px] font-bold text-white leading-none"
-            style={{ textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}
-          >
-            Case<br />Studies
-          </h2>
-        </div>
+        {/* "Case Studies" title — draggable + resizable; position/size are saved
+            per-language so the wider translated title can be repositioned. */}
+        <DraggableSlideElement
+          fieldKey={TITLE_FIELD_KEY}
+          customFields={cf}
+          onFieldChange={onFieldChange}
+          defaultClassName="absolute bottom-[8%] left-[4%]"
+          className="z-10 group/cstitle"
+        >
+          <SlideRichText
+            fieldKey={TITLE_FIELD_KEY}
+            defaultValue={t('Case Studies', deck?.renderLocale)}
+            defaultSize={42}
+            customFields={cf}
+            onFieldChange={onFieldChange}
+            className="font-bold leading-none"
+            style={{ color: '#ffffff', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}
+          />
+          {onFieldChange && titlePositioned && (
+            <button
+              type="button"
+              onClick={() => resetSlideElementPosition(TITLE_FIELD_KEY, onFieldChange)}
+              className="absolute -top-7 right-0 rounded bg-black/60 px-2 py-1 text-[10px] text-white/90 hover:text-white opacity-0 group-hover/cstitle:opacity-100 transition-opacity"
+              title="Move title back to default position"
+            >
+              ↺ Reset position
+            </button>
+          )}
+        </DraggableSlideElement>
 
         {!hasCaseStudies ? (
           <div className="absolute top-[10%] right-[5%] w-[40%]">

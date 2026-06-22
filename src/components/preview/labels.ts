@@ -108,6 +108,8 @@ const fr: LocaleLabels = {
   'details to be confirmed': 'détails à confirmer',
   // Footer (item 7)
   'updated': 'mis à jour',
+  // Case study slide title
+  'Case Studies': 'Études de cas',
   // Hotel intro — no-destination fallback sentence
   'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
     "C'est le moment idéal pour diversifier vos canaux de distribution et conquérir une plus grande part de marché avec Luxury Escapes.",

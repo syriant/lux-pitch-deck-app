@@ -11,6 +11,7 @@ import { uploadImage, uploadDocument } from '@/api/upload.api';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, localeFieldKey, applyLocaleOverlay } from '@/components/preview/i18n';
+import { translateDeck } from '@/api/translate.api';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
 import { getSalesforceStatus } from '@/api/salesforce.api';
 import { AppShell } from '@/components/layout/AppShell';
@@ -30,6 +31,7 @@ export function DeckPreview() {
   const [slides, setSlides] = useState<SlideDefinition[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeLocale, setActiveLocale] = useState(DEFAULT_LOCALE);
+  const [translating, setTranslating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -59,6 +61,29 @@ export function DeckPreview() {
       : deck),
     [deck, activeLocale],
   );
+
+  // Translation (SYR-70 piece 6): show a translate button for non-English locales;
+  // re-translate once a translation layer already exists for the active locale.
+  const activeLocaleLabel = SUPPORTED_LOCALES.find((l) => l.code === activeLocale)?.label ?? activeLocale;
+  const hasTranslations = activeLocale !== DEFAULT_LOCALE
+    && !!deck
+    && Object.keys(deck.customFields ?? {}).some((k) => k.startsWith(`i18n.${activeLocale}.`));
+
+  const handleTranslate = useCallback(async () => {
+    if (!id || translating || activeLocale === DEFAULT_LOCALE) return;
+    setTranslating(true);
+    try {
+      await translateDeck(id, activeLocale);
+      // Re-fetch to pick up the new i18n.<locale>.* keys the backend wrote.
+      const fresh = await getFullDeck(id);
+      setDeck((prev) => (prev ? { ...prev, customFields: fresh.customFields } : prev));
+      if (deckRef.current) deckRef.current = { ...deckRef.current, customFields: fresh.customFields };
+    } catch {
+      console.error('Translation failed');
+    } finally {
+      setTranslating(false);
+    }
+  }, [id, activeLocale, translating]);
 
   async function runSalesforceUpload() {
     if (!id) return;
@@ -514,6 +539,23 @@ export function DeckPreview() {
                 </option>
               ))}
             </select>
+            {activeLocale !== DEFAULT_LOCALE && (
+              <button
+                type="button"
+                onClick={handleTranslate}
+                disabled={translating}
+                title={`Auto-translate the deck's content into ${activeLocaleLabel} with AI. You can edit any field afterwards; English is never changed.`}
+                className="rounded-md border border-[#01B18B] px-3 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5 whitespace-nowrap"
+              >
+                {translating && (
+                  <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                )}
+                {translating ? 'Translating…' : `${hasTranslations ? 'Re-translate' : '✨ Translate'} to ${activeLocaleLabel}`}
+              </button>
+            )}
             <label className={`rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50 cursor-pointer ${addingPage ? 'opacity-50 pointer-events-none' : ''}`} title="Add a one-pager (PDF or image) as an extra page">
               {addingPage ? 'Adding…' : '+ One-pager'}
               <input
