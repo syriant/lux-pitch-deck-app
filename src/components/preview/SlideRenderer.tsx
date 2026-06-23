@@ -47,12 +47,15 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd 
 
   const placeholders = useMemo<Record<string, string>>(() => {
     const property = slide.property ?? deck.properties[0];
+    const yearIso = deck.campaignEnd ?? deck.campaignStart;
+    const year = yearIso ? new Date(yearIso).getFullYear() : NaN;
     return {
       hotelName: property?.propertyName ?? deck.name ?? '',
       destination: property?.destination ?? '',
+      year: Number.isNaN(year) ? '' : String(year),
       ...Object.fromEntries((brandStats ?? []).map((b) => [b.key, b.value])),
     };
-  }, [slide.property, deck.properties, deck.name, brandStats]);
+  }, [slide.property, deck.properties, deck.name, deck.campaignStart, deck.campaignEnd, brandStats]);
 
   const style = scale
     ? {

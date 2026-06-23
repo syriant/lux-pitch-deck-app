@@ -13,6 +13,8 @@ import { createContext, useContext } from 'react';
  * Currently supported placeholders:
  *   - {hotelName}    — the active property's name (or deck name as fallback)
  *   - {destination}  — the active property's destination (or empty string)
+ *   - {year}         — the deck's campaign year (end, else start; empty if unset)
+ *   - {<brandStat>}  — any brand-stat key (e.g. {facebookMembers})
  */
 export interface DeckRenderContextValue {
   placeholders: Record<string, string>;
