@@ -122,13 +122,20 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
   // the comfortable 6 channels on one slide. Scale the text/padding/ticks down
   // by row count so the table still fits the fixed slide height.
   const rowCount = channels.length;
-  const fontPx = rowCount <= 7 ? 9 : rowCount <= 10 ? 8 : rowCount <= 13 ? 7 : 6;
+  // Global text-size modifier for the whole grid (50–200%). fontPx is the table
+  // base size (channel names + column headers inherit it), so scaling it + the
+  // description default covers all the slide's text.
+  const propId = property?.id ?? 'empty';
+  const textScale = Math.min(200, Math.max(50, Number(cf[`mktgAssets.${propId}.textScale`]) || 100));
+  const scale = textScale / 100;
+  const fontPx = Math.round((rowCount <= 7 ? 9 : rowCount <= 10 ? 8 : rowCount <= 13 ? 7 : 6) * scale);
+  const descSize = Math.round(9 * scale);
   const cellPad = rowCount <= 7 ? 12 : rowCount <= 10 ? 4 : rowCount <= 13 ? 3 : 2;
   const iconCls = rowCount <= 7 ? 'w-8 h-8' : rowCount <= 10 ? 'w-6 h-6' : rowCount <= 13 ? 'w-5 h-5' : 'w-4 h-4';
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
-      <div className="px-[5%] pt-[4%] pb-3">
+      <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="mktgAssets.headline"
           defaultValue="Marketing Assets"
@@ -138,6 +145,25 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
           className="font-bold"
           style={{ color: GREEN }}
         />
+        {onFieldChange && (
+          <div className="flex items-center gap-1 ml-2 shrink-0" title="Scale all text on this slide">
+            <button
+              type="button"
+              onClick={() => onFieldChange('custom', '', `mktgAssets.${propId}.textScale`, String(Math.max(50, textScale - 10)))}
+              className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
+            >
+              A−
+            </button>
+            <span className="text-[10px] text-gray-500 w-9 text-center tabular-nums">{textScale}%</span>
+            <button
+              type="button"
+              onClick={() => onFieldChange('custom', '', `mktgAssets.${propId}.textScale`, String(Math.min(200, textScale + 10)))}
+              className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
+            >
+              A+
+            </button>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -199,15 +225,18 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                   const v = rulesByTier[tier]?.assetEntitlements?.[channel];
                   if (v && v.trim() && !/^(✓|yes|y)$/i.test(v.trim())) { description = v; break; }
                 }
+                const slug = slugify(channel);
+                // Channel name is translatable per deck (i18n overlay populates the .name key).
+                const channelName = cf?.[`mktgAssets.${property!.id}.${slug}.name`] || channel;
                 return (
                   <tr key={channel}>
                     <td className={`align-top ${rowBg}`} style={{ padding: cellPad }}>
-                      <div className="font-bold mb-0.5" style={{ color: GREEN }}>{channel}</div>
+                      <div className="font-bold mb-0.5" style={{ color: GREEN }}>{channelName}</div>
                       {description && (
                         <SlideRichText
-                          fieldKey={`mktgAssets.${property!.id}.${slugify(channel)}.desc`}
+                          fieldKey={`mktgAssets.${property!.id}.${slug}.desc`}
                           defaultValue={description}
-                          defaultSize={9}
+                          defaultSize={descSize}
                           customFields={cf}
                           onFieldChange={onFieldChange}
                           className="text-left"

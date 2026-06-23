@@ -3,6 +3,7 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
 import { formatMoney, currencySymbol } from '../currency';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
+import { translateInclusion } from '../i18n';
 
 const GREEN = '#00b2a0';
 const MINT = '#dff0ee';
@@ -23,10 +24,11 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
   return map;
 }
 
-function fmtDateRange(start: string | null, end: string | null): string {
+function fmtDateRange(start: string | null, end: string | null, locale?: string): string {
   if (!start && !end) return '—';
-  const s = start ? new Date(start).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const e = end ? new Date(end).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const tag = dateLocaleTag(locale);
+  const s = start ? new Date(start).toLocaleDateString(tag, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const e = end ? new Date(end).toLocaleDateString(tag, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   if (s && e) return `${s} – ${e}`;
   return s || e || '—';
 }
@@ -159,8 +161,8 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     });
     const td = owner?.tacticalDetails;
     return {
-      campaign: fmtDateRange(td?.campaignStart ?? deck?.campaignStart ?? null, td?.campaignEnd ?? deck?.campaignEnd ?? null),
-      travel: fmtDateRange(td?.travelStart ?? deck?.travelStart ?? null, td?.travelEnd ?? deck?.travelEnd ?? null),
+      campaign: fmtDateRange(td?.campaignStart ?? deck?.campaignStart ?? null, td?.campaignEnd ?? deck?.campaignEnd ?? null, locale),
+      travel: fmtDateRange(td?.travelStart ?? deck?.travelStart ?? null, td?.travelEnd ?? deck?.travelEnd ?? null, locale),
     };
   };
 
@@ -192,7 +194,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     label: 'Inclusions Value Adds',
     cells: optNums.map((num) => {
       const first = groups.get(num)![0];
-      return first.inclusions?.map((inc) => `• ${inc}`).join('\n') ?? '-';
+      return first.inclusions?.map((inc) => `• ${translateInclusion(inc, customFields)}`).join('\n') ?? '-';
     }),
   });
 

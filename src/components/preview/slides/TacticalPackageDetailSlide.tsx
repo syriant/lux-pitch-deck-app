@@ -3,6 +3,7 @@ import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/dec
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee, tacticalTableSize, tacticalTableSizeKey } from './tactical-shared';
 import { t, dateLocaleTag } from '../labels';
+import { translateInclusion } from '../i18n';
 import { FontSizeControl } from '../FontSizeControl';
 import { SlideRichText } from '../SlideRichText';
 
@@ -276,7 +277,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
               ) : inclusions4.map((item, i) => (
                 <div key={i} className="flex items-center gap-2 py-0.5">
                   <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: accent }} />
-                  <span className="text-[10px]" style={{ color: DARK }}>{item}</span>
+                  <span className="text-[10px]" style={{ color: DARK }}>{translateInclusion(item, cf)}</span>
                 </div>
               ))}
             </div>
@@ -291,7 +292,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
                 {extraNightIncl.map((item, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
                     <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: accent }} />
-                    <span className="text-[10px]" style={{ color: DARK }}>{item}</span>
+                    <span className="text-[10px]" style={{ color: DARK }}>{translateInclusion(item, cf)}</span>
                   </div>
                 ))}
               </div>

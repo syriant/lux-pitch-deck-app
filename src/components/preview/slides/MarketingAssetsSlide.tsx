@@ -12,10 +12,11 @@ interface MarketingAssetsSlideProps {
   onFieldChange?: FieldChangeHandler;
 }
 
-function fmtDateRange(start: string | null, end: string | null): string {
+function fmtDateRange(start: string | null, end: string | null, locale?: string): string {
   if (!start && !end) return '—';
-  const s = start ? new Date(start).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-  const e = end ? new Date(end).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const tag = dateLocaleTag(locale);
+  const s = start ? new Date(start).toLocaleDateString(tag, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const e = end ? new Date(end).toLocaleDateString(tag, { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   if (s && e) return `${s} – ${e}`;
   return s || e || '—';
 }
@@ -48,6 +49,9 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const propId = property?.id ?? 'empty';
   const locale = deck?.renderLocale;
+  // Global text-size modifier for the whole table (50–200%).
+  const textScale = Math.min(200, Math.max(50, Number(cf?.[`mktg.${propId}.textScale`]) || 100));
+  const baseFont = Math.round(9 * (textScale / 100));
 
   const optionLabels = uniqueOptions.map((o) =>
     o.tierLabel ?? optionColumnLabel(o.optionNumber, locale)
@@ -64,8 +68,8 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
     });
     const td = owner?.tacticalDetails;
     return {
-      campaign: fmtDateRange(td?.campaignStart ?? deck?.campaignStart ?? null, td?.campaignEnd ?? deck?.campaignEnd ?? null),
-      travel: fmtDateRange(td?.travelStart ?? deck?.travelStart ?? null, td?.travelEnd ?? deck?.travelEnd ?? null),
+      campaign: fmtDateRange(td?.campaignStart ?? deck?.campaignStart ?? null, td?.campaignEnd ?? deck?.campaignEnd ?? null, locale),
+      travel: fmtDateRange(td?.travelStart ?? deck?.travelStart ?? null, td?.travelEnd ?? deck?.travelEnd ?? null, locale),
     };
   };
 
@@ -125,20 +129,41 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
           className="font-bold"
           style={{ color: GREEN }}
         />
-        {onFieldChange && uniqueOptions.length > 0 && hasEdits && (
-          <button
-            type="button"
-            onClick={async () => {
-              const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`));
-              for (const k of keysToRemove) {
-                await onFieldChange('custom', '', k, '');
-              }
-            }}
-            className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap ml-2"
-            title="Reset table text to match current deal options"
-          >
-            Refresh from options
-          </button>
+        {onFieldChange && (
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            <div className="flex items-center gap-1" title="Scale all table text on this slide">
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', `mktg.${propId}.textScale`, String(Math.max(50, textScale - 10)))}
+                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
+              >
+                A−
+              </button>
+              <span className="text-[10px] text-gray-500 w-9 text-center tabular-nums">{textScale}%</span>
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', `mktg.${propId}.textScale`, String(Math.min(200, textScale + 10)))}
+                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
+              >
+                A+
+              </button>
+            </div>
+            {uniqueOptions.length > 0 && hasEdits && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`));
+                  for (const k of keysToRemove) {
+                    await onFieldChange('custom', '', k, '');
+                  }
+                }}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Reset table text to match current deal options"
+              >
+                Refresh from options
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -151,7 +176,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
         </div>
       ) : (
         <div className="flex-1 px-[5%] pb-2 overflow-visible">
-          <table className="w-full text-[9px] border-collapse">
+          <table className="w-full border-collapse" style={{ fontSize: baseFont }}>
             <thead>
               <tr>
                 <th className="p-2 text-left w-[14%]" style={{ backgroundColor: GREEN }} />
@@ -184,7 +209,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                         <SlideRichText
                           fieldKey={`mktg.${propId}.${row.key}.opt${optNums[0]}`}
                           defaultValue={row.cells[0]}
-                          defaultSize={9}
+                          defaultSize={baseFont}
                           customFields={cf}
                           onFieldChange={onFieldChange}
                           style={{ color: '#1a1a1a', textAlign: 'center' }}
@@ -196,7 +221,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                           <SlideRichText
                             fieldKey={`mktg.${propId}.${row.key}.opt${optNums[ci]}`}
                             defaultValue={cell}
-                            defaultSize={9}
+                            defaultSize={baseFont}
                             customFields={cf}
                             onFieldChange={onFieldChange}
                             style={{ color: '#1a1a1a' }}

@@ -56,3 +56,13 @@ export function applyLocaleOverlay(
   }
   return Object.keys(overlay).length > 0 ? { ...base, ...overlay } : base;
 }
+
+/** customFields key for an inclusion string's translation (deduped by slug). */
+export function inclusionKey(text: string): string {
+  return `incl.${text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
+}
+
+/** Translate an inclusion line via the i18n overlay; falls back to the English text. */
+export function translateInclusion(text: string, cf?: Record<string, string> | null): string {
+  return cf?.[inclusionKey(text)] ?? text;
+}
