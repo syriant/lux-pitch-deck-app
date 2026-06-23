@@ -141,15 +141,277 @@ const fr: LocaleLabels = {
     "Aucune ressource marketing sélectionnée — cochez les ressources par option à l'étape 6.",
 };
 
+
+const es: LocaleLabels = {
+  // Pricing-table row labels (deal-options, marketing-assets)
+  'Campaign period': 'Período de campaña',
+  'Travel dates': 'Fechas de viaje',
+  'Room night forecast': 'Previsión de noches de habitación',
+  'Inclusions Value Adds': 'Inclusiones y ventajas',
+  'NETT rate': 'Tarifa NETA',
+  'Sell rate': 'Tarifa de venta',
+  'Surcharge – Season': 'Suplemento – Temporada',
+  'Blackout dates': 'Fechas no disponibles',
+  'Allocation': 'Asignación',
+  'Payment': 'Pago',
+  // Cell fragments / unit words
+  'per night': 'por noche',
+  'rooms per night': 'habitaciones por noche',
+  'room nights': 'noches de habitación',
+  'Room': 'Habitación',
+  'VCC': 'VCC',
+  // Option column headers
+  'Option': 'Opción',
+  'One': 'Uno',
+  'Two': 'Dos',
+  'Three': 'Tres',
+  'Four': 'Cuatro',
+  'Five': 'Cinco',
+  'Six': 'Seis',
+  // Tactical comparison rows — Investment Overview
+  'Projected Room Nights & Revenue': 'Noches de habitación e ingresos previstos',
+  'Key Marketing Benefits': 'Principales ventajas de marketing',
+  'Secure Bookings with Strong Cancellation Terms and ZERO risk of no-shows':
+    'Reservas seguras con condiciones de cancelación estrictas y CERO riesgo de no-shows',
+  'Market Leading Payment Terms': 'Condiciones de pago líderes del mercado',
+  'Access to our LUX Plus Members': 'Acceso a nuestros miembros LUX Plus',
+  // Tactical comparison rows — Amplification
+  'Broadcast quality video of your property to maximise sales':
+    'Vídeo de calidad broadcast de su establecimiento para maximizar las ventas',
+  'Celebrity influencer content produced on-site':
+    'Contenido de influencers famosos producido in situ',
+  'Inventory': 'Inventario',
+  'Social media amplification': 'Amplificación en redes sociales',
+  'eDM to Luxury Escapes database': 'eDM a la base de datos de Luxury Escapes',
+  'Push Notification to Highest Engaged Luxury Escapes App Users':
+    'Notificación push a los usuarios más activos de la app de Luxury Escapes',
+  // Tactical package detail — section headings
+  'NETT RATES PER PACKAGE': 'TARIFAS NETAS POR PAQUETE',
+  'SURCHARGE PERIODS': 'PERÍODOS DE SUPLEMENTO',
+  'BLACKOUT DATES': 'FECHAS NO DISPONIBLES',
+  'EXTRA GUEST POLICY': 'POLÍTICA DE HUÉSPED ADICIONAL',
+  'INCLUSIONS': 'INCLUSIONES',
+  'EXTRA NIGHTS': 'NOCHES ADICIONALES',
+  // Tactical package detail — column headers
+  'Room Type': 'Tipo de habitación',
+  'Allot.': 'Asign.',
+  'Occ.': 'Ocup.',
+  'Nights': 'Noches',
+  'Extra Night': 'Noche adic.',
+  'From': 'Desde',
+  'To': 'Hasta',
+  'Period': 'Período',
+  'Per Night': 'Por noche',
+  'Guest': 'Huésped',
+  'Age': 'Edad',
+  'Fee per Night': 'Tarifa por noche',
+  // Tactical package detail — badge suffix / labels
+  'TACTICAL PACKAGE': 'PAQUETE TÁCTICO',
+  'PACKAGE': 'PAQUETE',
+  // Region-stats metric labels + headings (item 4)
+  'room nights per campaign': 'noches de habitación por campaña',
+  'ALOS': 'DME',
+  'bookings from international markets': 'reservas de mercados internacionales',
+  'booking window': 'ventana de reserva',
+  'of members upgraded their packages': 'de los miembros mejoraron su paquete',
+  'Market Coverage': 'Cobertura de mercado',
+  'Your Destination': 'Su destino',
+  // Reach region names (item 5)
+  'North America': 'Norteamérica',
+  'United Kingdom': 'Reino Unido',
+  'Middle East': 'Oriente Medio',
+  'India': 'India',
+  'Asia': 'Asia',
+  'Australia': 'Australia',
+  'New Zealand': 'Nueva Zelanda',
+  // Campaign-options generated body (item 6)
+  'From reviewing your rates in market and applied learnings from recent campaigns we have prepared {n} tailored {opt} for your review.':
+    'Tras revisar sus tarifas en el mercado y aplicar los aprendizajes de campañas recientes, hemos preparado {n} {opt} a medida para su consideración.',
+  'From reviewing your rates in market and applied learnings from recent campaigns I have prepared three tailored options for your review.':
+    'Tras revisar sus tarifas en el mercado y aplicar los aprendizajes de campañas recientes, he preparado tres opciones a medida para su consideración.',
+  'option': 'opción',
+  'options': 'opciones',
+  'night': 'noche',
+  'nights': 'noches',
+  'from': 'desde',
+  'includes': 'incluye',
+  'details to be confirmed': 'detalles por confirmar',
+  // Footer (item 7)
+  'updated': 'actualizado',
+  // Case study slide title
+  'Case Studies': 'Casos de éxito',
+  // Hotel intro — no-destination fallback sentence
+  'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
+    'Ahora es el momento ideal para diversificar los canales de distribución y conquistar una mayor cuota de mercado con Luxury Escapes.',
+  // Empty-state / placeholder messages
+  'No surcharges': 'Sin suplementos',
+  'No rooms configured': 'No hay habitaciones configuradas',
+  'No inclusions': 'Sin inclusiones',
+  'No objectives set': 'No hay objetivos definidos',
+  'No deal options configured': 'No hay opciones configuradas',
+  'No marketing assets configured': 'No hay recursos de marketing configurados',
+  'No marketing assets selected': 'No hay recursos de marketing seleccionados',
+  'No tactical packages configured': 'No hay paquetes tácticos configurados',
+  'No case studies linked yet': 'Aún no hay casos asociados',
+  'No case studies selected': 'No hay casos seleccionados',
+  'No campaign details configured': 'No hay detalles de campaña configurados',
+  'Tactical package not configured': 'Paquete táctico no configurado',
+  'Loading deal tier rules...': 'Cargando reglas de niveles…',
+  'Custom page image missing': 'Falta la imagen de página personalizada',
+  'Custom page image not found': 'Imagen de página personalizada no encontrada',
+  'Upload a pricing tool in the wizard (Step 2)': 'Importe una herramienta de tarificación en el asistente (paso 2)',
+  'Assets are auto-recommended from deal tier rules (Step 6)':
+    'Los recursos se recomiendan automáticamente según las reglas de niveles (paso 6)',
+  'Configure tactical packages in Step 2': 'Configure los paquetes tácticos en el paso 2',
+  'Add objectives in the wizard (Step 4)': 'Añada objetivos en el asistente (paso 4)',
+  'Add case studies in the wizard (Step 5)': 'Añada casos en el asistente (paso 5)',
+  "Tick assets per option in Step 6, or set the property's grade and destination if no entitlements load":
+    'Marque los recursos por opción en el paso 6, o defina la categoría y el destino del establecimiento si no se cargan las autorizaciones',
+  'No marketing assets selected — tick assets per option in Step 6.':
+    'No hay recursos de marketing seleccionados — marque los recursos por opción en el paso 6.',
+};
+
+const it: LocaleLabels = {
+  // Pricing-table row labels (deal-options, marketing-assets)
+  'Campaign period': 'Periodo della campagna',
+  'Travel dates': 'Date di viaggio',
+  'Room night forecast': 'Previsione di pernottamenti',
+  'Inclusions Value Adds': 'Inclusioni e vantaggi',
+  'NETT rate': 'Tariffa NETTA',
+  'Sell rate': 'Tariffa di vendita',
+  'Surcharge – Season': 'Supplemento – Stagione',
+  'Blackout dates': 'Date di chiusura',
+  'Allocation': 'Allotment',
+  'Payment': 'Pagamento',
+  // Cell fragments / unit words
+  'per night': 'a notte',
+  'rooms per night': 'camere a notte',
+  'room nights': 'pernottamenti',
+  'Room': 'Camera',
+  'VCC': 'VCC',
+  // Option column headers
+  'Option': 'Opzione',
+  'One': 'Uno',
+  'Two': 'Due',
+  'Three': 'Tre',
+  'Four': 'Quattro',
+  'Five': 'Cinque',
+  'Six': 'Sei',
+  // Tactical comparison rows — Investment Overview
+  'Projected Room Nights & Revenue': 'Pernottamenti e ricavi previsti',
+  'Key Marketing Benefits': 'Principali vantaggi di marketing',
+  'Secure Bookings with Strong Cancellation Terms and ZERO risk of no-shows':
+    'Prenotazioni sicure con condizioni di cancellazione rigorose e ZERO rischio di no-show',
+  'Market Leading Payment Terms': 'Condizioni di pagamento ai vertici del mercato',
+  'Access to our LUX Plus Members': 'Accesso ai nostri membri LUX Plus',
+  // Tactical comparison rows — Amplification
+  'Broadcast quality video of your property to maximise sales':
+    'Video di qualità broadcast della vostra struttura per massimizzare le vendite',
+  'Celebrity influencer content produced on-site':
+    'Contenuti di influencer famosi prodotti in loco',
+  'Inventory': 'Inventario',
+  'Social media amplification': 'Amplificazione sui social media',
+  'eDM to Luxury Escapes database': 'eDM al database di Luxury Escapes',
+  'Push Notification to Highest Engaged Luxury Escapes App Users':
+    "Notifica push agli utenti più attivi dell'app Luxury Escapes",
+  // Tactical package detail — section headings
+  'NETT RATES PER PACKAGE': 'TARIFFE NETTE PER PACCHETTO',
+  'SURCHARGE PERIODS': 'PERIODI DI SUPPLEMENTO',
+  'BLACKOUT DATES': 'DATE DI CHIUSURA',
+  'EXTRA GUEST POLICY': 'POLITICA OSPITE AGGIUNTIVO',
+  'INCLUSIONS': 'INCLUSIONI',
+  'EXTRA NIGHTS': 'NOTTI AGGIUNTIVE',
+  // Tactical package detail — column headers
+  'Room Type': 'Tipo di camera',
+  'Allot.': 'Allot.',
+  'Occ.': 'Occ.',
+  'Nights': 'Notti',
+  'Extra Night': 'Notte agg.',
+  'From': 'Dal',
+  'To': 'Al',
+  'Period': 'Periodo',
+  'Per Night': 'A notte',
+  'Guest': 'Ospite',
+  'Age': 'Età',
+  'Fee per Night': 'Tariffa a notte',
+  // Tactical package detail — badge suffix / labels
+  'TACTICAL PACKAGE': 'PACCHETTO TATTICO',
+  'PACKAGE': 'PACCHETTO',
+  // Region-stats metric labels + headings (item 4)
+  'room nights per campaign': 'pernottamenti per campagna',
+  'ALOS': 'DMS',
+  'bookings from international markets': 'prenotazioni dai mercati internazionali',
+  'booking window': 'finestra di prenotazione',
+  'of members upgraded their packages': "dei membri hanno fatto l'upgrade del pacchetto",
+  'Market Coverage': 'Copertura di mercato',
+  'Your Destination': 'La vostra destinazione',
+  // Reach region names (item 5)
+  'North America': 'America del Nord',
+  'United Kingdom': 'Regno Unito',
+  'Middle East': 'Medio Oriente',
+  'India': 'India',
+  'Asia': 'Asia',
+  'Australia': 'Australia',
+  'New Zealand': 'Nuova Zelanda',
+  // Campaign-options generated body (item 6)
+  'From reviewing your rates in market and applied learnings from recent campaigns we have prepared {n} tailored {opt} for your review.':
+    'Dopo aver esaminato le vostre tariffe sul mercato e applicato gli insegnamenti delle campagne recenti, abbiamo preparato {n} {opt} su misura per la vostra valutazione.',
+  'From reviewing your rates in market and applied learnings from recent campaigns I have prepared three tailored options for your review.':
+    'Dopo aver esaminato le vostre tariffe sul mercato e applicato gli insegnamenti delle campagne recenti, ho preparato tre opzioni su misura per la vostra valutazione.',
+  'option': 'opzione',
+  'options': 'opzioni',
+  'night': 'notte',
+  'nights': 'notti',
+  'from': 'da',
+  'includes': 'include',
+  'details to be confirmed': 'dettagli da confermare',
+  // Footer (item 7)
+  'updated': 'aggiornato',
+  // Case study slide title
+  'Case Studies': 'Casi di studio',
+  // Hotel intro — no-destination fallback sentence
+  'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
+    'È il momento ideale per diversificare i canali di distribuzione e conquistare una maggiore quota di mercato con Luxury Escapes.',
+  // Empty-state / placeholder messages
+  'No surcharges': 'Nessun supplemento',
+  'No rooms configured': 'Nessuna camera configurata',
+  'No inclusions': 'Nessuna inclusione',
+  'No objectives set': 'Nessun obiettivo definito',
+  'No deal options configured': 'Nessuna opzione configurata',
+  'No marketing assets configured': 'Nessuna risorsa di marketing configurata',
+  'No marketing assets selected': 'Nessuna risorsa di marketing selezionata',
+  'No tactical packages configured': 'Nessun pacchetto tattico configurato',
+  'No case studies linked yet': 'Nessun caso di studio ancora associato',
+  'No case studies selected': 'Nessun caso di studio selezionato',
+  'No campaign details configured': 'Nessun dettaglio della campagna configurato',
+  'Tactical package not configured': 'Pacchetto tattico non configurato',
+  'Loading deal tier rules...': 'Caricamento delle regole dei livelli…',
+  'Custom page image missing': 'Immagine della pagina personalizzata mancante',
+  'Custom page image not found': 'Immagine della pagina personalizzata non trovata',
+  'Upload a pricing tool in the wizard (Step 2)': 'Importate uno strumento di tariffazione nella procedura guidata (passaggio 2)',
+  'Assets are auto-recommended from deal tier rules (Step 6)':
+    'Le risorse sono consigliate automaticamente in base alle regole dei livelli (passaggio 6)',
+  'Configure tactical packages in Step 2': 'Configurate i pacchetti tattici nel passaggio 2',
+  'Add objectives in the wizard (Step 4)': 'Aggiungete obiettivi nella procedura guidata (passaggio 4)',
+  'Add case studies in the wizard (Step 5)': 'Aggiungete casi di studio nella procedura guidata (passaggio 5)',
+  "Tick assets per option in Step 6, or set the property's grade and destination if no entitlements load":
+    'Selezionate le risorse per opzione nel passaggio 6, oppure impostate la categoria e la destinazione della struttura se non si caricano le autorizzazioni',
+  'No marketing assets selected — tick assets per option in Step 6.':
+    'Nessuna risorsa di marketing selezionata — selezionate le risorse per opzione nel passaggio 6.',
+};
+
 /** BCP-47 tag for date formatting per UI locale. English keeps the AU format. */
 export function dateLocaleTag(locale?: string | null): string {
   switch (locale) {
     case 'fr': return 'fr-FR';
+    case 'es': return 'es-ES';
+    case 'it': return 'it-IT';
+    case 'ja': return 'ja-JP';
     default: return 'en-AU';
   }
 }
 
-const LABELS: Record<string, LocaleLabels> = { fr };
+const LABELS: Record<string, LocaleLabels> = { fr, es, it };
 
 /** Translate a fixed label. `id` is the English text; returns English if uncatalogued. */
 export function t(id: string, locale?: string | null): string {

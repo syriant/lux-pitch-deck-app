@@ -22,13 +22,15 @@ export interface SupportedLocale {
 /**
  * Languages offered in the preview switcher.
  * Confirmed first set (LUX): French, Spanish, Italian, Japanese — being rolled
- * out in stages. Starting with French only (Latin script, no layout surprises);
- * Spanish + Italian follow; Japanese is held back until CJK layout work is done
+ * out in stages. French + Spanish + Italian are live (Latin script, no layout
+ * surprises). Japanese is held back until CJK layout work is done
  * (variable-length / line-breaking — see plan doc piece 7).
  */
 export const SUPPORTED_LOCALES: SupportedLocale[] = [
   { code: 'en', label: 'English' },
   { code: 'fr', label: 'French' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'it', label: 'Italian' },
 ];
 
 const I18N_PREFIX = 'i18n.';
