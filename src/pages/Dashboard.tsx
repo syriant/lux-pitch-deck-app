@@ -4,6 +4,10 @@ import { getDecks, createDeck, deleteDeck, type Deck } from '@/api/decks.api';
 import { getTemplates, type DeckTemplate } from '@/api/templates.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { SUPPORTED_LOCALES } from '@/components/preview/i18n';
+
+const localeLabel = (code: string): string =>
+  SUPPORTED_LOCALES.find((l) => l.code === code)?.label ?? code;
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -102,7 +106,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#363A45]">Dashboard</h1>
@@ -216,6 +220,15 @@ export function Dashboard() {
                   >
                     <td className="py-3 pr-4 font-medium text-[#363A45]">
                       {deck.name}
+                      {deck.translatedLocales?.map((code) => (
+                        <span
+                          key={code}
+                          title={`Translated to ${localeLabel(code)}`}
+                          className="ml-1.5 inline-block rounded bg-[#E6F9F5] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#01B18B] align-middle"
+                        >
+                          {code}
+                        </span>
+                      ))}
                       {isDeleted && (
                         <span className="ml-2 inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
                           Deleted

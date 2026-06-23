@@ -14,6 +14,8 @@ export interface Deck {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  /** Locale codes this deck has translations for (excludes English source). */
+  translatedLocales?: string[];
 }
 
 export interface DeckProperty {
