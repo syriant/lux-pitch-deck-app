@@ -16,8 +16,16 @@ import {
   type UsageFacets,
 } from '@/api/llm.api';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
+import { SUPPORTED_LOCALES } from '@/components/preview/i18n';
 
 type Tab = 'usage' | 'models' | 'settings';
+
+/** Human-readable language for a usage row's context.locale (translation calls); '—' otherwise. */
+function usageLanguage(context: Record<string, unknown> | null): string {
+  const code = context?.locale;
+  if (typeof code !== 'string' || !code) return '—';
+  return SUPPORTED_LOCALES.find((l) => l.code === code)?.label ?? code;
+}
 
 const PROVIDER_LABEL: Record<LlmProvider, string> = {
   anthropic: 'Anthropic',
@@ -799,6 +807,7 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
           <tr className="border-b border-gray-200 text-left text-gray-500">
             <th className="pb-2 pr-3">When</th>
             <th className="pb-2 pr-3">System</th>
+            <th className="pb-2 pr-3">Language</th>
             <th className="pb-2 pr-3">User</th>
             <th className="pb-2 pr-3">Deck</th>
             <th className="pb-2 pr-3">Model</th>
@@ -812,11 +821,12 @@ function UsageTab({ settings }: { settings: LlmSetting[] }) {
         </thead>
         <tbody>
           {usage.length === 0 ? (
-            <tr><td colSpan={11} className="py-6 text-center text-gray-400">No usage yet.</td></tr>
+            <tr><td colSpan={12} className="py-6 text-center text-gray-400">No usage yet.</td></tr>
           ) : usage.map((row) => (
             <tr key={row.id} className="border-b border-gray-100">
               <td className="py-2 pr-3 text-gray-600">{new Date(row.createdAt).toLocaleString()}</td>
               <td className="py-2 pr-3 font-mono text-xs text-gray-700">{row.settingKey}</td>
+              <td className="py-2 pr-3 text-gray-700">{usageLanguage(row.context)}</td>
               <td className="py-2 pr-3 text-gray-700" title={row.user?.email ?? ''}>{row.user?.name ?? '—'}</td>
               <td className="py-2 pr-3 text-gray-700">
                 {row.deck ? (
