@@ -89,6 +89,7 @@ const fr: LocaleLabels = {
   // Reach region names (item 5)
   'North America': 'Amérique du Nord',
   'United Kingdom': 'Royaume-Uni',
+  'Europe': 'Europe',
   'Middle East': 'Moyen-Orient',
   'India': 'Inde',
   'Asia': 'Asie',
@@ -219,6 +220,7 @@ const es: LocaleLabels = {
   // Reach region names (item 5)
   'North America': 'Norteamérica',
   'United Kingdom': 'Reino Unido',
+  'Europe': 'Europa',
   'Middle East': 'Oriente Medio',
   'India': 'India',
   'Asia': 'Asia',
@@ -348,6 +350,7 @@ const it: LocaleLabels = {
   // Reach region names (item 5)
   'North America': 'America del Nord',
   'United Kingdom': 'Regno Unito',
+  'Europe': 'Europa',
   'Middle East': 'Medio Oriente',
   'India': 'India',
   'Asia': 'Asia',
@@ -400,6 +403,137 @@ const it: LocaleLabels = {
     'Nessuna risorsa di marketing selezionata — selezionate le risorse per opzione nel passaggio 6.',
 };
 
+
+const ja: LocaleLabels = {
+  // Pricing-table row labels (deal-options, marketing-assets)
+  'Campaign period': 'キャンペーン期間',
+  'Travel dates': '旅行日程',
+  'Room night forecast': '延べ宿泊室数の予測',
+  'Inclusions Value Adds': '特典・付加価値',
+  'NETT rate': 'ネット料金',
+  'Sell rate': '販売料金',
+  'Surcharge – Season': '追加料金 – シーズン',
+  'Blackout dates': '除外日',
+  'Allocation': '割当',
+  'Payment': '支払い',
+  // Cell fragments / unit words
+  'per night': '1泊あたり',
+  'rooms per night': '1泊あたりの客室数',
+  'room nights': '延べ宿泊室数',
+  'Room': '客室',
+  'VCC': 'VCC',
+  // Option column headers
+  'Option': 'オプション',
+  'One': '1',
+  'Two': '2',
+  'Three': '3',
+  'Four': '4',
+  'Five': '5',
+  'Six': '6',
+  // Tactical comparison rows — Investment Overview
+  'Projected Room Nights & Revenue': '予測延べ宿泊室数および収益',
+  'Key Marketing Benefits': '主なマーケティング特典',
+  'Secure Bookings with Strong Cancellation Terms and ZERO risk of no-shows':
+    '厳格なキャンセル規定による確実な予約と、ノーショーのリスクゼロ',
+  'Market Leading Payment Terms': '業界をリードする支払い条件',
+  'Access to our LUX Plus Members': 'LUX Plus会員へのアクセス',
+  // Tactical comparison rows — Amplification
+  'Broadcast quality video of your property to maximise sales':
+    '売上を最大化する放送品質の施設紹介動画',
+  'Celebrity influencer content produced on-site':
+    '現地で制作する著名インフルエンサーによるコンテンツ',
+  'Inventory': '在庫',
+  'Social media amplification': 'ソーシャルメディアでの拡散',
+  'eDM to Luxury Escapes database': 'Luxury EscapesデータベースへのeDM配信',
+  'Push Notification to Highest Engaged Luxury Escapes App Users':
+    'Luxury Escapesアプリの最もアクティブな利用者へのプッシュ通知',
+  // Tactical package detail — section headings
+  'NETT RATES PER PACKAGE': 'パッケージ別ネット料金',
+  'SURCHARGE PERIODS': '追加料金期間',
+  'BLACKOUT DATES': '除外日',
+  'EXTRA GUEST POLICY': '追加ゲストポリシー',
+  'INCLUSIONS': '特典',
+  'EXTRA NIGHTS': '追加宿泊',
+  // Tactical package detail — column headers
+  'Room Type': '客室タイプ',
+  'Allot.': '割当',
+  'Occ.': '定員',
+  'Nights': '泊数',
+  'Extra Night': '追加1泊',
+  'From': '開始',
+  'To': '終了',
+  'Period': '期間',
+  'Per Night': '1泊あたり',
+  'Guest': 'ゲスト',
+  'Age': '年齢',
+  'Fee per Night': '1泊あたりの料金',
+  // Tactical package detail — badge suffix / labels
+  'TACTICAL PACKAGE': 'タクティカルパッケージ',
+  'PACKAGE': 'パッケージ',
+  // Region-stats metric labels + headings (item 4)
+  'room nights per campaign': 'キャンペーンあたりの延べ宿泊室数',
+  'ALOS': '平均宿泊日数',
+  'bookings from international markets': '海外市場からの予約',
+  'booking window': '予約リードタイム',
+  'of members upgraded their packages': 'の会員がパッケージをアップグレード',
+  'Market Coverage': '市場カバレッジ',
+  'Your Destination': 'お客様の目的地',
+  // Reach region names (item 5)
+  'North America': '北米',
+  'United Kingdom': '英国',
+  'Europe': 'ヨーロッパ',
+  'Middle East': '中東',
+  'India': 'インド',
+  'Asia': 'アジア',
+  'Australia': 'オーストラリア',
+  'New Zealand': 'ニュージーランド',
+  // Campaign-options generated body (item 6)
+  'From reviewing your rates in market and applied learnings from recent campaigns we have prepared {n} tailored {opt} for your review.':
+    '市場における貴施設の料金を精査し、近年のキャンペーンから得た知見を踏まえ、ご検討用に{n}件のオーダーメイドの{opt}をご用意しました。',
+  'From reviewing your rates in market and applied learnings from recent campaigns I have prepared three tailored options for your review.':
+    '市場における貴施設の料金を精査し、近年のキャンペーンから得た知見を踏まえ、ご検討用に3件のオーダーメイドのオプションをご用意しました。',
+  'option': 'オプション',
+  'options': 'オプション',
+  'night': '泊',
+  'nights': '泊',
+  'from': '〜',
+  'includes': '含む',
+  'details to be confirmed': '詳細は追ってご連絡します',
+  // Footer (item 7)
+  'updated': '更新日',
+  // Case study slide title
+  'Case Studies': '導入事例',
+  // Hotel intro — no-destination fallback sentence
+  'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
+    '今こそ、Luxury Escapesとともに販売チャネルを多様化し、より大きな市場シェアを獲得する絶好の機会です。',
+  // Empty-state / placeholder messages
+  'No surcharges': '追加料金なし',
+  'No rooms configured': '客室が設定されていません',
+  'No inclusions': '特典なし',
+  'No objectives set': '目標が設定されていません',
+  'No deal options configured': 'オプションが設定されていません',
+  'No marketing assets configured': 'マーケティング素材が設定されていません',
+  'No marketing assets selected': 'マーケティング素材が選択されていません',
+  'No tactical packages configured': 'タクティカルパッケージが設定されていません',
+  'No case studies linked yet': '導入事例がまだ紐付けられていません',
+  'No case studies selected': '導入事例が選択されていません',
+  'No campaign details configured': 'キャンペーン詳細が設定されていません',
+  'Tactical package not configured': 'タクティカルパッケージが設定されていません',
+  'Loading deal tier rules...': 'ディールティアのルールを読み込んでいます…',
+  'Custom page image missing': 'カスタムページの画像がありません',
+  'Custom page image not found': 'カスタムページの画像が見つかりません',
+  'Upload a pricing tool in the wizard (Step 2)': 'ウィザードで料金ツールをアップロードしてください（ステップ2）',
+  'Assets are auto-recommended from deal tier rules (Step 6)':
+    '素材はディールティアのルールに基づき自動的に推奨されます（ステップ6）',
+  'Configure tactical packages in Step 2': 'ステップ2でタクティカルパッケージを設定してください',
+  'Add objectives in the wizard (Step 4)': 'ウィザードで目標を追加してください（ステップ4）',
+  'Add case studies in the wizard (Step 5)': 'ウィザードで導入事例を追加してください（ステップ5）',
+  "Tick assets per option in Step 6, or set the property's grade and destination if no entitlements load":
+    'ステップ6でオプションごとに素材をチェックするか、権限が読み込まれない場合は施設のグレードと目的地を設定してください',
+  'No marketing assets selected — tick assets per option in Step 6.':
+    'マーケティング素材が選択されていません — ステップ6でオプションごとに素材をチェックしてください。',
+};
+
 /** BCP-47 tag for date formatting per UI locale. English keeps the AU format. */
 export function dateLocaleTag(locale?: string | null): string {
   switch (locale) {
@@ -411,7 +545,7 @@ export function dateLocaleTag(locale?: string | null): string {
   }
 }
 
-const LABELS: Record<string, LocaleLabels> = { fr, es, it };
+const LABELS: Record<string, LocaleLabels> = { fr, es, it, ja };
 
 /** Translate a fixed label. `id` is the English text; returns English if uncatalogued. */
 export function t(id: string, locale?: string | null): string {

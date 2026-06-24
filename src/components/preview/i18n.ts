@@ -21,16 +21,17 @@ export interface SupportedLocale {
 
 /**
  * Languages offered in the preview switcher.
- * Confirmed first set (LUX): French, Spanish, Italian, Japanese — being rolled
- * out in stages. French + Spanish + Italian are live (Latin script, no layout
- * surprises). Japanese is held back until CJK layout work is done
- * (variable-length / line-breaking — see plan doc piece 7).
+ * Confirmed set (LUX): French, Spanish, Italian, Japanese. French + Spanish +
+ * Italian are live. Japanese (CJK) is enabled on the SYR-70 branch for piece-7
+ * testing — fonts (Noto Sans JP) + ja label catalogue are in; layout QA (P7.3)
+ * and native review of the ja catalogue remain before this merges to prod.
  */
 export const SUPPORTED_LOCALES: SupportedLocale[] = [
   { code: 'en', label: 'English' },
   { code: 'fr', label: 'French' },
   { code: 'es', label: 'Spanish' },
   { code: 'it', label: 'Italian' },
+  { code: 'ja', label: 'Japanese' },
 ];
 
 const I18N_PREFIX = 'i18n.';

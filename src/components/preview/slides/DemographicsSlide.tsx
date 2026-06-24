@@ -1,4 +1,5 @@
 import { type FullDeck } from '@/api/decks.api';
+import { SLIDE_FONT_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
@@ -55,7 +56,7 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold leading-snug"
-          style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
+          style={{ fontFamily: SLIDE_FONT_STACK }}
         />
         <SlideRichText
           fieldKey="demo.subheadline"

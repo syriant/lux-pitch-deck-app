@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { SLIDE_FONT_STACK } from '../fonts';
 import { useQuery } from '@tanstack/react-query';
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
@@ -91,7 +92,7 @@ function drawMapWithLabels(
     // Name lines — translate via key; wrap on whitespace (English names break on \n).
     const lines = t(key, locale).split(/\n|\s+/);
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.font = `${nameSize}px Arial, sans-serif`;
+    ctx.font = `${nameSize}px ${SLIDE_FONT_STACK}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -105,7 +106,7 @@ function drawMapWithLabels(
 
     // Member count (green)
     ctx.fillStyle = '#00b2a0';
-    ctx.font = `bold ${countSize}px Arial, sans-serif`;
+    ctx.font = `bold ${countSize}px ${SLIDE_FONT_STACK}`;
     ctx.fillText(members, x, startY + lines.length * lineH + countSize * 0.4);
   }
 
@@ -204,7 +205,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
               fieldKey="reach.title"
               customFields={cf}
               onFieldChange={onFieldChange}
-              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
+              style={{ fontFamily: SLIDE_FONT_STACK, textAlign: 'center' }}
             />
             {onFieldChange && titlePositioned && (
               <button

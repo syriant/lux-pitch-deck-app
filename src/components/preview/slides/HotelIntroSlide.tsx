@@ -1,4 +1,5 @@
 import { type FullDeck } from '@/api/decks.api';
+import { SLIDE_FONT_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
@@ -67,7 +68,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
                 customFields={cf}
                 onFieldChange={onFieldChange}
                 className="font-bold text-white leading-snug"
-                style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
+                style={{ fontFamily: SLIDE_FONT_STACK }}
               />
               {onFieldChange && valuePropPositioned && (
                 <button

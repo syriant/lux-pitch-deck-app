@@ -1,5 +1,23 @@
 @import 'tailwindcss';
 
+/* SYR-70 piece 7 (CJK): self-hosted Japanese face so slide copy renders with real
+   glyphs in the preview AND the server-side PDF (Chromium has no system JP font).
+   Referenced as a fallback in the slide font stacks (see SLIDE_FONT_STACK). */
+@font-face {
+  font-family: 'Noto Sans JP';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/NotoSansJP-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans JP';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/NotoSansJP-Bold.woff2') format('woff2');
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }

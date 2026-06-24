@@ -1,4 +1,5 @@
 import { type FullDeck } from '@/api/decks.api';
+import { SLIDE_FONT_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
@@ -102,7 +103,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
               customFields={cf}
               onFieldChange={onFieldChange}
               className="font-bold text-white leading-snug drop-shadow-md"
-              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', textAlign: 'center' }}
+              style={{ fontFamily: SLIDE_FONT_STACK, textAlign: 'center' }}
             />
             {onFieldChange && hookPositioned && (
               <button

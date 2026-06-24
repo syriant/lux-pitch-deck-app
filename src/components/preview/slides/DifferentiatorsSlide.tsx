@@ -1,4 +1,5 @@
 import { type FullDeck } from '@/api/decks.api';
+import { SLIDE_FONT_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
@@ -60,7 +61,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
               customFields={cf}
               onFieldChange={onFieldChange}
               className="font-bold leading-snug"
-              style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif', color: GREEN }}
+              style={{ fontFamily: SLIDE_FONT_STACK, color: GREEN }}
             />
             {onFieldChange && headlinePositioned && (
               <button
