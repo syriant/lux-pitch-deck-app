@@ -24,6 +24,15 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
   return map;
 }
 
+// Pick the label shown for a surcharge. Seasonal surcharges store the date range
+// in `name` and the season title (e.g. "shoulder") in `period` — show the dates,
+// not the title. Day-of-week surcharges store the day in `name` and a qualified
+// label (e.g. "Saturday (high season)") in `period`, which begins with `name`;
+// those keep the label.
+function surchargeLabel(s: { name: string; period?: string }): string {
+  return s.period && s.period.startsWith(s.name) ? s.period : s.name;
+}
+
 function fmtDateRange(start: string | null, end: string | null, locale?: string): string {
   if (!start && !end) return '—';
   const tag = dateLocaleTag(locale);
@@ -43,8 +52,10 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   // Forecast is sourced from the pricing tool and only present for some
   // properties (e.g. limited Reef Sleep WSY data), so only offer the toggle
   // when at least one option actually carries a room-night forecast.
-  const hasForecast = !!property && property.options.some((o) => o.tacticalDetails?.roomNightForecast != null);
+  const hasForecast = !!property && property.options.some((o) => o.tacticalDetails?.roomNightForecast != null || o.tacticalDetails?.revenueForecast != null);
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
+  // Per-property table text-size (50–200%), mirroring the campaign-details slide.
+  const dealTextScale = property ? Math.min(200, Math.max(50, Number(cf[`deal.${property.id}.textScale`]) || 100)) : 100;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -61,6 +72,23 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
         />
         {onFieldChange && hasOptions && (
           <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-1" title="Scale all table text on this slide">
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', `deal.${property.id}.textScale`, String(Math.max(50, dealTextScale - 10)))}
+                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
+              >
+                A−
+              </button>
+              <span className="text-[10px] text-gray-500 w-9 text-center tabular-nums">{dealTextScale}%</span>
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', `deal.${property.id}.textScale`, String(Math.min(200, dealTextScale + 10)))}
+                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
+              >
+                A+
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => onFieldChange('custom', '', 'deal.showSellRates', cf['deal.showSellRates'] === 'true' ? 'false' : 'true')}
@@ -79,11 +107,21 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
                 {cf['deal.showForecast'] === 'true' ? 'Hide forecast' : 'Show forecast'}
               </button>
             )}
-            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`)) && (
+            <button
+              type="button"
+              onClick={() => onFieldChange('custom', '', `deal.${property.id}.combine`, cf[`deal.${property.id}.combine`] === 'true' ? 'false' : 'true')}
+              className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+              title="Combine the campaign details (Allocation, Payment) onto this slide and hide the separate details slide"
+            >
+              {cf[`deal.${property.id}.combine`] === 'true' ? 'Split details slide' : 'Combine onto one slide'}
+            </button>
+            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale')) && (
               <button
                 type="button"
                 onClick={async () => {
-                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`));
+                  // Reset per-cell text/size overrides only — leave the structural
+                  // combine + text-scale toggles intact.
+                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale'));
                   for (const k of keysToRemove) {
                     await onFieldChange('custom', '', k, '');
                   }
@@ -136,6 +174,12 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   const optNums = Array.from(groups.keys()).sort();
   const showSell = customFields?.['deal.showSellRates'] === 'true';
   const showForecast = customFields?.['deal.showForecast'] === 'true';
+  // When combined, the campaign-details slide's rows (Allocation, Payment) move
+  // onto this table and that slide is hidden via hiddenSlides (see DeckPreview).
+  const combined = customFields?.[`deal.${property.id}.combine`] === 'true';
+  // Per-property table text-size (50–200%), driven by the header A−/A+ control.
+  const textScale = Math.min(200, Math.max(50, Number(customFields?.[`deal.${property.id}.textScale`]) || 100));
+  const baseFont = Math.round(9 * (textScale / 100));
   const locale = deck?.renderLocale;
 
   // Per-option room-night forecast — owner row carries the parsed value.
@@ -144,6 +188,14 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     const owner = grp.find((o) => o.tacticalDetails?.roomNightForecast != null);
     const n = owner?.tacticalDetails?.roomNightForecast;
     return n != null ? `${n.toLocaleString()} ${t('room nights', locale)}` : '';
+  };
+
+  // Per-option revenue forecast (Total Hotel Revenue, AUD) — owner row carries it.
+  const optionRevenue = (optNum: number): string => {
+    const grp = groups.get(optNum) ?? [];
+    const owner = grp.find((o) => o.tacticalDetails?.revenueForecast != null);
+    const r = owner?.tacticalDetails?.revenueForecast;
+    return r != null ? `${currencySymbol(property.currency)}${r.toLocaleString()}` : '';
   };
 
   const optionLabels = optNums.map((num) => {
@@ -166,6 +218,19 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     };
   };
 
+  // Per-option allocation lines, deduped — mirrors the campaign-details slide.
+  const optionAllocation = (optNum: number): string => {
+    const rooms = groups.get(optNum) ?? [];
+    const lines = rooms.map((r) => {
+      const room = r.roomType ?? t('Room', locale);
+      if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;
+      return /^\d+$/.test(r.allocation)
+        ? `${room} – ${r.allocation} ${t('rooms per night', locale)}`
+        : `${room} – ${r.allocation}`;
+    });
+    return Array.from(new Set(lines)).join('\n');
+  };
+
   // Build rows
   type Row = { key: string; label: string; cells: string[] };
   const rows: Row[] = [];
@@ -179,12 +244,21 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   }
   rows.push({ key: 'travel', label: 'Travel dates', cells: travelCells });
 
+  // Allocation — merged in from the campaign-details slide when combined.
+  if (combined) {
+    rows.push({ key: 'allocation', label: 'Allocation', cells: optNums.map((num) => optionAllocation(num)) });
+  }
+
   // Room night forecast (#— from the pricing tool). Opt-in via the slide
   // header toggle; only rendered when a forecast was parsed for some option.
   if (showForecast) {
     const forecastCells = optNums.map((num) => optionForecast(num));
     if (forecastCells.some((c) => c !== '')) {
       rows.push({ key: 'forecast', label: 'Room night forecast', cells: forecastCells });
+    }
+    const revenueCells = optNums.map((num) => optionRevenue(num));
+    if (revenueCells.some((c) => c !== '')) {
+      rows.push({ key: 'revenue', label: 'Revenue forecast', cells: revenueCells });
     }
   }
 
@@ -243,11 +317,12 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       label: 'Surcharge – Season',
       cells: optNums.map((num) => {
         const first = groups.get(num)![0];
-        return first.surcharges?.map((s) =>
-          s.amount == null
-            ? `${s.period ?? s.name}`
-            : `${s.period ?? s.name} - ${currencySymbol(property.currency)}${Number(s.amount).toLocaleString()} ${t('per night', locale)}`
-        ).join('\n') ?? '-';
+        return first.surcharges?.map((s) => {
+          const label = surchargeLabel(s);
+          return s.amount == null
+            ? label
+            : `${label} - ${currencySymbol(property.currency)}${Number(s.amount).toLocaleString()} ${t('per night', locale)}`;
+        }).join('\n') ?? '-';
       }),
     });
   }
@@ -258,9 +333,14 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     rows.push({ key: 'blackout', label: 'Blackout dates', cells: blackoutCells });
   }
 
+  // Payment — merged in from the campaign-details slide when combined (closing row).
+  if (combined) {
+    rows.push({ key: 'payment', label: 'Payment', cells: optNums.map(() => t('VCC', locale)) });
+  }
+
   return (
     <div className="flex-1 px-[5%] pb-2 overflow-visible">
-      <table className="w-full text-[9px] border-collapse">
+      <table className="w-full border-collapse" style={{ fontSize: baseFont }}>
         <thead>
           <tr>
             <th className="p-2 text-left w-[14%]" style={{ backgroundColor: GREEN }} />
@@ -297,7 +377,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
                     <SlideRichText
                       fieldKey={`deal.${property.id}.${row.key}.opt${optNums[0]}`}
                       defaultValue={row.cells[0].replace(/\n/g, '<br>')}
-                      defaultSize={9}
+                      defaultSize={baseFont}
                       customFields={customFields}
                       onFieldChange={onFieldChange}
                       style={{ color: '#1a1a1a', textAlign: 'center' }}
@@ -309,7 +389,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
                       <SlideRichText
                         fieldKey={`deal.${property.id}.${row.key}.opt${optNums[ci]}`}
                         defaultValue={cell.replace(/\n/g, '<br>')}
-                        defaultSize={9}
+                        defaultSize={baseFont}
                         customFields={customFields}
                         onFieldChange={onFieldChange}
                         style={{ color: '#1a1a1a' }}

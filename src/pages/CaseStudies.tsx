@@ -17,7 +17,6 @@ import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.ap
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
-import { FetchImagesModal } from '@/components/images/FetchImagesModal';
 import { CaseStudySummaryReview } from '@/components/case-studies/CaseStudySummaryReview';
 
 interface FormData {
@@ -67,7 +66,6 @@ export function CaseStudies() {
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  const [showFetch, setShowFetch] = useState(false);
   // Why the PDF yielded no images (flattened slides / none present), shown in the
   // images section. Cleared once the form has images or a non-PDF form opens.
   const [imagesNote, setImagesNote] = useState('');
@@ -77,7 +75,6 @@ export function CaseStudies() {
   async function addFetchedImages(urls: string[]) {
     await approveLibraryImages(urls).catch(() => {});
     setForm((prev) => ({ ...prev, images: [...prev.images, ...urls.filter((u) => !prev.images.includes(u))] }));
-    setShowFetch(false);
   }
 
   useEffect(() => {
@@ -564,18 +561,10 @@ export function CaseStudies() {
                 destination={form.destination}
                 existingUrls={form.images}
                 onPicked={(url) => setForm((prev) => ({ ...prev, images: [...prev.images, url] }))}
+                onAddFetched={addFetchedImages}
                 onError={(msg) => setError(msg)}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setShowFetch(true)}
-              disabled={!form.hotelName.trim()}
-              title={form.hotelName.trim() ? '' : 'Enter a hotel name first'}
-              className="text-xs text-[#01B18B] hover:text-[#009977] underline disabled:opacity-50 disabled:no-underline"
-            >
-              Fetch hotel photos (LUX / Google)
-            </button>
           </div>
 
           <div className="flex gap-3">
@@ -672,17 +661,6 @@ export function CaseStudies() {
             </div>
           </div>
         </div>
-      )}
-
-      {showFetch && (
-        <FetchImagesModal
-          hotelName={form.hotelName}
-          destination={form.destination || null}
-          existingUrls={new Set(form.images)}
-          onClose={() => setShowFetch(false)}
-          onAdd={addFetchedImages}
-          addTargetLabel="case study"
-        />
       )}
 
       {viewingImage && (

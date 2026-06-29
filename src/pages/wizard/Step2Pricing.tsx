@@ -113,6 +113,7 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
         const guest = opt.extraGuestSurcharge;
         const tacticalDetails: TacticalDetails = {};
         if (opt.roomNightForecast != null) tacticalDetails.roomNightForecast = opt.roomNightForecast;
+        if (opt.revenueForecast != null) tacticalDetails.revenueForecast = opt.revenueForecast;
         // Per-option travel dates from this option's sheet. Older tools (v4.0/
         // v3.4) don't have per-option Prices-Forecasting sheets, so fall back to
         // the deck-level travel range so the campaign-dates editor pre-fills

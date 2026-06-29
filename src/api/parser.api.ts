@@ -38,6 +38,7 @@ export interface ParsedPricingTool {
       currency: string | null;
     }>;
     roomNightForecast: number | null;
+    revenueForecast: number | null;
     extraGuestSurcharge: {
       adult: { net: number | null; sell: number | null };
       child: { net: number | null; sell: number | null };

@@ -14,7 +14,6 @@ import { fetchTableauMetrics } from '@/api/tableau.api';
 import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
 import { uploadUrl } from '@/api/upload.api';
 import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
-import { FetchImagesModal } from '@/components/images/FetchImagesModal';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
 import { ImagePicker } from '@/components/case-studies/ImagePicker';
@@ -93,7 +92,6 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   // handleAutoUpload (below) replaces the separate single/summary handlers.
   const [pdfMessage, setPdfMessage] = useState('');
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  const [showFetch, setShowFetch] = useState(false);
   const [imagesNote, setImagesNote] = useState('');
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
   const [metricsMessage, setMetricsMessage] = useState('');
@@ -131,7 +129,6 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   async function addFetchedImages(urls: string[]) {
     await approveLibraryImages(urls).catch(() => {});
     setCreateImages((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))]);
-    setShowFetch(false);
   }
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
@@ -687,19 +684,11 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
                 destination={createForm.destination}
                 existingUrls={createImages}
                 onPicked={(url) => setCreateImages((prev) => [...prev, url])}
+                onAddFetched={addFetchedImages}
                 onError={(msg) => setError(msg)}
                 size="sm"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setShowFetch(true)}
-              disabled={!createForm.hotelName.trim()}
-              title={createForm.hotelName.trim() ? '' : 'Enter a hotel name first'}
-              className="text-xs text-[#01B18B] hover:text-[#009977] underline disabled:opacity-50 disabled:no-underline"
-            >
-              Fetch hotel photos (LUX / Google)
-            </button>
           </div>
           <div className="flex gap-2">
             <button
@@ -788,17 +777,6 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           {saving ? 'Saving...' : 'Next: Marketing Assets'}
         </button>
       </div>
-
-      {showFetch && (
-        <FetchImagesModal
-          hotelName={createForm.hotelName}
-          destination={createForm.destination || null}
-          existingUrls={new Set(createImages)}
-          onClose={() => setShowFetch(false)}
-          onAdd={addFetchedImages}
-          addTargetLabel="case study"
-        />
-      )}
 
       {viewingImage && (
         <div

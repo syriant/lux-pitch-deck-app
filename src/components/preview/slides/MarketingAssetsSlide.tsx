@@ -91,13 +91,16 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       label: 'Allocation',
       cells: uniqueOptions.map((o) => {
         const rooms = groups.get(o.optionNumber) ?? [o];
-        return rooms.map((r: { roomType: string | null; allocation: string | null }) => {
+        const lines = rooms.map((r: { roomType: string | null; allocation: string | null }) => {
           const room = r.roomType ?? t('Room', locale);
           if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;
           return /^\d+$/.test(r.allocation)
             ? `${room} – ${r.allocation} ${t('rooms per night', locale)}`
             : `${room} – ${r.allocation}`;
-        }).join('<br>');
+        });
+        // The option group can hold several rows with the same room + allocation
+        // (one per package/event); collapse identical lines so they don't repeat.
+        return Array.from(new Set(lines)).join('<br>');
       }),
     },
     {
@@ -114,7 +117,11 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       const v = (cf?.[`mktg.${propId}.${row.key}.opt${optNums[ci]}`] ?? cell ?? '').trim();
       return v === '' || v === '—';
     });
-  const visibleRows = rows.filter((row) => row.key !== 'period' || !isRowEmpty(row));
+  // When the PCM combines this into the deal-options slide, its rows move there
+  // and this slide is hidden (via hiddenSlides) — render empty so the rows never
+  // appear twice, even if the slide is manually un-hidden.
+  const combined = cf?.[`deal.${propId}.combine`] === 'true';
+  const visibleRows = combined ? [] : rows.filter((row) => row.key !== 'period' || !isRowEmpty(row));
 
   const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`));
 

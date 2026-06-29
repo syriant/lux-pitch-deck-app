@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
@@ -293,13 +294,13 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-// A marketing-assets grid cell. Defaults to the ✓/✕ icon (driven by the
-// option's marketingAssets flag). Once a PCM gives it text it becomes the full
-// rich-text editor — size, alignment, decoration and multi-line wrap — via
-// SlideRichText, keyed per channel+option so the override flows to the PPTX/PDF
-// export. Clicking the icon seeds an editable glyph; clearing all text reverts
-// to the icon. Edit affordances only render when onFieldChange is set (i.e. not
-// in the print/export path).
+// A marketing-assets grid cell. The big ✓/✗ icon (driven by the option's
+// Step-6 marketingAssets flag) always shows by default, so it can never be
+// "lost". A PCM can add an optional caption beneath it (e.g. "2–4 hero
+// position") or hide the icon for a text-only cell — both reversible via the
+// hover toolbar. The caption (keyed per channel+option) and the `.hideIcon`
+// flag flow to the PPTX/PDF export. Edit affordances only render when
+// onFieldChange is set (i.e. not in the print/export path).
 function MarketingAssetCell({
   included,
   fieldKey,
@@ -315,32 +316,84 @@ function MarketingAssetCell({
   onFieldChange?: FieldChangeHandler;
   iconCls: string;
 }) {
-  const raw = customFields?.[fieldKey];
-  const hasOverride = !!(raw && raw.trim() && raw.trim() !== '<br>');
+  const [hovered, setHovered] = useState(false);
+  const [adding, setAdding] = useState(false);
 
-  if (hasOverride) {
+  const raw = customFields?.[fieldKey] ?? '';
+  // Older versions seeded the override with a bare ✓/✕ glyph to enter edit
+  // mode; treat those (and empty/<br>/whitespace) as "no caption" so the icon
+  // shows through instead of a stray glyph.
+  const captionEmpty = !raw.trim() || raw.trim() === '<br>' || /^(?:✓|✕|✗|&nbsp;|\s)+$/i.test(raw.trim());
+  const hasCaption = !captionEmpty;
+  const hideIcon = customFields?.[`${fieldKey}.hideIcon`] === 'true';
+  const icon = included ? <CheckIcon cls={iconCls} /> : <CrossIcon cls={iconCls} />;
+
+  const caption = (
+    <SlideRichText
+      fieldKey={fieldKey}
+      defaultValue=""
+      defaultSize={defaultSize}
+      customFields={customFields}
+      onFieldChange={onFieldChange}
+      className="min-h-[1.1em]"
+      style={{ textAlign: 'center' }}
+    />
+  );
+
+  // Static (export/print) path — no editing affordances.
+  if (!onFieldChange) {
     return (
-      <SlideRichText
-        fieldKey={fieldKey}
-        defaultValue=""
-        defaultSize={defaultSize}
-        customFields={customFields}
-        onFieldChange={onFieldChange}
-        style={{ textAlign: 'center' }}
-      />
+      <div className="flex flex-col items-center justify-center gap-0.5">
+        {!hideIcon && icon}
+        {hasCaption && caption}
+      </div>
     );
   }
 
-  const icon = included ? <CheckIcon cls={iconCls} /> : <CrossIcon cls={iconCls} />;
-  if (!onFieldChange) return icon;
+  // Show the caption editor when there's text, while adding a note, or when the
+  // icon is hidden with nothing else — so the cell is never blank.
+  const showCaption = hasCaption || adding || (hideIcon && captionEmpty);
+
   return (
-    <button
-      type="button"
-      title="Click to replace the tick/cross with editable text"
-      onClick={() => onFieldChange('custom', '', fieldKey, included ? '✓' : '✕')}
-      className="w-full cursor-pointer rounded hover:bg-black/5 inline-flex items-center justify-center"
+    <div
+      className="relative w-full flex flex-col items-center justify-center gap-0.5"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {icon}
-    </button>
+      {!hideIcon && icon}
+      {showCaption && caption}
+      {hovered && (
+        <div className="absolute -top-2 right-0 z-10 flex gap-1">
+          {!showCaption && (
+            <button
+              type="button"
+              title="Add a note beneath the icon"
+              onClick={() => setAdding(true)}
+              className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50"
+            >
+              + note
+            </button>
+          )}
+          {(hasCaption || adding) && (
+            <button
+              type="button"
+              title="Remove the note (revert to the icon)"
+              onClick={() => { onFieldChange('custom', '', fieldKey, ''); setAdding(false); }}
+              className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50"
+            >
+              − note
+            </button>
+          )}
+          <button
+            type="button"
+            title={hideIcon ? 'Show the tick/cross icon' : 'Hide the icon (text only)'}
+            onClick={() => onFieldChange('custom', '', `${fieldKey}.hideIcon`, hideIcon ? '' : 'true')}
+            className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50"
+          >
+            {hideIcon ? 'Show icon' : 'Hide icon'}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

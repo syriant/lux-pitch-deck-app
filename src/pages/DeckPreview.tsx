@@ -203,10 +203,31 @@ export function DeckPreview() {
           });
         } else if (entityType === 'custom') {
           const current = deckRef.current?.customFields ?? {};
+          // Combining the deal-options + campaign-details slides is a structural
+          // toggle: write the bare (locale-independent) key so it applies across
+          // languages, and drive the existing hiddenSlides mechanism so the
+          // standalone campaign-details slide is hidden when on and restored when
+          // off (its rows move onto the deal-options slide).
+          const combineMatch = /^deal\.(.+)\.combine$/.exec(field);
           // English writes to the bare key (canonical source); a non-English
           // active locale writes to its prefixed key so English is preserved.
-          const persistKey = activeLocale === DEFAULT_LOCALE ? field : localeFieldKey(activeLocale, field);
-          const updated = { ...current, [persistKey]: value };
+          const persistKey = combineMatch
+            ? field
+            : (activeLocale === DEFAULT_LOCALE ? field : localeFieldKey(activeLocale, field));
+          const updated: Record<string, string> = { ...current, [persistKey]: value };
+          if (combineMatch) {
+            const mktgSlideId = `marketing-assets-${combineMatch[1]}`;
+            let nextHidden: string[] = [];
+            try {
+              const parsed = JSON.parse(current['hiddenSlides'] ?? '[]');
+              if (Array.isArray(parsed)) nextHidden = parsed.filter((s): s is string => typeof s === 'string');
+            } catch { /* ignore malformed */ }
+            nextHidden = value === 'true'
+              ? Array.from(new Set([...nextHidden, mktgSlideId]))
+              : nextHidden.filter((s) => s !== mktgSlideId);
+            updated['hiddenSlides'] = JSON.stringify(nextHidden);
+            setHiddenSlides(nextHidden);
+          }
           setDeck((prev) => {
             if (!prev) return prev;
             return { ...prev, customFields: updated };

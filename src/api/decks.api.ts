@@ -81,6 +81,8 @@ export interface TacticalExtraGuestRow {
 
 export interface TacticalDetails {
   roomNightForecast?: number | null;
+  /** Campaign revenue forecast (Total Hotel Revenue, AUD) from the pricing tool. */
+  revenueForecast?: number | null;
   extraGuestPolicy?: TacticalExtraGuestRow[];
   extraNightInclusions?: string[];
   comparisonOverrides?: Record<string, string>;

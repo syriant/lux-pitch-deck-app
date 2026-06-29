@@ -104,7 +104,11 @@ export function resolveComparisonCell(
 
   if (row.key === 'Room Nights & Revenue') {
     const nights = opt.tacticalDetails?.roomNightForecast;
-    if (nights != null) return `${nights.toLocaleString()} room nights`;
+    const revenue = opt.tacticalDetails?.revenueForecast;
+    const parts: string[] = [];
+    if (nights != null) parts.push(`${nights.toLocaleString()} room nights`);
+    if (revenue != null) parts.push(`$${revenue.toLocaleString()}`);
+    if (parts.length) return parts.join(' · ');
   }
 
   return '';

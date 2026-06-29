@@ -57,6 +57,8 @@ export function Step3Images({ deckId, coverImage, heroImage, logoImage, gallery:
   const [showLogoFetchModal, setShowLogoFetchModal] = useState(false);
   const [libraryLogos, setLibraryLogos] = useState<LibraryImage[]>([]);
   const [logosLoading, setLogosLoading] = useState(false);
+  const [logoThumbBg, setLogoThumbBg] = useState<ThumbBg>('checker');
+  const logoCardBg = THUMB_BGS.find((b) => b.key === logoThumbBg)?.cardClass ?? '';
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const heroRef = useRef<HTMLInputElement>(null);
@@ -243,6 +245,9 @@ export function Step3Images({ deckId, coverImage, heroImage, logoImage, gallery:
         <p className="mb-2 text-xs text-gray-500">
           Use a <strong>PNG with a transparent background</strong> — anything else (JPG, white-background PNG) will sit as a solid block on the cover photo.
         </p>
+        {(logo || (hotelName && libraryLogos.length > 0)) && (
+          <div className="mb-2"><LogoBgPicker value={logoThumbBg} onChange={setLogoThumbBg} /></div>
+        )}
 
         {/* Library matches — surfaces existing logos for this hotel so PCMs
             don't re-upload or burn Google quota when one already exists. */}
@@ -264,7 +269,7 @@ export function Step3Images({ deckId, coverImage, heroImage, logoImage, gallery:
                     disabled={uploadingLogo || isCurrent}
                     className={`relative w-24 h-16 rounded border-2 ${
                       isCurrent ? 'border-[#01B18B] ring-2 ring-[#01B18B]/30' : 'border-gray-200 hover:border-[#01B18B]'
-                    } overflow-hidden bg-[repeating-conic-gradient(#f3f4f6_0_25%,#ffffff_0_50%)] bg-[length:12px_12px] flex items-center justify-center disabled:cursor-not-allowed`}
+                    } overflow-hidden ${logoCardBg} flex items-center justify-center disabled:cursor-not-allowed`}
                     title={logoSourceLabel(img.source)}
                   >
                     <img src={uploadUrl(img.url) ?? ''} alt="" className="max-w-full max-h-full object-contain p-1" />
@@ -291,7 +296,7 @@ export function Step3Images({ deckId, coverImage, heroImage, logoImage, gallery:
             <span className="text-xs text-[#01B18B]">Working...</span>
           </div>
         ) : logo ? (
-          <div className="relative group w-64 h-24 rounded-lg overflow-hidden border border-gray-200 bg-[repeating-conic-gradient(#f3f4f6_0_25%,#ffffff_0_50%)] bg-[length:16px_16px] flex items-center justify-center">
+          <div className={`relative group w-64 h-24 rounded-lg overflow-hidden border border-gray-200 ${logoCardBg} flex items-center justify-center`}>
             <img src={uploadUrl(logo) ?? ''} alt="Hotel logo" className="max-w-full max-h-full object-contain" />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <button onClick={() => logoRef.current?.click()} className="rounded bg-white px-2 py-1 text-xs font-medium text-gray-700">Replace</button>
@@ -476,12 +481,43 @@ interface FetchLogoModalProps {
   onPick: (url: string) => Promise<void>;
 }
 
+// Logos are transparent PNGs; a white-text logo is invisible on a white/checker
+// card and reads as an error. Let the PCM switch the preview background to prove
+// the logo is really there. Mirrors the cover-logo backdrop swatches.
+type ThumbBg = 'checker' | 'light' | 'dark';
+const THUMB_BGS: ReadonlyArray<{ key: ThumbBg; label: string; cardClass: string; swatch: string }> = [
+  { key: 'checker', label: 'Checkerboard (shows transparency)', cardClass: 'bg-[repeating-conic-gradient(#f3f4f6_0_25%,#ffffff_0_50%)] bg-[length:16px_16px]', swatch: 'bg-[repeating-conic-gradient(#d1d5db_0_25%,#ffffff_0_50%)] bg-[length:8px_8px] border border-gray-300' },
+  { key: 'light', label: 'White', cardClass: 'bg-white', swatch: 'bg-white border border-gray-300' },
+  { key: 'dark', label: 'Dark (reveals white logos)', cardClass: 'bg-gray-800', swatch: 'bg-gray-800' },
+];
+
+function LogoBgPicker({ value, onChange }: { value: ThumbBg; onChange: (b: ThumbBg) => void }) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-gray-500">Preview background:</span>
+      {THUMB_BGS.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          title={opt.label}
+          aria-label={opt.label}
+          className={`w-5 h-5 rounded-sm ${opt.swatch} ${value === opt.key ? 'ring-2 ring-[#01B18B]' : 'opacity-70 hover:opacity-100'}`}
+        />
+      ))}
+      <span className="text-[11px] text-gray-400">If a logo looks blank or wrong, switch the background — a white logo only shows on a dark one, it's not an error.</span>
+    </div>
+  );
+}
+
 function FetchLogoModal({ hotelName, destination, onClose, onPick }: FetchLogoModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [images, setImages] = useState<LibraryImage[]>([]);
   const [googleConfigured, setGoogleConfigured] = useState(true);
   const [picking, setPicking] = useState<string | null>(null);
+  const [thumbBg, setThumbBg] = useState<ThumbBg>('checker');
+  const cardBg = THUMB_BGS.find((b) => b.key === thumbBg)?.cardClass ?? '';
 
   useEffect(() => {
     let cancelled = false;
@@ -547,14 +583,16 @@ function FetchLogoModal({ hotelName, destination, onClose, onPick }: FetchLogoMo
               No logo candidates returned — Places couldn't find a website for this hotel, or Brandfetch has no record of the domain. Upload a PNG manually instead.
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
+            <>
+              <div className="mb-3"><LogoBgPicker value={thumbBg} onChange={setThumbBg} /></div>
+              <div className="grid grid-cols-3 gap-4">
               {images.map((img) => (
                 <button
                   key={img.id}
                   type="button"
                   onClick={() => pick(img.url)}
                   disabled={picking !== null}
-                  className="relative group rounded-lg overflow-hidden border-2 border-gray-200 hover:border-[#01B18B] transition-all bg-[repeating-conic-gradient(#f3f4f6_0_25%,#ffffff_0_50%)] bg-[length:16px_16px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`relative group rounded-lg overflow-hidden border-2 border-gray-200 hover:border-[#01B18B] transition-all ${cardBg} disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className="h-32 flex items-center justify-center p-3">
                     <img src={uploadUrl(img.url) ?? ''} alt="" className="max-w-full max-h-full object-contain" />
@@ -566,7 +604,8 @@ function FetchLogoModal({ hotelName, destination, onClose, onPick }: FetchLogoMo
                   )}
                 </button>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
 

@@ -221,6 +221,16 @@ function PackageCard({
                 className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
               />
             </label>
+            <label className="block">
+              <span className="text-xs font-medium text-gray-700 block mb-1">Revenue forecast (AUD)</span>
+              <input
+                type="number"
+                value={details.revenueForecast ?? ''}
+                onChange={(e) => setDetails({ ...details, revenueForecast: e.target.value === '' ? null : Number(e.target.value) })}
+                onBlur={() => saveDetails(details)}
+                className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              />
+            </label>
           </div>
 
           {/* Show on slide — per-package element visibility (all on by default) */}
