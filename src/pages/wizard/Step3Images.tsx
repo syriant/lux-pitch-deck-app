@@ -515,12 +515,20 @@ function FetchLogoModal({ hotelName, destination, onClose, onPick }: FetchLogoMo
   const [error, setError] = useState('');
   const [images, setImages] = useState<LibraryImage[]>([]);
   const [googleConfigured, setGoogleConfigured] = useState(true);
+  const [rateLimited, setRateLimited] = useState(false);
   const [picking, setPicking] = useState<string | null>(null);
   const [thumbBg, setThumbBg] = useState<ThumbBg>('checker');
   const cardBg = THUMB_BGS.find((b) => b.key === thumbBg)?.cardClass ?? '';
+  const fetchedRef = useRef(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current = true;
+    // React StrictMode double-invokes effects in dev, which would fire two
+    // Brandfetch calls per open and burn its rate limit twice as fast. Dedupe so
+    // we only fetch once per modal instance (hotel/destination are fixed here).
+    if (fetchedRef.current) return () => { mountedRef.current = false; };
+    fetchedRef.current = true;
     (async () => {
       try {
         // Modal is the explicit "go to Google" action — force a CSE call
@@ -532,16 +540,17 @@ function FetchLogoModal({ hotelName, destination, onClose, onPick }: FetchLogoMo
           limit: 12,
           forceGoogle: true,
         });
-        if (cancelled) return;
+        if (!mountedRef.current) return;
         setImages(result.images);
         setGoogleConfigured(result.googleConfigured);
+        setRateLimited(result.rateLimited);
       } catch {
-        if (!cancelled) setError('Failed to fetch logos');
+        if (mountedRef.current) setError('Failed to fetch logos');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (mountedRef.current) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { mountedRef.current = false; };
   }, [hotelName, destination]);
 
   async function pick(url: string) {
@@ -577,6 +586,10 @@ function FetchLogoModal({ hotelName, destination, onClose, onPick }: FetchLogoMo
           ) : !googleConfigured ? (
             <div className="rounded-md border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
               Logo fetch isn't configured — needs both <code>GOOGLE_PLACES_API_KEY</code> (to resolve hotel → domain) and <code>BRANDFETCH_API_KEY</code> (to fetch logos). Ask an admin.
+            </div>
+          ) : rateLimited && images.length === 0 ? (
+            <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 p-8 text-center text-sm text-amber-800">
+              The logo service (Brandfetch) is unavailable — its request limit has been reached, not a problem with this hotel. Try again later (free-tier limits reset monthly), use a key with more quota, or upload a PNG manually.
             </div>
           ) : images.length === 0 ? (
             <div className="rounded-md border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">

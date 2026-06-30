@@ -110,6 +110,8 @@ export interface FetchLogosResponse {
   googleConfigured: boolean;
   googleUsed: boolean;
   cachedCount: number;
+  /** Brandfetch returned HTTP 429 — rate-limited, not "no logo exists". */
+  rateLimited: boolean;
 }
 
 export async function fetchHotelLogos(args: {
