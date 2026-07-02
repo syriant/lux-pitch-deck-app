@@ -55,7 +55,11 @@ export function applyLocaleOverlay(
   const prefix = `${I18N_PREFIX}${locale}.`;
   const overlay: Record<string, string> = {};
   for (const [k, v] of Object.entries(base)) {
-    if (k.startsWith(prefix)) overlay[k.slice(prefix.length)] = v;
+    // Skip blank overrides so an empty translation falls back to the English
+    // base instead of blanking the field (e.g. a caption that was never filled).
+    if (k.startsWith(prefix) && (v ?? '').trim() !== '' && v.trim() !== '<br>') {
+      overlay[k.slice(prefix.length)] = v;
+    }
   }
   return Object.keys(overlay).length > 0 ? { ...base, ...overlay } : base;
 }
