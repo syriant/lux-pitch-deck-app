@@ -218,11 +218,14 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
             <tbody>
               {channels.map((channel, ri) => {
                 const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
-                // Pick the first non-empty description across the 3 tiers.
-                // Today they're consistent across tiers; if that ever changes,
-                // we'd need to revisit this consolidation.
+                // Consolidate the channel description into the single left
+                // column. Descriptions can differ per tier (e.g. Daily Email
+                // "Hero 1..." vs "Hero 4..."), so prefer the property's matched
+                // tier — the value the Step 6 editor shows — and only fall back
+                // across the other tiers when that tier has no text.
                 let description = '';
-                for (const tier of [1, 2, 3] as const) {
+                const tierOrder = property?.tier ? [property.tier, 1, 2, 3] : [1, 2, 3];
+                for (const tier of tierOrder) {
                   const v = rulesByTier[tier]?.assetEntitlements?.[channel];
                   if (v && v.trim() && !/^(✓|yes|y)$/i.test(v.trim())) { description = v; break; }
                 }
