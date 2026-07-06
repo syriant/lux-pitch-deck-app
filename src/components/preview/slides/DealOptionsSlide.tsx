@@ -280,7 +280,9 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     key: 'rates',
     label: 'NETT rate',
     cells: optNums.map((num) => {
-      const rooms = groups.get(num)!.filter((r) => r.selected);
+      // Order rooms by price, lowest to highest.
+      const rooms = groups.get(num)!.filter((r) => r.selected)
+        .sort((a, b) => Number(a.costPrice ?? Infinity) - Number(b.costPrice ?? Infinity));
       return rooms.map((r) => {
         const price = formatMoney(r.costPrice, property.currency) ?? '?';
         const roomLabel = r.roomType ?? t('Room', locale);
@@ -298,7 +300,9 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       key: 'sellrates',
       label: 'Sell rate',
       cells: optNums.map((num) => {
-        const rooms = groups.get(num)!.filter((r) => r.selected);
+        // Order rooms by price, lowest to highest.
+        const rooms = groups.get(num)!.filter((r) => r.selected)
+          .sort((a, b) => Number(a.sellPrice ?? Infinity) - Number(b.sellPrice ?? Infinity));
         return rooms.map((r) => {
           const price = formatMoney(r.sellPrice, property.currency) ?? '?';
           const roomLabel = r.roomType ?? 'Room';
