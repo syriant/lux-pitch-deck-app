@@ -110,18 +110,13 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
     },
   ];
 
-  // Drop the Campaign period row when empty for every option (no pricing-tool
-  // source; blank unless entered manually). Honour manual overrides.
-  const isRowEmpty = (row: Row): boolean =>
-    row.cells.every((cell, ci) => {
-      const v = (cf?.[`mktg.${propId}.${row.key}.opt${optNums[ci]}`] ?? cell ?? '').trim();
-      return v === '' || v === '—';
-    });
-  // When the PCM combines this into the deal-options slide, its rows move there
-  // and this slide is hidden (via hiddenSlides) — render empty so the rows never
-  // appear twice, even if the slide is manually un-hidden.
+  // Campaign period + Travel dates live on the deal-options slide (always shown
+  // there), so they're omitted here to avoid listing the same dates twice.
+  // When the PCM combines this into the deal-options slide, Allocation + Payment
+  // move there too and this slide is hidden (via hiddenSlides) — render empty so
+  // nothing duplicates even if the slide is manually un-hidden.
   const combined = cf?.[`deal.${propId}.combine`] === 'true';
-  const visibleRows = combined ? [] : rows.filter((row) => row.key !== 'period' || !isRowEmpty(row));
+  const visibleRows = combined ? [] : rows.filter((row) => row.key !== 'period' && row.key !== 'travel');
 
   const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`));
 
