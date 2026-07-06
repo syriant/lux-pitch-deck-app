@@ -155,7 +155,7 @@ export function tacticalTableSizeKey(optionId: string): string {
 /** Per-package table text size for the Single Page slide (default 9). */
 export function tacticalTableSize(customFields: Record<string, string> | null | undefined, optionId: string): number {
   const n = Number(customFields?.[tacticalTableSizeKey(optionId)]);
-  return Number.isFinite(n) && n > 0 ? Math.min(16, Math.max(6, n)) : 9;
+  return Number.isFinite(n) && n > 0 ? Math.min(16, Math.max(4, n)) : 9;
 }
 
 export type ExtraGuestFeeBasis = 'net' | 'sell';

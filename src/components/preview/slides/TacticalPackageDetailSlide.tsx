@@ -51,7 +51,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
   const contentRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const sig = opt
-    ? `${opt.id}|${(opt.rooms ?? []).length}|${(opt.surcharges ?? []).length}|${(opt.tacticalDetails?.extraGuestPolicy ?? []).length}|${(opt.inclusions ?? []).length}|${(opt.tacticalDetails?.extraNightInclusions ?? []).length}|${JSON.stringify(opt.tacticalDetails?.hidden ?? {})}`
+    ? `${opt.id}|${(opt.rooms ?? []).length}|${(opt.surcharges ?? []).length}|${(opt.blackoutDates ?? []).length}|${(opt.tacticalDetails?.extraGuestPolicy ?? []).length}|${(opt.inclusions ?? []).length}|${(opt.tacticalDetails?.extraNightInclusions ?? []).length}|${JSON.stringify(opt.tacticalDetails?.hidden ?? {})}`
     : '';
   useLayoutEffect(() => {
     const body = bodyRef.current;
@@ -59,7 +59,10 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
     if (!body || !content) return;
     const avail = body.clientHeight;
     const needed = content.scrollHeight;
-    setScale(needed > avail && needed > 0 ? Math.max(0.5, avail / needed) : 1);
+    // Floor at 0.4 (not 0.5) so a dense package shrinks far enough to keep every
+    // section visible — including Blackout Dates — rather than clipping the tail.
+    // Mirrors the PPTX export, which now shrinks font/rows to fit all sections.
+    setScale(needed > avail && needed > 0 ? Math.max(0.4, avail / needed) : 1);
   }, [sig]);
 
   if (!opt || !prop) {
@@ -133,7 +136,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
         {onFieldChange && (
           <div className="absolute top-1 right-[4%] z-20 flex items-center gap-1 rounded bg-black/60 px-2 py-1 opacity-0 transition-opacity group-hover:opacity-100">
             <span className="text-[10px] text-white/70">Table text</span>
-            <FontSizeControl fieldKey={tacticalTableSizeKey(opt.id)} size={tablePx} min={6} max={16} onFieldChange={onFieldChange} />
+            <FontSizeControl fieldKey={tacticalTableSizeKey(opt.id)} size={tablePx} min={4} max={16} step={0.5} onFieldChange={onFieldChange} />
           </div>
         )}
         <div
