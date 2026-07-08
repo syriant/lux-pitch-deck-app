@@ -18,14 +18,47 @@
   src: url('/fonts/NotoSansJP-Bold.woff2') format('woff2');
 }
 
+/* Brand Refresh 2026 — self-hosted so slides render real Suisse in the preview
+   AND the server-side PDF. Suisse Works = expressive serif display/headings
+   (Regular + Medium Italic emphasis); Suisse Intl = sans body/labels/tables.
+   Fallbacks (Times New Roman / Arial) live in the stacks in fonts.ts. */
+@font-face {
+  font-family: 'Suisse Works';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/SuisseWorks-Regular.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Suisse Works';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/SuisseWorks-MediumItalic.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Suisse Intl';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/SuisseIntl-Regular.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Suisse Intl';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/SuisseIntl-Medium.otf') format('opentype');
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Rich text formatting in slide preview */
 .rich-text mark {
-  background-color: #00b2a0;
-  color: #ffffff;
+  background-color: #8ED9AE !important;
+  color: #363A45 !important;
   padding: 0 2px;
   border-radius: 2px;
 }

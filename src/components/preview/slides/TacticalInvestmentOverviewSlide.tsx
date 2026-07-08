@@ -9,10 +9,7 @@ import {
   uniqueOptionsByNumber,
 } from './tactical-shared';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
-const RED = '#d44a4a';
+import { OCEAN_TEAL, SANDY_BEIGE, BURNT_ORANGE, INK } from '../brand';
 
 interface Props {
   property?: DeckPropertyFull;
@@ -23,8 +20,8 @@ interface Props {
 function CheckIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-7 h-7 mx-auto" aria-label="Included">
-      <circle cx="12" cy="12" r="10.5" fill="none" stroke={GREEN} strokeWidth="1.5" />
-      <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke={GREEN} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="10.5" fill="none" stroke={OCEAN_TEAL} strokeWidth="1.5" />
+      <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke={OCEAN_TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -32,8 +29,8 @@ function CheckIcon() {
 function CrossIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-7 h-7 mx-auto" aria-label="Not included">
-      <circle cx="12" cy="12" r="10.5" fill="none" stroke={RED} strokeWidth="1.5" />
-      <path d="M8 8l8 8M16 8l-8 8" fill="none" stroke={RED} strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="10.5" fill="none" stroke={BURNT_ORANGE} strokeWidth="1.5" />
+      <path d="M8 8l8 8M16 8l-8 8" fill="none" stroke={BURNT_ORANGE} strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -52,7 +49,7 @@ export function TacticalInvestmentOverviewSlide({ property, deck, onFieldChange 
   const labelColPct = 100 - optionColPct * options.length;
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       <div className="px-[5%] pt-[4%] pb-3">
         <SlideRichText
           fieldKey="tactical.investment.headline"
@@ -61,7 +58,7 @@ export function TacticalInvestmentOverviewSlide({ property, deck, onFieldChange 
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold"
-          style={{ color: GREEN }}
+          style={{ color: OCEAN_TEAL }}
         />
       </div>
 
@@ -86,7 +83,7 @@ export function TacticalInvestmentOverviewSlide({ property, deck, onFieldChange 
                   <th
                     key={i}
                     className="p-3 text-center font-bold text-white"
-                    style={{ backgroundColor: GREEN, borderLeft: '2px solid white' }}
+                    style={{ backgroundColor: OCEAN_TEAL, borderLeft: '2px solid white' }}
                   >
                     {(opt.tierLabel ?? optionColumnLabel(opt.optionNumber, locale)).toUpperCase()}
                   </th>
@@ -95,10 +92,10 @@ export function TacticalInvestmentOverviewSlide({ property, deck, onFieldChange 
             </thead>
             <tbody>
               {INVESTMENT_OVERVIEW_ROWS.map((row, ri) => {
-                const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+                const rowBg = ri % 2 === 0 ? 'bg-[#EEF3F2]' : 'bg-white';
                 return (
                   <tr key={row.key}>
-                    <td className={`p-3 align-middle font-bold text-right ${rowBg}`} style={{ color: GREEN }}>
+                    <td className={`p-3 align-middle font-bold text-right ${rowBg}`} style={{ color: OCEAN_TEAL }}>
                       {t(row.label, locale)}
                     </td>
                     {options.map((opt, ci) => {
@@ -115,7 +112,7 @@ export function TacticalInvestmentOverviewSlide({ property, deck, onFieldChange 
                         );
                       }
                       return (
-                        <td key={ci} className={`${cellBase} text-left whitespace-pre-line`} style={{ ...cellStyle, color: '#1a1a1a' }}>
+                        <td key={ci} className={`${cellBase} text-left whitespace-pre-line`} style={{ ...cellStyle, color: INK }}>
                           {value || <span className="text-gray-300">—</span>}
                         </td>
                       );

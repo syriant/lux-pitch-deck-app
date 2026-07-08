@@ -1,11 +1,12 @@
 import { type FullDeck } from '@/api/decks.api';
-import { SLIDE_FONT_STACK } from '../fonts';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
 import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+import { OCEAN_TEAL, TEAL_200, TEAL_300, TEAL_400 } from '../brand';
 
 const HOOK_FIELD_KEY = 'cover.hookText';
 const LOGO_FIELD_KEY = 'cover.logo';
@@ -68,7 +69,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
       <div className="absolute inset-0" style={
         coverImgUrl
           ? { backgroundImage: `url(${coverImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { background: 'linear-gradient(135deg, #8eb8b0 0%, #b0cfc9 30%, #c8ddd8 60%, #a3c4bd 100%)' }
+          : { background: `linear-gradient(135deg, ${OCEAN_TEAL} 0%, ${TEAL_300} 30%, ${TEAL_200} 60%, ${TEAL_400} 100%)` }
       } />
       {coverBackdropOverlay && <div className={`absolute inset-0 ${coverBackdropOverlay}`} />}
 
@@ -103,7 +104,7 @@ export function CoverSlide({ deck, onFieldChange }: CoverSlideProps) {
               customFields={cf}
               onFieldChange={onFieldChange}
               className="font-bold text-white leading-snug drop-shadow-md"
-              style={{ fontFamily: SLIDE_FONT_STACK, textAlign: 'center' }}
+              style={{ fontFamily: SLIDE_DISPLAY_STACK, textAlign: 'center' }}
             />
             {onFieldChange && hookPositioned && (
               <button

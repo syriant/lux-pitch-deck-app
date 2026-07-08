@@ -1,13 +1,13 @@
 import { type FullDeck } from '@/api/decks.api';
-import { SLIDE_FONT_STACK } from '../fonts';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { useSlideEditorContext } from '../SlideEditorContext';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+import { OCEAN_TEAL, TEAL_200, TEAL_400 } from '../brand';
 
-const GREEN = '#00b2a0';
 const VALUE_PROP_FIELD_KEY = 'hotelIntro.valueProp';
 
 function isPositioned(cf: Record<string, string>, fieldKey: string): boolean {
@@ -53,7 +53,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   return (
     <div data-slide-root="true" className="relative h-full w-full flex flex-col overflow-hidden">
       <div className="flex-1 flex">
-        <div className="w-[50%] flex flex-col p-[5%]" style={{ backgroundColor: GREEN }}>
+        <div className="w-[50%] flex flex-col p-[5%]" style={{ backgroundColor: OCEAN_TEAL }}>
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-5 w-auto self-start mb-6" />
 
           <div className="flex-1 flex items-center">
@@ -68,7 +68,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
                 customFields={cf}
                 onFieldChange={onFieldChange}
                 className="font-bold text-white leading-snug"
-                style={{ fontFamily: SLIDE_FONT_STACK }}
+                style={{ fontFamily: SLIDE_DISPLAY_STACK }}
               />
               {onFieldChange && valuePropPositioned && (
                 <button
@@ -87,7 +87,7 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
         <div className="w-[50%]" style={
           heroImgUrl
             ? { backgroundImage: `url(${heroImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-            : { background: 'linear-gradient(180deg, #c8ddd8 0%, #a3c4bd 50%, #8eb8b0 100%)' }
+            : { background: `linear-gradient(180deg, ${TEAL_200} 0%, ${TEAL_400} 50%, ${OCEAN_TEAL} 100%)` }
         }>
           {!heroImgUrl && (
             <div className="h-full w-full flex items-center justify-center text-white/50 text-xs">

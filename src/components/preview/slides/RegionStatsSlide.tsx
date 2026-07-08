@@ -4,9 +4,8 @@ import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { t, dateLocaleTag } from '../labels';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface RegionStatsSlideProps {
   property?: DeckPropertyFull;
@@ -44,19 +43,19 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
                 value={destination}
                 onChange={(v) => onFieldChange('property', property.id, 'destination', v)}
                 className="text-[33px] font-bold leading-tight"
-                style={{ color: '#000' }}
+                style={{ fontFamily: SLIDE_DISPLAY_STACK, color: '#000' }}
                 as="h2"
               />
             ) : (
-              <h2 className="text-[33px] font-bold leading-tight" style={{ color: '#000' }}>{destination}</h2>
+              <h2 className="text-[33px] font-bold leading-tight" style={{ fontFamily: SLIDE_DISPLAY_STACK, color: '#000' }}>{destination}</h2>
             )}
-            <p className="text-[33px] italic font-light" style={{ color: '#000' }}>
-              & <span style={{ color: GREEN }}>Luxury Escapes</span>
+            <p className="text-[33px] italic font-light" style={{ fontFamily: SLIDE_DISPLAY_STACK, color: '#000' }}>
+              & <span style={{ color: OCEAN_TEAL }}>Luxury Escapes</span>
             </p>
           </div>
 
           {/* Body — mint background */}
-          <div className="flex-1 flex flex-col px-[8.5%] pt-3 pb-3 overflow-hidden" style={{ backgroundColor: MINT }}>
+          <div className="flex-1 flex flex-col px-[8.5%] pt-3 pb-3 overflow-hidden" style={{ backgroundColor: SANDY_BEIGE }}>
 
           {/* Narrative */}
           <SlideRichText

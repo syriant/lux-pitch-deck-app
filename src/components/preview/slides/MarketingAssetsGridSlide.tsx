@@ -5,10 +5,8 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { getDealTierRules, type DealTierRule } from '@/api/deal-tiers.api';
 import { SlideRichText } from '../SlideRichText';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
-const RED = '#d44a4a';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE, BURNT_ORANGE, INK } from '../brand';
 
 interface MarketingAssetsGridSlideProps {
   property?: DeckPropertyFull;
@@ -57,11 +55,11 @@ function findRulesByTier(rules: DealTierRule[], property: DeckPropertyFull): Rec
 function CheckIcon({ cls = 'w-8 h-8' }: { cls?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={`${cls} mx-auto`} aria-label="Included">
-      <circle cx="12" cy="12" r="10.5" fill="none" stroke={GREEN} strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="10.5" fill="none" stroke={OCEAN_TEAL} strokeWidth="1.5" />
       <path
         d="M7 12.5l3.2 3.2L17 9"
         fill="none"
-        stroke={GREEN}
+        stroke={OCEAN_TEAL}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -73,11 +71,11 @@ function CheckIcon({ cls = 'w-8 h-8' }: { cls?: string }) {
 function CrossIcon({ cls = 'w-8 h-8' }: { cls?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={`${cls} mx-auto`} aria-label="Not included">
-      <circle cx="12" cy="12" r="10.5" fill="none" stroke={RED} strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="10.5" fill="none" stroke={BURNT_ORANGE} strokeWidth="1.5" />
       <path
         d="M8 8l8 8M16 8l-8 8"
         fill="none"
-        stroke={RED}
+        stroke={BURNT_ORANGE}
         strokeWidth="2"
         strokeLinecap="round"
       />
@@ -135,7 +133,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
   const iconCls = rowCount <= 7 ? 'w-8 h-8' : rowCount <= 10 ? 'w-6 h-6' : rowCount <= 13 ? 'w-5 h-5' : 'w-4 h-4';
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="mktgAssets.headline"
@@ -144,7 +142,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold"
-          style={{ color: GREEN }}
+          style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
         />
         {onFieldChange && (
           <div className="flex items-center gap-1 ml-2 shrink-0" title="Scale all text on this slide">
@@ -208,7 +206,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                   <th
                     key={i}
                     className="p-3 text-center font-bold text-white"
-                    style={{ backgroundColor: GREEN, borderLeft: '2px solid white' }}
+                    style={{ backgroundColor: OCEAN_TEAL, borderLeft: '2px solid white' }}
                   >
                     {label}
                   </th>
@@ -217,7 +215,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
             </thead>
             <tbody>
               {channels.map((channel, ri) => {
-                const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+                const rowBg = ri % 2 === 0 ? 'bg-[#EEF3F2]' : 'bg-white';
                 // Consolidate the channel description into the single left
                 // column. Descriptions can differ per tier (e.g. Daily Email
                 // "Hero 1..." vs "Hero 4..."), so prefer the property's matched
@@ -235,7 +233,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                 return (
                   <tr key={channel}>
                     <td className={`align-top ${rowBg}`} style={{ padding: cellPad }}>
-                      <div className="font-bold mb-0.5" style={{ color: GREEN }}>{channelName}</div>
+                      <div className="font-bold mb-0.5" style={{ color: OCEAN_TEAL }}>{channelName}</div>
                       {description && (
                         <SlideRichText
                           fieldKey={`mktgAssets.${property!.id}.${slug}.desc`}
@@ -244,7 +242,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                           customFields={cf}
                           onFieldChange={onFieldChange}
                           className="text-left"
-                          style={{ color: '#1a1a1a' }}
+                          style={{ color: INK }}
                         />
                       )}
                     </td>

@@ -5,8 +5,9 @@ import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { uploadUrl } from '@/api/upload.api';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, TEAL_100, TEAL_200, TEAL_400 } from '../brand';
 
-const GREEN = '#00b2a0';
 const TITLE_FIELD_KEY = 'caseStudy.heading';
 
 interface CaseStudySlideProps {
@@ -35,7 +36,7 @@ function CaseStudyCard({
       {imgSrc ? (
         <img src={imgSrc} alt={cs.hotelName} className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #a3c4bd, #c8ddd8)' }} />
+        <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${TEAL_400}, ${TEAL_200})` }} />
       )}
     </div>
   );
@@ -49,7 +50,7 @@ function CaseStudyCard({
         customFields={customFields}
         onFieldChange={onFieldChange}
         className="font-bold leading-snug mb-1"
-        style={{ color: GREEN }}
+        style={{ color: OCEAN_TEAL }}
       />
       <SlideRichText
         fieldKey={`caseStudy.${cs.id}.narrative`}
@@ -98,7 +99,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
         onGalleryAdd={onGalleryAdd}
         className="absolute inset-0"
         placeholderText="Background image"
-        fallbackGradient="linear-gradient(135deg, #c8ddd8 0%, #a3c4bd 40%, #8eb8b0 70%, #d4e8e4 100%)"
+        fallbackGradient={`linear-gradient(135deg, ${TEAL_200} 0%, ${TEAL_400} 40%, ${OCEAN_TEAL} 70%, ${TEAL_100} 100%)`}
       />
 
       {/* Content area */}
@@ -134,7 +135,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold leading-none"
-            style={{ color: '#ffffff', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}
+            style={{ fontFamily: SLIDE_DISPLAY_STACK, color: '#ffffff', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}
           />
           {onFieldChange && titlePositioned && (
             <button
@@ -180,7 +181,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
                 style={{ left: '59%', top: '50%', transform: 'translate(-50%, -50%)' }}
                 title="Swap cards"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00b2a0" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={OCEAN_TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M7 16l-4-4 4-4" />
                   <path d="M17 8l4 4-4 4" />
                   <path d="M3 12h18" />

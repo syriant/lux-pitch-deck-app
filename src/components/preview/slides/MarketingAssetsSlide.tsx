@@ -2,9 +2,8 @@ import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/dec
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
 
 interface MarketingAssetsSlideProps {
   property?: DeckPropertyFull;
@@ -121,7 +120,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`));
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       {/* Header */}
       <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
@@ -129,7 +128,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold"
-          style={{ color: GREEN }}
+          style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
         />
         {onFieldChange && (
           <div className="flex items-center gap-1 ml-2 shrink-0">
@@ -181,9 +180,9 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
           <table className="w-full border-collapse" style={{ fontSize: baseFont }}>
             <thead>
               <tr>
-                <th className="p-2 text-left w-[14%]" style={{ backgroundColor: GREEN }} />
+                <th className="p-2 text-left w-[14%]" style={{ backgroundColor: OCEAN_TEAL }} />
                 {optionLabels.map((label, i) => (
-                  <th key={i} className="p-2 text-center font-bold text-white" style={{ backgroundColor: GREEN }}>
+                  <th key={i} className="p-2 text-center font-bold text-white" style={{ backgroundColor: OCEAN_TEAL }}>
                     {label}
                   </th>
                 ))}
@@ -191,7 +190,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
             </thead>
             <tbody>
               {visibleRows.map((row, ri) => {
-                const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+                const rowBg = ri % 2 === 0 ? 'bg-[#EEF3F2]' : 'bg-white';
                 const effective = row.cells.map((defaultCell, ci) => {
                   const fk = `mktg.${propId}.${row.key}.opt${optNums[ci]}`;
                   return cf?.[fk] ?? defaultCell;
@@ -203,7 +202,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                   && effective.every((v) => v === effective[0]);
                 return (
                   <tr key={row.key} className="border-b border-gray-200">
-                    <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
+                    <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
                       {t(row.label, locale)}
                     </td>
                     {allSame ? (
@@ -214,7 +213,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                           defaultSize={baseFont}
                           customFields={cf}
                           onFieldChange={onFieldChange}
-                          style={{ color: '#1a1a1a', textAlign: 'center' }}
+                          style={{ color: INK, textAlign: 'center' }}
                         />
                       </td>
                     ) : (
@@ -226,7 +225,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                             defaultSize={baseFont}
                             customFields={cf}
                             onFieldChange={onFieldChange}
-                            style={{ color: '#1a1a1a' }}
+                            style={{ color: INK }}
                           />
                         </td>
                       ))

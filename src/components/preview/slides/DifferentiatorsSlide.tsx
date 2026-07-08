@@ -1,13 +1,12 @@
 import { type FullDeck } from '@/api/decks.api';
-import { SLIDE_FONT_STACK } from '../fonts';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
 const HEADLINE_FIELD_KEY = 'diff.headline';
 const GRID_FIELD_KEY = 'diff.grid';
 
@@ -47,7 +46,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
   const gridPositioned = isPositioned(cf, GRID_FIELD_KEY);
 
   return (
-    <div data-slide-root="true" className="relative h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div data-slide-root="true" className="relative h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       <div className="flex-1 flex p-[5%] gap-[4%]">
         <div className="flex-1 flex flex-col">
           <DraggableSlideElement
@@ -61,7 +60,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
               customFields={cf}
               onFieldChange={onFieldChange}
               className="font-bold leading-snug"
-              style={{ fontFamily: SLIDE_FONT_STACK, color: GREEN }}
+              style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
             />
             {onFieldChange && headlinePositioned && (
               <button
@@ -84,7 +83,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
             <div className="grid grid-cols-2 gap-4">
               {items.map((item) => (
                 <div key={item.key}>
-                  <div className="w-8 border-t-2 mb-2" style={{ borderColor: GREEN }} />
+                  <div className="w-8 border-t-2 mb-2" style={{ borderColor: OCEAN_TEAL }} />
                   <SlideRichText
                     fieldKey={`diff.title.${item.key}`}
                     defaultValue={item.title}

@@ -3,8 +3,8 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
-
-const GREEN = '#00b2a0';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface CampaignOptionsSlideProps {
   deck: FullDeck;
@@ -79,7 +79,7 @@ export function CampaignOptionsSlide({ deck, onFieldChange, onGalleryAdd }: Camp
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: '#dff0ee' }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       <div className="flex-1 flex p-[4%] gap-[3%]">
         {/* Left column — headline + body text */}
         <div className="flex-1 flex flex-col">
@@ -99,7 +99,7 @@ export function CampaignOptionsSlide({ deck, onFieldChange, onGalleryAdd }: Camp
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold leading-snug mb-3"
-            style={{ color: GREEN }}
+            style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
           />
 
           <SlideRichText

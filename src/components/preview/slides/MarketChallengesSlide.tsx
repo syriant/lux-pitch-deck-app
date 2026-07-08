@@ -2,9 +2,8 @@ import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface MarketChallengesSlideProps {
   deck: FullDeck;
@@ -19,16 +18,17 @@ export function MarketChallengesSlide({ deck, onFieldChange }: MarketChallengesS
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       <div className="flex-1 flex flex-col p-[5%]">
         {/* Heading */}
         <div className="mb-8">
-          <div className="w-16 border-t-2 mb-4" style={{ borderColor: GREEN }} />
+          <div className="w-16 border-t-2 mb-4" style={{ borderColor: OCEAN_TEAL }} />
           <SlideRichText
             fieldKey="market-challenges.headline"
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-bold mb-2 text-gray-800"
+            style={{ fontFamily: SLIDE_DISPLAY_STACK }}
           />
           <SlideRichText
             fieldKey="market-challenges.subheadline"
@@ -44,7 +44,7 @@ export function MarketChallengesSlide({ deck, onFieldChange }: MarketChallengesS
             <div key={i} className="flex items-start gap-3">
               <div
                 className="mt-1 w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: GREEN }}
+                style={{ backgroundColor: OCEAN_TEAL }}
               />
               <SlideRichText
                 fieldKey={`market-challenges.item.${i}`}

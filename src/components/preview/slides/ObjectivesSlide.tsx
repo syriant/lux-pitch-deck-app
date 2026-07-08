@@ -3,9 +3,8 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface ObjectivesSlideProps {
   objectives: DeckObjective[];
@@ -24,7 +23,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       <div className="flex-1 flex p-[5%] gap-[4%]">
         {/* Left column — heading + photo */}
         <div className="w-[52%] flex flex-col">
@@ -33,7 +32,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
             customFields={cf}
             onFieldChange={onFieldChange}
             className="font-light italic leading-snug mb-4"
-            style={{ color: GREEN }}
+            style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
           />
 
           <SlideImage
@@ -58,7 +57,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
             <>
               {primary && (
                 <div className="mb-6">
-                  <div className="w-full border-t-2 mb-3" style={{ borderColor: GREEN }} />
+                  <div className="w-full border-t-2 mb-3" style={{ borderColor: OCEAN_TEAL }} />
                   <SlideRichText
                     fieldKey={`obj.primary.title`}
                     customFields={cf}
@@ -80,7 +79,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
 
               {secondary.length > 0 && (
                 <div>
-                  <div className="w-full border-t-2 mb-3" style={{ borderColor: GREEN }} />
+                  <div className="w-full border-t-2 mb-3" style={{ borderColor: OCEAN_TEAL }} />
                   <SlideRichText
                     fieldKey={`obj.secondary.title`}
                     customFields={cf}

@@ -1,13 +1,11 @@
 import { type FullDeck } from '@/api/decks.api';
-import { SLIDE_FONT_STACK } from '../fonts';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
+import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface DemographicsSlideProps {
   deck?: FullDeck;
@@ -30,7 +28,7 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
   const bgImgUrl = cf?.['image.demographics'] ? uploadUrl(cf['image.demographics']) : null;
 
   return (
-    <div className="h-full w-full flex flex-col relative" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col relative" style={{ backgroundColor: SANDY_BEIGE }}>
       {/* Optional background image */}
       {deck && onFieldChange && onGalleryAdd && (
         <div className="absolute top-2 right-2 z-10">
@@ -56,7 +54,7 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold leading-snug"
-          style={{ fontFamily: SLIDE_FONT_STACK }}
+          style={{ fontFamily: SLIDE_DISPLAY_STACK }}
         />
         <SlideRichText
           fieldKey="demo.subheadline"
@@ -82,13 +80,13 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
         ))}
       </div>
 
-      <div className="relative mx-[6%] flex-1 border-t-2 pt-3" style={{ borderColor: GREEN }}>
+      <div className="relative mx-[6%] flex-1 border-t-2 pt-3" style={{ borderColor: OCEAN_TEAL }}>
         <SlideRichText
           fieldKey="demo.audienceTitle"
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold mb-2"
-          style={{ color: GREEN }}
+          style={{ color: OCEAN_TEAL }}
         />
         <ul className="space-y-1 text-[10px]" style={{ color: '#333' }}>
           <li className="flex items-start gap-1.5">

@@ -30,7 +30,7 @@ function FormatToolbar({ onFormat }: { onFormat: (cmd: string) => void }) {
     <div className="flex gap-0.5 rounded bg-black/60 p-0.5 mb-1">
       <FormatButton label="B" cmd="bold" className="font-bold" onFormat={onFormat} />
       <FormatButton label="U" cmd="underline" className="underline" onFormat={onFormat} />
-      <FormatButton label={<span className="bg-[#00b2a0] text-white px-0.5 rounded-sm">H</span>} cmd="highlight" onFormat={onFormat} />
+      <FormatButton label={<span className="bg-[#8ED9AE] text-[#363A45] px-0.5 rounded-sm">H</span>} cmd="highlight" onFormat={onFormat} />
       <FormatButton label="✕" cmd="removeFormat" className="text-white/50" onFormat={onFormat} />
     </div>
   );
@@ -108,8 +108,8 @@ export function RichEditableText({
 
     const wrapper = document.createElement(tagName);
     if (cmd === 'highlight') {
-      wrapper.style.backgroundColor = '#00b2a0';
-      wrapper.style.color = '#ffffff';
+      wrapper.style.backgroundColor = '#8ED9AE';
+      wrapper.style.color = '#363A45';
       wrapper.style.padding = '0 2px';
       wrapper.style.borderRadius = '2px';
     }

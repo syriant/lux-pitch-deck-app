@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { uploadUrl } from '@/api/upload.api';
 import { ImagePicker } from './ImagePicker';
+import { OCEAN_TEAL, TEAL_200, TEAL_400 } from './brand';
 
 interface SlideImageProps {
   fieldKey: string;
@@ -21,7 +22,7 @@ export function SlideImage({
   onFieldChange,
   onGalleryAdd,
   className = '',
-  fallbackGradient = 'linear-gradient(135deg, #a3c4bd 0%, #8eb8b0 50%, #c8ddd8 100%)',
+  fallbackGradient = `linear-gradient(135deg, ${TEAL_400} 0%, ${OCEAN_TEAL} 50%, ${TEAL_200} 100%)`,
   placeholderText = 'Click to set image',
 }: SlideImageProps) {
   const [showPicker, setShowPicker] = useState(false);

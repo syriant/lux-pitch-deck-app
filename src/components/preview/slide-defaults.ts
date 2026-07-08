@@ -73,7 +73,7 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
 
   // ─── Demographics ────────────────────────────────────────────────────
   'demo.headline': {
-    value: "With our <mark style='background-color:#00b2a0;color:#ffffff;padding:0 2px;border-radius:2px'>affluent and engaged</mark> customers turn inspiration into bookings",
+    value: "With our <mark style='background-color:#8ED9AE;color:#363A45;padding:0 2px;border-radius:2px'>affluent and engaged</mark> customers turn inspiration into bookings",
     size: 33,
   },
   'demo.subheadline': {
@@ -96,7 +96,7 @@ export const SLIDE_DEFAULTS: Record<string, SlideDefault> = {
 
   // ─── Objectives ──────────────────────────────────────────────────────
   'obj.headline': {
-    value: "We create <mark style='background-color:#00b2a0;color:#ffffff;padding:0 2px;border-radius:2px'>tailored tactical campaigns</mark><br>to achieve your specific key objectives",
+    value: "We create <mark style='background-color:#8ED9AE;color:#363A45;padding:0 2px;border-radius:2px'>tailored tactical campaigns</mark><br>to achieve your specific key objectives",
     size: 26,
   },
   'obj.primary.title': { value: 'Primary Objective', size: 18 },

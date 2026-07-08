@@ -9,4 +9,13 @@
  * a user's own OS (Windows/macOS) preview with its native JP font.
  */
 export const SLIDE_FONT_STACK =
-  'Arial, "Helvetica Neue", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", "Hiragino Sans", Meiryo, sans-serif';
+  '"Suisse Intl", Arial, "Helvetica Neue", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic", "Hiragino Sans", Meiryo, sans-serif';
+
+/**
+ * Brand Refresh 2026 — expressive serif display face for slide headlines, with
+ * italic emphasis (Suisse Works Medium Italic). Falls back to Times New Roman
+ * per the brand typography guidance when Suisse is unavailable; "Noto Sans JP"
+ * keeps CJK headlines legible. Body/labels/tables use SLIDE_FONT_STACK above.
+ */
+export const SLIDE_DISPLAY_STACK =
+  '"Suisse Works", "Times New Roman", Times, "Noto Sans JP", serif';

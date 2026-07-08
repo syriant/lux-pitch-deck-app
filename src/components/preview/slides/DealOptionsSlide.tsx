@@ -4,9 +4,8 @@ import { SlideRichText } from '../SlideRichText';
 import { formatMoney, currencySymbol } from '../currency';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { translateInclusion } from '../i18n';
-
-const GREEN = '#00b2a0';
-const MINT = '#dff0ee';
+import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
 
 interface DealOptionsSlideProps {
   property?: DeckPropertyFull;
@@ -60,7 +59,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: MINT }}>
+    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
       {/* Header */}
       <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
@@ -68,7 +67,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold"
-          style={{ color: GREEN }}
+          style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
         />
         {onFieldChange && hasOptions && (
           <div className="flex items-center gap-2 ml-2">
@@ -347,9 +346,9 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       <table className="w-full border-collapse" style={{ fontSize: baseFont }}>
         <thead>
           <tr>
-            <th className="p-2 text-left w-[14%]" style={{ backgroundColor: GREEN }} />
+            <th className="p-2 text-left w-[14%]" style={{ backgroundColor: OCEAN_TEAL }} />
             {optionLabels.map((label, i) => (
-              <th key={i} className="p-2 text-center font-bold text-white" style={{ backgroundColor: GREEN }}>
+              <th key={i} className="p-2 text-center font-bold text-white" style={{ backgroundColor: OCEAN_TEAL }}>
                 {label}
               </th>
             ))}
@@ -357,7 +356,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
         </thead>
         <tbody>
           {rows.map((row, ri) => {
-            const rowBg = ri % 2 === 0 ? 'bg-[#edf7f5]' : 'bg-white';
+            const rowBg = ri % 2 === 0 ? 'bg-[#EEF3F2]' : 'bg-white';
             // Merge adjacent option cells when they resolve to the same text
             // (after applying any per-cell custom-field overrides). Cuts the
             // visual repetition for rows like "VCC / VCC / VCC".
@@ -373,7 +372,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
 
             return (
               <tr key={ri} className="border-b border-gray-200">
-                <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: GREEN }}>
+                <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
                   {t(row.label, locale)}
                 </td>
                 {allSame ? (
@@ -384,7 +383,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
                       defaultSize={baseFont}
                       customFields={customFields}
                       onFieldChange={onFieldChange}
-                      style={{ color: '#1a1a1a', textAlign: 'center' }}
+                      style={{ color: INK, textAlign: 'center' }}
                     />
                   </td>
                 ) : (
@@ -396,7 +395,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
                         defaultSize={baseFont}
                         customFields={customFields}
                         onFieldChange={onFieldChange}
-                        style={{ color: '#1a1a1a' }}
+                        style={{ color: INK }}
                       />
                     </td>
                   ))

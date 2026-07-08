@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { SLIDE_FONT_STACK } from '../fonts';
+import { SLIDE_FONT_STACK, SLIDE_DISPLAY_STACK } from '../fonts';
 import { useQuery } from '@tanstack/react-query';
 import { type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
@@ -10,6 +10,7 @@ import { SlideImage } from '../SlideImage';
 import { SLIDE_DEFAULTS } from '../slide-defaults';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { t, dateLocaleTag } from '../labels';
+import { OCEAN_TEAL } from '../brand';
 
 const TITLE_FIELD_KEY = 'reach.title';
 const SUBTITLE_FIELD_KEY = 'reach.subtitle';
@@ -105,7 +106,7 @@ function drawMapWithLabels(
     });
 
     // Member count (green)
-    ctx.fillStyle = '#00b2a0';
+    ctx.fillStyle = OCEAN_TEAL;
     ctx.font = `bold ${countSize}px ${SLIDE_FONT_STACK}`;
     ctx.fillText(members, x, startY + lines.length * lineH + countSize * 0.4);
   }
@@ -187,7 +188,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
           </div>
         )}
         {!bgImgUrl && (
-          <div className="absolute inset-0 bg-gradient-to-b from-[#8eb8b0] to-[#c8ddd8]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#255158] to-[#B3C2C5]" />
         )}
 
         {/* White card overlay — data-slide-root="true" makes this the
@@ -205,7 +206,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
               fieldKey="reach.title"
               customFields={cf}
               onFieldChange={onFieldChange}
-              style={{ fontFamily: SLIDE_FONT_STACK, textAlign: 'center' }}
+              style={{ fontFamily: SLIDE_DISPLAY_STACK, textAlign: 'center' }}
             />
             {onFieldChange && titlePositioned && (
               <button
