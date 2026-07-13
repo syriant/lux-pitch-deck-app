@@ -18,6 +18,11 @@ interface SlideRichTextProps {
   defaultValue?: string;
   defaultSize?: number;
   customFields?: Record<string, string>;
+  /**
+   * Extra placeholder tokens merged over the deck-level ones, for values scoped
+   * to this field (e.g. a case study's own metric tokens like {revenue}).
+   */
+  extraPlaceholders?: Record<string, string>;
   onFieldChange?: FieldChangeHandler;
   className?: string;
   style?: React.CSSProperties;
@@ -28,6 +33,7 @@ export function SlideRichText({
   defaultValue,
   defaultSize,
   customFields,
+  extraPlaceholders,
   onFieldChange,
   className = '',
   style,
@@ -48,9 +54,10 @@ export function SlideRichText({
   const isTemplateEditorMode = editorContext.allowedKeys !== undefined;
 
   // Substitute {hotelName} / {destination} etc. placeholders for real deck rendering.
+  // extraPlaceholders (e.g. a case study's metric tokens) win over deck-level ones.
   const value = isTemplateEditorMode
     ? rawValue
-    : substitutePlaceholders(rawValue, deckContext.placeholders);
+    : substitutePlaceholders(rawValue, { ...deckContext.placeholders, ...extraPlaceholders });
 
   const mergedStyle: React.CSSProperties = {
     ...style,

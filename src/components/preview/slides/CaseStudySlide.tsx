@@ -2,6 +2,7 @@ import { type DeckCaseStudyLink, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
+import { buildCaseStudyMetricVars } from '../case-study-metrics';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { uploadUrl } from '@/api/upload.api';
@@ -30,6 +31,10 @@ function CaseStudyCard({
   onFieldChange?: FieldChangeHandler;
 }) {
   const imgSrc = cs.images?.[0] ? uploadUrl(cs.images[0]) : null;
+  // Metric tokens ({revenue}, {room_nights}, …) scoped to this case study, so the
+  // narrative resolves to its own numbers in preview (and, via the mirror in the
+  // API, in the PPTX/PDF export).
+  const metricVars = buildCaseStudyMetricVars(cs);
 
   const imageBlock = (
     <div style={{ height: '55%' }} className="overflow-hidden">
@@ -48,6 +53,7 @@ function CaseStudyCard({
         defaultValue={cs.title}
         defaultSize={20}
         customFields={customFields}
+        extraPlaceholders={metricVars}
         onFieldChange={onFieldChange}
         className="font-bold leading-snug mb-1"
         style={{ color: OCEAN_TEAL }}
@@ -57,6 +63,7 @@ function CaseStudyCard({
         defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} room nights` : null].filter(Boolean).join(' · ')}
         defaultSize={15}
         customFields={customFields}
+        extraPlaceholders={metricVars}
         onFieldChange={onFieldChange}
         className="leading-[1.4]"
         style={{ color: '#333' }}

@@ -439,10 +439,10 @@ export function CaseStudies() {
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Deal ID</label>
+              <label className="block text-sm font-medium text-gray-700">Salesforce Deal ID</label>
               <div className="mt-1 flex gap-2">
                 <input type="text" value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}
-                  placeholder="e.g. 12345"
+                  placeholder="e.g. 006RF00000LYwIPYA1"
                   className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
                 <button
                   type="button"
@@ -513,7 +513,14 @@ export function CaseStudies() {
           <div>
             <label className="block text-sm font-medium text-gray-700">Narrative</label>
             <textarea rows={3} value={form.narrative} onChange={(e) => setForm({ ...form, narrative: e.target.value })}
+              placeholder="e.g. Revenue achieved — {revenue} across {bookings} bookings."
               className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
+            <p className="mt-1 text-xs text-gray-500">
+              Insert metric tokens and they fill in from Tableau on the slide:{' '}
+              <code>{'{revenue}'}</code>, <code>{'{room_nights}'}</code>, <code>{'{bookings}'}</code>,{' '}
+              <code>{'{packages_sold}'}</code>, <code>{'{adr}'}</code>, <code>{'{alos}'}</code>,{' '}
+              <code>{'{lead_time}'}</code>, <code>{'{upgrade_percentage}'}</code>.
+            </p>
           </div>
 
           <div>

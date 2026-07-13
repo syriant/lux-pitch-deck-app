@@ -217,7 +217,7 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
                   </div>
                   <div className="mt-3 flex items-end gap-2">
                     <div className="flex-1">
-                      <Field label="Deal ID" value={r.dealId} onChange={(v) => patch(i, { dealId: v })} />
+                      <Field label="Salesforce Deal ID" value={r.dealId} onChange={(v) => patch(i, { dealId: v })} />
                     </div>
                     <button
                       type="button"
@@ -235,8 +235,14 @@ export function CaseStudySummaryReview({ drafts, warnings, onClose, onCreated }:
                       value={r.narrative}
                       onChange={(e) => patch(i, { narrative: e.target.value })}
                       rows={2}
+                      placeholder="e.g. Revenue achieved — {revenue} across {bookings} bookings."
                       className="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
                     />
+                    <p className="mt-1 text-[11px] text-gray-500">
+                      Metric tokens fill in from Tableau: <code>{'{revenue}'}</code>, <code>{'{room_nights}'}</code>,{' '}
+                      <code>{'{bookings}'}</code>, <code>{'{packages_sold}'}</code>, <code>{'{adr}'}</code>,{' '}
+                      <code>{'{alos}'}</code>, <code>{'{lead_time}'}</code>, <code>{'{upgrade_percentage}'}</code>.
+                    </p>
                   </div>
                   <div className="mt-3">
                     <Label>PCM notes (package price · LOS · inclusions)</Label>

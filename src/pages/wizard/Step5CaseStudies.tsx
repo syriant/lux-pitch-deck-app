@@ -531,12 +531,12 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           </div>
           <div className="flex items-end gap-2">
             <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Deal ID</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Salesforce Deal ID</label>
               <input
                 type="text"
                 value={createForm.dealId}
                 onChange={(e) => setCreateForm({ ...createForm, dealId: e.target.value })}
-                placeholder="offer_opportunity_bk or name"
+                placeholder="e.g. 006RF00000LYwIPYA1"
                 className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
               />
             </div>
@@ -635,9 +635,14 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
               rows={2}
               value={createForm.narrative}
               onChange={(e) => setCreateForm({ ...createForm, narrative: e.target.value })}
-              placeholder="Brief summary of the campaign results..."
+              placeholder="e.g. Revenue achieved — {revenue} across {bookings} bookings."
               className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
             />
+            <p className="mt-1 text-[11px] text-gray-500">
+              Metric tokens fill in from Tableau: <code>{'{revenue}'}</code>, <code>{'{room_nights}'}</code>,{' '}
+              <code>{'{bookings}'}</code>, <code>{'{packages_sold}'}</code>, <code>{'{adr}'}</code>,{' '}
+              <code>{'{alos}'}</code>, <code>{'{lead_time}'}</code>, <code>{'{upgrade_percentage}'}</code>.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Images</label>

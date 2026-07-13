@@ -244,6 +244,8 @@ export interface DeckCaseStudyLink {
     alos: string | null;
     leadTime: number | null;
     bookings: number | null;
+    packagesSold: number | null;
+    upgradePercentage: string | null;
     narrative: string | null;
     images: string[] | null;
     tags: string[] | null;
