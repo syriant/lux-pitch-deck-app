@@ -114,10 +114,13 @@ export function resolveComparisonCell(
   return '';
 }
 
+// Brand Refresh 2026: Ocean Teal family for Diamond/Platinum, Burnt Orange for
+// Gold. Kept in sync with the API's TIER_PALETTE in
+// lux-pitch-deck-api/src/modules/export/templates/tactical-shared.ts.
 export const TIER_PALETTE: Record<number, { accent: string; badgeLabel: string }> = {
-  1: { accent: '#2D62EA', badgeLabel: 'DIAMOND' },
-  2: { accent: '#7A4FE7', badgeLabel: 'PLATINUM' },
-  3: { accent: '#E68A2E', badgeLabel: 'GOLD' },
+  1: { accent: '#255158', badgeLabel: 'DIAMOND' }, // Ocean Teal (badge lifts to Teal 400 on the band)
+  2: { accent: '#46646A', badgeLabel: 'PLATINUM' }, // lighter slate-teal, between Ocean Teal & Ink
+  3: { accent: '#363A45', badgeLabel: 'GOLD' }, // Ink
 };
 
 export function tierBadgeName(opt: DeckOption): string {

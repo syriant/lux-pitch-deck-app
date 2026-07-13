@@ -6,7 +6,14 @@ import { t, dateLocaleTag } from '../labels';
 import { translateInclusion } from '../i18n';
 import { FontSizeControl } from '../FontSizeControl';
 import { SlideRichText } from '../SlideRichText';
-import { OCEAN_TEAL, SANDY_BEIGE, INK, TEAL_100 } from '../brand';
+import { OCEAN_TEAL, SANDY_BEIGE, INK, TEAL_100, TEAL_400 } from '../brand';
+
+/** True when a hex colour is light enough to need dark (not white) text on it. */
+function isLightHex(hex: string): boolean {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 140; // perceived luminance
+}
 
 interface Props {
   property?: DeckPropertyFull;
@@ -72,6 +79,15 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
 
   const palette = TIER_PALETTE[opt.optionNumber] ?? TIER_PALETTE[1];
   const accent = palette.accent;
+  // The header badge sits on the fixed Ocean Teal band. Diamond's accent IS
+  // Ocean Teal, so its badge would vanish — lift it to a lighter teal. Platinum
+  // and Gold already contrast, so they keep their accent.
+  const badgeFill = accent === OCEAN_TEAL ? TEAL_400 : accent;
+  // Text on an accent fill and the keyline dashes must stay legible whatever the
+  // tier colour is: dark accents get white text + accent-coloured dashes; a light
+  // accent would flip to dark (Ink) text and dark dashes.
+  const onAccent = isLightHex(accent) ? INK : '#FFFFFF';
+  const keyline = isLightHex(accent) ? INK : accent;
   const rooms = opt.rooms ?? [];
   // Union of night-count columns across all rooms, sorted ascending.
   const nightCounts = Array.from(
@@ -110,8 +126,8 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
       <div className="relative" style={{ backgroundColor: OCEAN_TEAL, height: 80 }}>
         <div className="absolute left-[4%] top-1/2 -translate-y-1/2 flex items-center">
           <div
-            className="px-4 py-2 text-white font-bold text-sm tracking-wide"
-            style={{ backgroundColor: accent }}
+            className="px-4 py-2 font-bold text-sm tracking-wide"
+            style={{ backgroundColor: badgeFill, color: onAccent }}
           >
             ◆ {t(tierBadgeName(opt), locale)} {t('TACTICAL PACKAGE', locale)}
           </div>
@@ -121,7 +137,10 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
             <div className="text-[10px] uppercase tracking-wider" style={{ color: TEAL_100 }}>
               {t('Room night forecast', locale)}
             </div>
-            <div className="text-3xl font-bold" style={{ color: accent }}>
+            {/* White, not the tier accent: the header band is a fixed Ocean
+                Teal, so a teal-family accent (Diamond/Platinum) would vanish
+                into it. */}
+            <div className="text-3xl font-bold text-white">
               {fmtNumber(forecast)}
             </div>
           </div>
@@ -268,7 +287,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
         <div className="flex gap-2" style={{ flexBasis: '40%' }}>
           {showIncl && (
           <div className="flex-1 flex flex-col">
-            <div className="px-3 py-1.5 text-white text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: accent }}>
+            <div className="px-3 py-1.5 text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: badgeFill, color: onAccent }}>
               {t('INCLUSIONS', locale)}
             </div>
             <div className="flex-1 bg-white p-2 overflow-hidden">
@@ -276,7 +295,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
                 <div className="text-[10px] text-gray-400 text-center py-2">{t('No inclusions', deck?.renderLocale)}</div>
               ) : inclusions4.map((item, i) => (
                 <div key={i} className="flex items-center gap-2 py-0.5">
-                  <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: accent }} />
+                  <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: keyline }} />
                   <span className="text-[10px]" style={{ color: INK }}>{translateInclusion(item, cf)}</span>
                 </div>
               ))}
@@ -285,13 +304,13 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           )}
           {showExtraNightIncl && (
             <div className="flex-1 flex flex-col">
-              <div className="px-3 py-1.5 text-white text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: accent }}>
+              <div className="px-3 py-1.5 text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: badgeFill, color: onAccent }}>
                 {t('EXTRA NIGHTS', locale)}
               </div>
               <div className="flex-1 bg-white p-2 overflow-hidden">
                 {extraNightIncl.map((item, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
-                    <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: accent }} />
+                    <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: keyline }} />
                     <span className="text-[10px]" style={{ color: INK }}>{translateInclusion(item, cf)}</span>
                   </div>
                 ))}
