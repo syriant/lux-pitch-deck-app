@@ -45,3 +45,18 @@ export async function updateDifferentiator(id: string, data: UpdateDifferentiato
 export async function deactivateDifferentiator(id: string): Promise<void> {
   await apiClient.delete(`/differentiators/${id}`);
 }
+
+export interface BulkDifferentiatorItem {
+  title: string;
+  description?: string;
+  category?: string;
+}
+
+export async function bulkCreateDifferentiators(items: BulkDifferentiatorItem[]): Promise<Differentiator[]> {
+  const res = await apiClient.post<Differentiator[]>('/differentiators/bulk', { items });
+  return res.data;
+}
+
+export async function bulkDeactivateDifferentiators(ids: string[]): Promise<void> {
+  await apiClient.post('/differentiators/bulk-deactivate', { ids });
+}

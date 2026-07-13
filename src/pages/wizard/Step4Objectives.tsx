@@ -60,7 +60,11 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
           getDeckDifferentiators(deckId),
         ]);
         setTemplates(tmpl.filter((t) => t.active));
-        setAllDifferentiators(diffs.filter((d) => d.active));
+        // Show active differentiators PLUS any this deck already has selected —
+        // even if since deactivated — so those can still be unticked (otherwise
+        // they're counted as selected but have no row to deselect).
+        const savedDiffIdSet = new Set(savedDiffs.map((d) => d.differentiatorId));
+        setAllDifferentiators(diffs.filter((d) => d.active || savedDiffIdSet.has(d.id)));
 
         // Pre-populate from saved data
         if (savedObjs.length > 0) {
@@ -408,7 +412,14 @@ export function Step4Objectives({ deckId, deck, registerSave, onBack, onNext }: 
                     className="mt-0.5"
                   />
                   <div>
-                    <div className="font-medium">{diff.title}</div>
+                    <div className="font-medium">
+                      {diff.title}
+                      {!diff.active && (
+                        <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 align-middle">
+                          Deactivated
+                        </span>
+                      )}
+                    </div>
                     {isSuggested && (
                       <div className="text-xs text-green-600">
                         {isSelected ? 'Auto-suggested' : 'Suggested — deselect another to add'}
