@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { isAxiosError } from 'axios';
 import {
   createProperty,
   updateProperty,
@@ -208,7 +209,13 @@ export function Step1Hotels({
         text: `Imported from "${opp.opportunityName ?? id}". Confirm the destination matches an option in the dropdown so deal-tier rules apply.`,
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch Salesforce opportunity';
+      // Prefer the API's message ("Could not reach Salesforce...", "Opportunity
+      // not found...") over axios's generic "Request failed with status code N".
+      const apiMsg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      const msg =
+        apiMsg ?? (err instanceof Error ? err.message : 'Failed to fetch Salesforce opportunity');
       setSfMessage({ kind: 'error', text: msg });
     } finally {
       setSfImporting(false);
