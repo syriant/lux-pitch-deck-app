@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import {
   createCaseStudy,
   updateCaseStudy,
@@ -9,10 +9,10 @@ import {
 import { fetchTableauMetrics } from '@/api/tableau.api';
 import { fetchSalesforceOpportunity } from '@/api/salesforce.api';
 import { uploadUrl } from '@/api/upload.api';
-import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
+import { ingestBase64Images, approveLibraryImages, uploadToLibrary } from '@/api/image-library.api';
+import { FetchImagesModal } from '@/components/images/FetchImagesModal';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
-import { ImagePicker } from './ImagePicker';
 
 export interface CaseStudyFormValues {
   title: string;
@@ -120,8 +120,9 @@ interface CaseStudyFormProps {
 
 /**
  * The one Add/Edit Case Study form, shared by the library page and wizard
- * Step 5. Owns field state, Tableau metrics fetch, image management (hero /
- * remove / preview), base64 image ingest on submit, and the duplicate-409
+ * Step 5. Owns field state, Tableau metrics fetch, the wizard-style image
+ * gallery (Cover = first image, shown on the case study slide) with the
+ * shared fetch modal, base64 image ingest on submit, and the duplicate-409
  * confirm flow. Mount it fresh per open (conditional render + key).
  */
 export function CaseStudyForm({
@@ -139,10 +140,54 @@ export function CaseStudyForm({
   const [saving, setSaving] = useState(false);
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
   const [metricsMessage, setMetricsMessage] = useState('');
-  const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
   const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
+  const [showFetchModal, setShowFetchModal] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
   const imagesNote = form.images.length === 0 ? (initialImagesNote ?? '') : '';
+  // The cover is simply the first image — it's what the case study slide shows.
+  const cover = form.images[0] ?? null;
+
+  async function handleCoverUpload(file: File) {
+    setUploadingCover(true);
+    try {
+      const row = await uploadToLibrary({
+        file,
+        hotelName: form.hotelName.trim() || undefined,
+        destination: form.destination.trim() || undefined,
+        source: 'manual_upload',
+      });
+      setForm((prev) => ({ ...prev, images: [row.url, ...prev.images.filter((u) => u !== row.url)] }));
+    } catch {
+      setError('Failed to upload cover image');
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  async function handleUploadFiles(files: FileList) {
+    setUploadingImages(true);
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        const row = await uploadToLibrary({
+          file,
+          hotelName: form.hotelName.trim() || undefined,
+          destination: form.destination.trim() || undefined,
+          source: 'manual_upload',
+        });
+        urls.push(row.url);
+      }
+      setForm((prev) => ({ ...prev, images: [...prev.images, ...urls.filter((u) => !prev.images.includes(u))] }));
+    } catch {
+      setError('Failed to upload image');
+    } finally {
+      setUploadingImages(false);
+    }
+  }
 
   // Density-dependent classes; everything else is identical between contexts.
   const s = compact
@@ -154,11 +199,8 @@ export function CaseStudyForm({
         label: 'block text-xs font-medium text-gray-600 mb-1',
         input: 'block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none',
         hint: 'mt-1 text-[11px] text-gray-500',
-        tile: 'relative group w-16 h-16 rounded border overflow-hidden',
-        tileLabel: 'text-[8px]',
         button: 'rounded-md bg-[#01B18B] px-4 py-1.5 text-sm text-white hover:bg-[#009977] disabled:opacity-50',
         cancel: 'rounded-md border border-gray-300 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50',
-        pickerSize: 'sm' as const,
       }
     : {
         container: 'mb-6 rounded-lg border border-gray-200 bg-white p-6 space-y-4',
@@ -168,11 +210,8 @@ export function CaseStudyForm({
         label: 'block text-sm font-medium text-gray-700',
         input: 'mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]',
         hint: 'mt-1 text-xs text-gray-500',
-        tile: 'relative group w-20 h-20 rounded border overflow-hidden',
-        tileLabel: 'text-[9px]',
         button: 'rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50',
         cancel: 'rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50',
-        pickerSize: undefined,
       };
 
   // One click pulls Tableau metrics and the Salesforce opportunity (hotel name
@@ -322,6 +361,7 @@ export function CaseStudyForm({
   }
 
   return (
+    <>
     <form onSubmit={handleSubmit} className={s.container}>
       <h3 className={s.heading}>{caseStudyId ? 'Edit Case Study' : 'New Case Study'}</h3>
 
@@ -427,57 +467,119 @@ export function CaseStudyForm({
         </p>
       </div>
 
+      {/* Images — same look and flow as the wizard's image step. The first
+          image is the Cover, used on the case study slide (no hero here). */}
       <div>
-        <label className={`${s.label} mb-1`}>Images</label>
-        {imagesNote && (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">{imagesNote}</p>
-        )}
-        {form.images.length > 1 && (
-          <p className={`${s.hint} mb-1 mt-0`}>The first image is the hero shown on the case study slide — hover an image to set it.</p>
-        )}
-        <div className="flex gap-2 flex-wrap mb-2">
-          {form.images.map((url, idx) => (
-            <div key={url} className={`${s.tile} ${idx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>
-              <button
-                type="button"
-                onClick={() => setViewingImage(url)}
-                className="block w-full h-full"
-                aria-label="Preview image"
-              >
-                <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
-              </button>
-              {idx === 0 && form.images.length > 1 && (
-                <span className={`absolute bottom-0 left-0 right-0 bg-[#01B18B] text-white ${s.tileLabel} font-medium text-center py-0.5`}>Hero</span>
-              )}
-              {idx > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, images: [url, ...form.images.filter((u) => u !== url)] })}
-                  className={`absolute bottom-0 left-0 right-0 bg-black/70 text-white ${s.tileLabel} py-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}
-                >
-                  Set as hero
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setForm({ ...form, images: form.images.filter((u) => u !== url) })}
-                className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                &times;
-              </button>
+        <label className={`${s.label} mb-2`}>Cover Image (case study slide)</label>
+        <input ref={coverRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) void handleCoverUpload(f); e.target.value = ''; }} />
+        <div className="relative w-full max-w-sm">
+          {uploadingCover ? (
+            <div className="w-full h-32 rounded-lg border-2 border-dashed border-[#01B18B] bg-[#E6F9F5] flex flex-col items-center justify-center gap-2">
+              <Spinner className="text-[#01B18B]" />
+              <span className="text-xs text-[#01B18B]">Uploading cover...</span>
             </div>
-          ))}
-          <ImagePicker
-            hotelName={form.hotelName}
-            destination={form.destination}
-            existingUrls={form.images}
-            onPicked={(url) => setForm((prev) => ({ ...prev, images: [...prev.images, url] }))}
-            onAddFetched={addFetchedImages}
-            onError={(msg) => setError(msg)}
-            size={s.pickerSize}
+          ) : cover ? (
+            <div className="relative group h-32 w-full rounded-lg overflow-hidden border border-gray-200">
+              <img src={uploadUrl(cover) ?? ''} alt="Cover" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <button type="button" onClick={() => coverRef.current?.click()} className="rounded bg-white px-2 py-1 text-xs font-medium text-gray-700">Replace</button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => coverRef.current?.click()}
+              className="w-full h-32 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 flex items-center justify-center text-gray-400 text-sm"
+            >
+              + Upload cover
+            </button>
+          )}
+          {/* Hidden mirror of the cover so native form validation ("Please
+              fill out this field") anchors its bubble to the cover slot. */}
+          <input
+            type="text"
+            required
+            value={cover ?? ''}
+            onChange={() => {}}
+            tabIndex={-1}
+            aria-hidden="true"
+            className="absolute bottom-0 left-1/2 h-px w-px opacity-0 pointer-events-none"
           />
         </div>
       </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className={s.label}>Image Gallery ({form.images.length} images)</label>
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={(e) => { if (e.target.files?.length) void handleUploadFiles(e.target.files); e.target.value = ''; }} />
+          <div className="flex items-center gap-2">
+            {form.hotelName.trim() && (
+              <button
+                type="button"
+                onClick={() => setShowFetchModal(true)}
+                className="rounded-md border border-[#01B18B] px-3 py-1.5 text-xs text-[#01B18B] hover:bg-[#E6F9F5]"
+              >
+                Fetch for {form.hotelName.trim()}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploadingImages}
+              className="rounded-md bg-[#01B18B] px-3 py-1.5 text-xs text-white hover:bg-[#009977] disabled:opacity-50"
+            >
+              {uploadingImages ? <><Spinner size="sm" className="text-white inline-block mr-1.5" /> Uploading...</> : '+ Add Images'}
+            </button>
+          </div>
+        </div>
+
+        {imagesNote && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">{imagesNote}</p>
+        )}
+
+        {form.images.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
+            <p className="text-sm text-gray-400">No images yet. Fetch photos for the hotel or upload your own.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 gap-3">
+            {form.images.map((url, idx) => (
+              <div key={url} className="relative group rounded-lg overflow-hidden border border-gray-200">
+                <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-24 object-cover" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                  {idx !== 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, images: [url, ...form.images.filter((u) => u !== url)] })}
+                      className="rounded bg-white px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                    >
+                      Set as Cover
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, images: form.images.filter((u) => u !== url) })}
+                    className="rounded bg-red-600 px-2 py-0.5 text-[10px] font-medium text-white"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {idx === 0 && (
+                  <div className="absolute top-1 left-1 rounded bg-[#01B18B] px-1.5 py-0.5 text-[9px] font-medium text-white">
+                    Cover
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {!cover && (
+        <p className="text-xs text-amber-600">Please upload a cover image before proceeding.</p>
+      )}
 
       <div className="flex gap-3">
         <button type="submit" disabled={saving} className={s.button}>
@@ -487,28 +589,6 @@ export function CaseStudyForm({
           Cancel
         </button>
       </div>
-
-      {viewingImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
-          onClick={() => setViewingImage(null)}
-        >
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
-            className="absolute top-4 right-4 text-white text-3xl leading-none hover:text-gray-300"
-            aria-label="Close"
-          >
-            ×
-          </button>
-          <img
-            src={uploadUrl(viewingImage) ?? ''}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[90vh] object-contain rounded"
-          />
-        </div>
-      )}
 
       {pendingDuplicates && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -549,5 +629,18 @@ export function CaseStudyForm({
         </div>
       )}
     </form>
+
+    {/* Outside the <form> so the panel's buttons can never trigger a submit. */}
+    {showFetchModal && form.hotelName.trim() && (
+      <FetchImagesModal
+        hotelName={form.hotelName.trim()}
+        destination={form.destination.trim() || null}
+        existingUrls={new Set(form.images)}
+        onClose={() => setShowFetchModal(false)}
+        onAdd={addFetchedImages}
+        addTargetLabel="case study"
+      />
+    )}
+    </>
   );
 }
