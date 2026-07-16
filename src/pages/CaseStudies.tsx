@@ -1,52 +1,26 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect } from 'react';
 import {
   getCaseStudies,
   getCaseStudyFacets,
   type CaseStudyFacets,
-  createCaseStudy,
-  updateCaseStudy,
   deleteCaseStudy,
   parseCaseStudyPdfAuto,
   type CaseStudy,
   type CaseStudyDraft,
   type CaseStudySummaryDraft,
-  type DuplicateCandidate,
 } from '@/api/case-studies.api';
-import { fetchTableauMetrics } from '@/api/tableau.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { uploadUrl } from '@/api/upload.api';
-import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
-import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
-import { ImagePicker } from '@/components/case-studies/ImagePicker';
+import {
+  CaseStudyForm,
+  caseStudyToFormValues,
+  draftToFormValues,
+  emptyCaseStudyForm,
+  summariseDraft,
+  type CaseStudyFormValues,
+} from '@/components/case-studies/CaseStudyForm';
 import { CaseStudySummaryReview } from '@/components/case-studies/CaseStudySummaryReview';
-
-interface FormData {
-  title: string;
-  hotelName: string;
-  destination: string;
-  propertyType: string;
-  dealId: string;
-  roomNights: string;
-  revenue: string;
-  adr: string;
-  alos: string;
-  leadTime: string;
-  bookings: string;
-  packagesSold: string;
-  upgradePercentage: string;
-  narrative: string;
-  tags: string;
-  images: string[];
-  sourcePdfUrl: string | null;
-}
-
-const emptyForm: FormData = {
-  title: '', hotelName: '', destination: '', propertyType: '', dealId: '',
-  roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
-  packagesSold: '', upgradePercentage: '',
-  narrative: '', tags: '', images: [], sourcePdfUrl: null,
-};
 
 export function CaseStudies() {
   const [items, setItems] = useState<CaseStudy[]>([]);
@@ -60,27 +34,17 @@ export function CaseStudies() {
   const [facets, setFacets] = useState<CaseStudyFacets>({ destinations: [], propertyTypes: [] });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormData>(emptyForm);
+  const [formInitial, setFormInitial] = useState<CaseStudyFormValues>(emptyCaseStudyForm);
+  // Remounts the form so a fresh open never inherits the previous open's state.
+  const [formInstance, setFormInstance] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<CaseStudy | null>(null);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
-  const [fetchingMetrics, setFetchingMetrics] = useState(false);
-  const [metricsMessage, setMetricsMessage] = useState('');
   const [parsingPdf, setParsingPdf] = useState(false);
   const [summary, setSummary] = useState<{ drafts: CaseStudySummaryDraft[]; warnings: string[] } | null>(null);
   const [pdfMessage, setPdfMessage] = useState('');
-  const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
-  const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
-  const [viewingImage, setViewingImage] = useState<string | null>(null);
-  // Why the PDF yielded no images (flattened slides / none present), shown in the
-  // images section. Cleared once the form has images or a non-PDF form opens.
+  // Why the PDF yielded no images (flattened slides / none present), shown in
+  // the form's images section.
   const [imagesNote, setImagesNote] = useState('');
-
-  // Pull clean hotel photos from LUX/Google. Adding to the case study is the
-  // explicit approval that promotes pending fetched images into the library.
-  async function addFetchedImages(urls: string[]) {
-    await approveLibraryImages(urls).catch(() => {});
-    setForm((prev) => ({ ...prev, images: [...prev.images, ...urls.filter((u) => !prev.images.includes(u))] }));
-  }
 
   useEffect(() => {
     getDestinations()
@@ -121,196 +85,29 @@ export function CaseStudies() {
   }, []);
 
   function openCreate() {
-    setForm({ ...emptyForm });
+    setFormInitial(emptyCaseStudyForm);
     setEditingId(null);
-    setMetricsMessage('');
     setImagesNote('');
+    setFormInstance((n) => n + 1);
     setShowForm(true);
   }
 
   function openEdit(item: CaseStudy) {
-    setForm({
-      title: item.title,
-      hotelName: item.hotelName,
-      destination: item.destination ?? '',
-      propertyType: item.propertyType ?? '',
-      dealId: item.dealId ?? '',
-      roomNights: item.roomNights?.toString() ?? '',
-      revenue: item.revenue ?? '',
-      adr: item.adr ?? '',
-      alos: item.alos ?? '',
-      leadTime: item.leadTime?.toString() ?? '',
-      bookings: item.bookings?.toString() ?? '',
-      packagesSold: item.packagesSold?.toString() ?? '',
-      upgradePercentage: item.upgradePercentage ?? '',
-      narrative: item.narrative ?? '',
-      tags: item.tags?.join(', ') ?? '',
-      images: item.images ?? [],
-      sourcePdfUrl: item.sourcePdfUrl,
-    });
+    setFormInitial(caseStudyToFormValues(item));
     setEditingId(item.id);
-    setMetricsMessage('');
     setImagesNote('');
+    setFormInstance((n) => n + 1);
     setShowForm(true);
-  }
-
-  async function handleFetchMetrics() {
-    if (!form.dealId.trim()) return;
-    setFetchingMetrics(true);
-    setMetricsMessage('');
-    try {
-      const metrics = await fetchTableauMetrics(form.dealId.trim());
-      setForm((prev) => ({
-        ...prev,
-        roomNights: metrics.roomNights?.toString() ?? prev.roomNights,
-        revenue: metrics.revenue?.toString() ?? prev.revenue,
-        adr: metrics.adr?.toString() ?? prev.adr,
-        alos: metrics.alos?.toString() ?? prev.alos,
-        leadTime: metrics.leadTime?.toString() ?? prev.leadTime,
-        bookings: metrics.bookings?.toString() ?? prev.bookings,
-        packagesSold: metrics.packagesSold?.toString() ?? prev.packagesSold,
-        upgradePercentage: metrics.upgradePercentage?.toString() ?? prev.upgradePercentage,
-      }));
-      setMetricsMessage('Metrics populated from Tableau');
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      if (status === 503) {
-        setMetricsMessage('Tableau is not configured yet — enter metrics manually');
-      } else {
-        setMetricsMessage('Failed to fetch metrics from Tableau');
-      }
-    } finally {
-      setFetchingMetrics(false);
-    }
-  }
-
-  async function resolveImagesForSubmit(): Promise<string[]> {
-    const dataUrls = form.images.filter((u) => u.startsWith('data:'));
-    if (dataUrls.length === 0) return form.images;
-
-    const ingested = await ingestBase64Images({
-      items: dataUrls.map((dataUrl) => ({ dataUrl })),
-      hotelName: form.hotelName.trim() || null,
-      destination: form.destination.trim() || null,
-      source: 'pitch_deck',
-    });
-
-    let i = 0;
-    return form.images.map((u) => (u.startsWith('data:') ? ingested[i++]?.url ?? u : u));
-  }
-
-  async function buildPayload() {
-    const images = await resolveImagesForSubmit();
-    return {
-      title: form.title,
-      hotelName: form.hotelName,
-      destination: form.destination || undefined,
-      propertyType: form.propertyType || undefined,
-      dealId: form.dealId || undefined,
-      roomNights: form.roomNights ? parseInt(form.roomNights) : undefined,
-      revenue: form.revenue ? parseFloat(form.revenue) : undefined,
-      adr: form.adr ? parseFloat(form.adr) : undefined,
-      alos: form.alos ? parseFloat(form.alos) : undefined,
-      leadTime: form.leadTime ? parseInt(form.leadTime) : undefined,
-      bookings: form.bookings ? parseInt(form.bookings) : undefined,
-      packagesSold: form.packagesSold ? parseInt(form.packagesSold) : undefined,
-      upgradePercentage: form.upgradePercentage ? parseFloat(form.upgradePercentage) : undefined,
-      narrative: form.narrative || undefined,
-      tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
-      images,
-      sourcePdfUrl: form.sourcePdfUrl ?? undefined,
-    };
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError('');
-    let payload: Awaited<ReturnType<typeof buildPayload>>;
-    try {
-      payload = await buildPayload();
-    } catch {
-      setError('Failed to ingest extracted images');
-      return;
-    }
-
-    try {
-      if (editingId) {
-        await updateCaseStudy(editingId, payload);
-      } else {
-        await createCaseStudy(payload);
-      }
-      setShowForm(false);
-      setLoading(true);
-      await load();
-    } catch (err: unknown) {
-      const resp = (err as { response?: { status?: number; data?: { candidates?: DuplicateCandidate[] } } })?.response;
-      if (!editingId && resp?.status === 409 && resp.data?.candidates) {
-        setPendingDuplicates(resp.data.candidates);
-        setPendingPayload(payload);
-        return;
-      }
-      setError(editingId ? 'Failed to update' : 'Failed to create');
-    }
-  }
-
-  async function confirmDuplicateCreate() {
-    if (!pendingPayload) return;
-    try {
-      await createCaseStudy(pendingPayload, true);
-      setPendingDuplicates(null);
-      setPendingPayload(null);
-      setShowForm(false);
-      setLoading(true);
-      await load();
-    } catch {
-      setError('Failed to create');
-    }
   }
 
   function applyDraft(draft: CaseStudyDraft) {
-    setForm({
-      title: draft.title ?? '',
-      hotelName: draft.hotelName ?? '',
-      destination: draft.destination ?? '',
-      propertyType: draft.propertyType ?? '',
-      dealId: '',
-      roomNights: draft.roomNights != null ? String(draft.roomNights) : '',
-      revenue: draft.revenue != null ? String(draft.revenue) : '',
-      adr: draft.adr != null ? String(draft.adr) : '',
-      alos: draft.alos != null ? String(draft.alos) : '',
-      leadTime: draft.leadTime != null ? String(draft.leadTime) : '',
-      bookings: draft.bookings != null ? String(draft.bookings) : '',
-      packagesSold: draft.packagesSold != null ? String(draft.packagesSold) : '',
-      upgradePercentage: draft.upgradePercentage != null ? String(draft.upgradePercentage) : '',
-      narrative: draft.narrative ?? '',
-      tags: draft.tags?.join(', ') ?? '',
-      images: draft.images,
-      sourcePdfUrl: draft.sourcePdfUrl,
-    });
+    const { imagesNote: note, message } = summariseDraft(draft);
+    setFormInitial(draftToFormValues(draft));
     setEditingId(null);
+    setImagesNote(note);
+    setPdfMessage(message);
+    setFormInstance((n) => n + 1);
     setShowForm(true);
-    setMetricsMessage('');
-    // Image-related warnings belong in the images section; everything else goes
-    // in the general banner.
-    const imageWarnings = draft.warnings.filter((w) => /image|photo/i.test(w));
-    const otherWarnings = draft.warnings.filter((w) => !/image|photo/i.test(w));
-    setImagesNote(
-      draft.images.length === 0
-        ? (imageWarnings[0] ?? 'No photos were found in the PDF — use “Fetch hotel photos” or upload to add images.')
-        : '',
-    );
-
-    const parts: string[] = [];
-    parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
-    if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
-    if (otherWarnings.length > 0) parts.push(otherWarnings.join(' '));
-    if (draft.duplicateCandidates.length > 0) {
-      parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
-    }
-    if (!draft.destinationMatched && draft.destination) {
-      parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
-    }
-    setPdfMessage(parts.join(' · '));
   }
 
   // One button: the API decides whether the PDF is a single-hotel deck (opens
@@ -440,185 +237,15 @@ export function CaseStudies() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 rounded-lg border border-gray-200 bg-white p-6 space-y-4">
-          <h2 className="text-lg font-semibold">{editingId ? 'Edit Case Study' : 'New Case Study'}</h2>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Title</label>
-              <input type="text" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Hotel Name</label>
-              <input type="text" required value={form.hotelName} onChange={(e) => setForm({ ...form, hotelName: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Destination</label>
-              <DestinationCombobox
-                options={destinationOptions}
-                value={form.destination}
-                onChange={(sel) => setForm({ ...form, destination: sel.label })}
-                placeholder="Search or type a destination..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Property Type</label>
-              <input type="text" value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
-              <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Salesforce Deal ID</label>
-              <div className="mt-1 flex gap-2">
-                <input type="text" value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}
-                  placeholder="e.g. 006RF00000LYwIPYA1"
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-                <button
-                  type="button"
-                  disabled={!form.dealId.trim() || fetchingMetrics}
-                  onClick={handleFetchMetrics}
-                  className="shrink-0 rounded-md border border-[#01B18B] px-3 py-2 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  {fetchingMetrics ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
-                  Fetch Metrics
-                </button>
-              </div>
-              {metricsMessage && (
-                <p className={`mt-1 text-xs ${metricsMessage.includes('populated') ? 'text-[#01B18B]' : 'text-amber-600'}`}>
-                  {metricsMessage}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Room Nights</label>
-              <input type="number" value={form.roomNights} onChange={(e) => setForm({ ...form, roomNights: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Revenue ($)</label>
-              <input type="number" step="0.01" value={form.revenue} onChange={(e) => setForm({ ...form, revenue: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">ADR ($)</label>
-              <input type="number" step="0.01" value={form.adr} onChange={(e) => setForm({ ...form, adr: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">ALOS (days)</label>
-              <input type="number" step="0.1" max="99" value={form.alos} onChange={(e) => setForm({ ...form, alos: e.target.value })}
-                placeholder="e.g. 3.5"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Bookings</label>
-              <input type="number" value={form.bookings} onChange={(e) => setForm({ ...form, bookings: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Lead Time (days)</label>
-              <input type="number" value={form.leadTime} onChange={(e) => setForm({ ...form, leadTime: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Packages Sold</label>
-              <input type="number" value={form.packagesSold} onChange={(e) => setForm({ ...form, packagesSold: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Upgrade %</label>
-              <input type="number" step="0.01" value={form.upgradePercentage} onChange={(e) => setForm({ ...form, upgradePercentage: e.target.value })}
-                placeholder="e.g. 12.5"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Narrative</label>
-            <textarea rows={3} value={form.narrative} onChange={(e) => setForm({ ...form, narrative: e.target.value })}
-              placeholder="e.g. Revenue achieved — {revenue} across {bookings} bookings."
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]" />
-            <p className="mt-1 text-xs text-gray-500">
-              Insert metric tokens and they fill in from Tableau on the slide:{' '}
-              <code>{'{revenue}'}</code>, <code>{'{room_nights}'}</code>, <code>{'{bookings}'}</code>,{' '}
-              <code>{'{packages_sold}'}</code>, <code>{'{adr}'}</code>, <code>{'{alos}'}</code>,{' '}
-              <code>{'{lead_time}'}</code>, <code>{'{upgrade_percentage}'}</code>.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
-            {imagesNote && form.images.length === 0 && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">{imagesNote}</p>
-            )}
-            {form.images.length > 1 && (
-              <p className="text-xs text-gray-500 mb-1">The first image is the hero shown on the case study slide — hover an image to set it.</p>
-            )}
-            <div className="flex gap-2 flex-wrap mb-2">
-              {form.images.map((url, idx) => (
-                <div key={url} className={`relative group w-20 h-20 rounded border overflow-hidden ${idx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>
-                  <button
-                    type="button"
-                    onClick={() => setViewingImage(url)}
-                    className="block w-full h-full"
-                    aria-label="Preview image"
-                  >
-                    <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
-                  </button>
-                  {idx === 0 && form.images.length > 1 && (
-                    <span className="absolute bottom-0 left-0 right-0 bg-[#01B18B] text-white text-[9px] font-medium text-center py-0.5">Hero</span>
-                  )}
-                  {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, images: [url, ...form.images.filter((u) => u !== url)] })}
-                      className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[9px] py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Set as hero
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, images: form.images.filter((u) => u !== url) })}
-                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-              <ImagePicker
-                hotelName={form.hotelName}
-                destination={form.destination}
-                existingUrls={form.images}
-                onPicked={(url) => setForm((prev) => ({ ...prev, images: [...prev.images, url] }))}
-                onAddFetched={addFetchedImages}
-                onError={(msg) => setError(msg)}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button type="submit" className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]">
-              {editingId ? 'Save Changes' : 'Create'}
-            </button>
-            <button type="button" onClick={() => setShowForm(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-              Cancel
-            </button>
-          </div>
-        </form>
+        <CaseStudyForm
+          key={formInstance}
+          caseStudyId={editingId ?? undefined}
+          initial={formInitial}
+          destinationOptions={destinationOptions}
+          imagesNote={imagesNote}
+          onSaved={() => { setShowForm(false); setLoading(true); void load(); }}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       {items.length === 0 ? (
@@ -705,63 +332,6 @@ export function CaseStudies() {
         </div>
       )}
 
-      {viewingImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
-          onClick={() => setViewingImage(null)}
-        >
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
-            className="absolute top-4 right-4 text-white text-3xl leading-none hover:text-gray-300"
-            aria-label="Close"
-          >
-            ×
-          </button>
-          <img
-            src={uploadUrl(viewingImage) ?? ''}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[90vh] object-contain rounded"
-          />
-        </div>
-      )}
-
-      {pendingDuplicates && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Possible Duplicate</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              A case study with a similar hotel name already exists:
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {pendingDuplicates.map((c) => (
-                <li key={c.id} className="flex justify-between rounded-md bg-gray-50 px-3 py-2 text-sm">
-                  <span>
-                    <span className="font-medium text-gray-900">{c.hotelName}</span>
-                    {c.destination && <span className="text-gray-500"> · {c.destination}</span>}
-                  </span>
-                  <span className="text-xs text-gray-500">{Math.round(c.similarity * 100)}% match</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                onClick={() => { setPendingDuplicates(null); setPendingPayload(null); }}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDuplicateCreate}
-                className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
-              >
-                Create anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

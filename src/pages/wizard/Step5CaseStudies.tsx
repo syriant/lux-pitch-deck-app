@@ -1,22 +1,22 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   getCaseStudies,
-  createCaseStudy,
   parseCaseStudyPdfAuto,
   type CaseStudy,
   type CaseStudyDraft,
   type CaseStudySummaryDraft,
-  type DuplicateCandidate,
 } from '@/api/case-studies.api';
 import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
-import { fetchTableauMetrics } from '@/api/tableau.api';
 import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
-import { uploadUrl } from '@/api/upload.api';
-import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
-import { DestinationCombobox } from '@/components/common/DestinationCombobox';
 import { Spinner } from '@/components/common/Spinner';
-import { ImagePicker } from '@/components/case-studies/ImagePicker';
+import {
+  CaseStudyForm,
+  draftToFormValues,
+  emptyCaseStudyForm,
+  summariseDraft,
+  type CaseStudyFormValues,
+} from '@/components/case-studies/CaseStudyForm';
 import { CaseStudySummaryReview } from '@/components/case-studies/CaseStudySummaryReview';
 
 interface Step5Props {
@@ -25,44 +25,6 @@ interface Step5Props {
   onBack: () => void;
   onNext: () => void;
 }
-
-interface InlineForm {
-  title: string;
-  hotelName: string;
-  destination: string;
-  propertyType: string;
-  tags: string;
-  dealId: string;
-  roomNights: string;
-  revenue: string;
-  adr: string;
-  alos: string;
-  leadTime: string;
-  bookings: string;
-  packagesSold: string;
-  upgradePercentage: string;
-  narrative: string;
-  sourcePdfUrl: string | null;
-}
-
-const emptyForm: InlineForm = {
-  title: '',
-  hotelName: '',
-  destination: '',
-  propertyType: '',
-  tags: '',
-  dealId: '',
-  roomNights: '',
-  revenue: '',
-  adr: '',
-  alos: '',
-  leadTime: '',
-  bookings: '',
-  packagesSold: '',
-  upgradePercentage: '',
-  narrative: '',
-  sourcePdfUrl: null,
-};
 
 export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Props) {
   const [caseStudies, setCaseStudies] = useState<CaseStudy[]>([]);
@@ -79,11 +41,11 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   });
   const [activeProperty, setActiveProperty] = useState(properties[0]?.id ?? '');
 
-  // Inline create form
+  // Inline create form (shared CaseStudyForm, compact styling)
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState<InlineForm>(emptyForm);
-  const [createImages, setCreateImages] = useState<string[]>([]);
-  const [creating, setCreating] = useState(false);
+  const [formInitial, setFormInitial] = useState<CaseStudyFormValues>(emptyCaseStudyForm);
+  // Remounts the form so a fresh open never inherits the previous open's state.
+  const [formInstance, setFormInstance] = useState(0);
   const [destinationOptions, setDestinationOptions] = useState<string[]>([]);
   const [destinationsLoaded, setDestinationsLoaded] = useState(false);
   const [parsingPdf, setParsingPdf] = useState(false);
@@ -91,47 +53,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
 
   // handleAutoUpload (below) replaces the separate single/summary handlers.
   const [pdfMessage, setPdfMessage] = useState('');
-  const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [imagesNote, setImagesNote] = useState('');
-  const [fetchingMetrics, setFetchingMetrics] = useState(false);
-  const [metricsMessage, setMetricsMessage] = useState('');
-
-  // Tableau metrics lookup for the inline create form (parity with the standalone form).
-  async function fetchCreateMetrics() {
-    if (!createForm.dealId.trim()) return;
-    setFetchingMetrics(true);
-    setMetricsMessage('');
-    try {
-      const m = await fetchTableauMetrics(createForm.dealId.trim());
-      setCreateForm((prev) => ({
-        ...prev,
-        roomNights: m.roomNights?.toString() ?? prev.roomNights,
-        revenue: m.revenue?.toString() ?? prev.revenue,
-        adr: m.adr?.toString() ?? prev.adr,
-        alos: m.alos?.toString() ?? prev.alos,
-        leadTime: m.leadTime?.toString() ?? prev.leadTime,
-        bookings: m.bookings?.toString() ?? prev.bookings,
-        packagesSold: m.packagesSold?.toString() ?? prev.packagesSold,
-        upgradePercentage: m.upgradePercentage?.toString() ?? prev.upgradePercentage,
-      }));
-      setMetricsMessage('Metrics populated from Tableau');
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      setMetricsMessage(status === 503
-        ? 'Tableau is not configured yet — enter metrics manually'
-        : 'Failed to fetch metrics from Tableau');
-    } finally {
-      setFetchingMetrics(false);
-    }
-  }
-
-  // Pull clean hotel photos from LUX/Google; adding to the case study approves them.
-  async function addFetchedImages(urls: string[]) {
-    await approveLibraryImages(urls).catch(() => {});
-    setCreateImages((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))]);
-  }
-  const [pendingDuplicates, setPendingDuplicates] = useState<DuplicateCandidate[] | null>(null);
-  const [pendingPayload, setPendingPayload] = useState<Parameters<typeof createCaseStudy>[0] | null>(null);
 
   useEffect(() => {
     getDestinations()
@@ -196,151 +118,28 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   }
 
   function openCreateForm() {
-    setCreateForm(emptyForm);
-    setCreateImages([]);
+    setFormInitial(emptyCaseStudyForm);
     setPdfMessage('');
     setImagesNote('');
-    setMetricsMessage('');
+    setFormInstance((n) => n + 1);
     setShowCreateForm(true);
   }
 
-  async function resolveImagesForSubmit(): Promise<string[]> {
-    const dataUrls = createImages.filter((u) => u.startsWith('data:'));
-    const httpUrls = createImages.filter((u) => !u.startsWith('data:'));
-    if (dataUrls.length === 0) return httpUrls;
-
-    const ingested = await ingestBase64Images({
-      items: dataUrls.map((dataUrl) => ({ dataUrl })),
-      hotelName: createForm.hotelName.trim() || null,
-      destination: createForm.destination.trim() || null,
-      source: 'pitch_deck',
-    });
-
-    // Preserve original order by walking createImages and substituting.
-    let i = 0;
-    return createImages.map((u) => (u.startsWith('data:') ? ingested[i++]?.url ?? u : u));
-  }
-
-  async function buildCreatePayload() {
-    const tags = createForm.tags.split(',').map((t) => t.trim()).filter(Boolean);
-    const images = await resolveImagesForSubmit();
-    return {
-      title: createForm.title,
-      hotelName: createForm.hotelName,
-      destination: createForm.destination || undefined,
-      propertyType: createForm.propertyType || undefined,
-      tags: tags.length > 0 ? tags : undefined,
-      dealId: createForm.dealId.trim() || undefined,
-      roomNights: createForm.roomNights ? Number(createForm.roomNights) : undefined,
-      revenue: createForm.revenue ? Number(createForm.revenue) : undefined,
-      adr: createForm.adr ? Number(createForm.adr) : undefined,
-      alos: createForm.alos ? Number(createForm.alos) : undefined,
-      leadTime: createForm.leadTime ? Number(createForm.leadTime) : undefined,
-      bookings: createForm.bookings ? Number(createForm.bookings) : undefined,
-      packagesSold: createForm.packagesSold ? Number(createForm.packagesSold) : undefined,
-      upgradePercentage: createForm.upgradePercentage ? Number(createForm.upgradePercentage) : undefined,
-      narrative: createForm.narrative || undefined,
-      images: images.length > 0 ? images : undefined,
-      sourcePdfUrl: createForm.sourcePdfUrl ?? undefined,
-    };
-  }
-
-  async function handleCreate(e: FormEvent) {
-    e.preventDefault();
-    setCreating(true);
-    setError('');
-    let payload: Awaited<ReturnType<typeof buildCreatePayload>>;
-    try {
-      payload = await buildCreatePayload();
-    } catch {
-      setError('Failed to ingest extracted images');
-      setCreating(false);
-      return;
-    }
-    try {
-      const created = await createCaseStudy(payload);
-      setCaseStudies((prev) => [created, ...prev]);
-      toggleCaseStudy(activeProperty, created.id);
-      setShowCreateForm(false);
-      setCreateForm(emptyForm);
-      setCreateImages([]);
-      setPdfMessage('');
-      setImagesNote('');
-      setMetricsMessage('');
-    } catch (err: unknown) {
-      const resp = (err as { response?: { status?: number; data?: { candidates?: DuplicateCandidate[] } } })?.response;
-      if (resp?.status === 409 && resp.data?.candidates) {
-        setPendingDuplicates(resp.data.candidates);
-        setPendingPayload(payload);
-      } else {
-        setError('Failed to create case study');
-      }
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function confirmDuplicateCreate() {
-    if (!pendingPayload) return;
-    setCreating(true);
-    try {
-      const created = await createCaseStudy(pendingPayload, true);
-      setCaseStudies((prev) => [created, ...prev]);
-      toggleCaseStudy(activeProperty, created.id);
-      setPendingDuplicates(null);
-      setPendingPayload(null);
-      setShowCreateForm(false);
-      setCreateForm(emptyForm);
-      setCreateImages([]);
-      setPdfMessage('');
-      setImagesNote('');
-      setMetricsMessage('');
-    } catch {
-      setError('Failed to create case study');
-    } finally {
-      setCreating(false);
-    }
+  function handleCreated(created: CaseStudy) {
+    setCaseStudies((prev) => [created, ...prev]);
+    toggleCaseStudy(activeProperty, created.id);
+    setShowCreateForm(false);
+    setPdfMessage('');
+    setImagesNote('');
   }
 
   function applyDraft(draft: CaseStudyDraft) {
-    setCreateForm({
-      ...emptyForm,
-      title: draft.title ?? '',
-      hotelName: draft.hotelName ?? '',
-      destination: draft.destination ?? '',
-      propertyType: draft.propertyType ?? '',
-      narrative: draft.narrative ?? '',
-      tags: draft.tags?.join(', ') ?? '',
-      roomNights: draft.roomNights != null ? String(draft.roomNights) : '',
-      revenue: draft.revenue != null ? String(draft.revenue) : '',
-      adr: draft.adr != null ? String(draft.adr) : '',
-      alos: draft.alos != null ? String(draft.alos) : '',
-      leadTime: draft.leadTime != null ? String(draft.leadTime) : '',
-      bookings: draft.bookings != null ? String(draft.bookings) : '',
-      packagesSold: draft.packagesSold != null ? String(draft.packagesSold) : '',
-      upgradePercentage: draft.upgradePercentage != null ? String(draft.upgradePercentage) : '',
-      sourcePdfUrl: draft.sourcePdfUrl,
-    });
-    setCreateImages(draft.images);
+    const { imagesNote: note, message } = summariseDraft(draft);
+    setFormInitial(draftToFormValues(draft));
+    setImagesNote(note);
+    setPdfMessage(message);
+    setFormInstance((n) => n + 1);
     setShowCreateForm(true);
-    const imageWarnings = draft.warnings.filter((w) => /image|photo/i.test(w));
-    const otherWarnings = draft.warnings.filter((w) => !/image|photo/i.test(w));
-    setImagesNote(
-      draft.images.length === 0
-        ? (imageWarnings[0] ?? 'No photos were found in the PDF — use “Fetch hotel photos” or upload to add images.')
-        : '',
-    );
-    const parts: string[] = [];
-    parts.push(`Extracted via ${draft.llm.provider}/${draft.llm.model}`);
-    if (draft.llm.costUsd !== null) parts.push(`$${draft.llm.costUsd.toFixed(4)}`);
-    if (otherWarnings.length > 0) parts.push(otherWarnings.join(' '));
-    if (draft.duplicateCandidates.length > 0) {
-      parts.push(`⚠ ${draft.duplicateCandidates.length} possible duplicate(s): ${draft.duplicateCandidates.map((c) => c.hotelName).join(', ')}`);
-    }
-    if (!draft.destinationMatched && draft.destination) {
-      parts.push(`Destination "${draft.destination}" has no deal-tier match — consider editing.`);
-    }
-    setPdfMessage(parts.join(' · '));
   }
 
   // One button: the API classifies the PDF and we open either the create form
@@ -349,7 +148,6 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
     setParsingPdf(true);
     setPdfMessage('');
     setImagesNote('');
-    setMetricsMessage('');
     setError('');
     try {
       const res = await parseCaseStudyPdfAuto(file);
@@ -473,245 +271,18 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
 
       {pdfMessage && <div className="mb-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">{pdfMessage}</div>}
 
-      {/* Inline create form */}
+      {/* Inline create form (shared with the library page) */}
       {showCreateForm && (
-        <form onSubmit={handleCreate} className="mb-4 rounded-lg border border-[#01B18B]/30 bg-[#E6F9F5] p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-gray-900">New Case Study</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
-              <input
-                type="text"
-                required
-                value={createForm.title}
-                onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
-                placeholder="e.g. 8-week campaign driving 250 room nights"
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Hotel Name *</label>
-              <input
-                type="text"
-                required
-                value={createForm.hotelName}
-                onChange={(e) => setCreateForm({ ...createForm, hotelName: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Destination</label>
-              <DestinationCombobox
-                options={destinationOptions}
-                value={createForm.destination}
-                onChange={(sel) => setCreateForm({ ...createForm, destination: sel.label })}
-                placeholder="Search or type a destination..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Property Type</label>
-              <input
-                type="text"
-                value={createForm.propertyType}
-                onChange={(e) => setCreateForm({ ...createForm, propertyType: e.target.value })}
-                placeholder="e.g. Resort, Boutique Hotel"
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Tags (comma-separated)</label>
-              <input
-                type="text"
-                value={createForm.tags}
-                onChange={(e) => setCreateForm({ ...createForm, tags: e.target.value })}
-                placeholder="e.g. beach, family, luxury"
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Salesforce Deal ID</label>
-              <input
-                type="text"
-                value={createForm.dealId}
-                onChange={(e) => setCreateForm({ ...createForm, dealId: e.target.value })}
-                placeholder="e.g. 006RF00000LYwIPYA1"
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={fetchCreateMetrics}
-              disabled={!createForm.dealId.trim() || fetchingMetrics}
-              className="rounded-md border border-[#01B18B] px-3 py-1.5 text-xs text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-50 whitespace-nowrap"
-            >
-              {fetchingMetrics ? 'Fetching…' : 'Fetch metrics'}
-            </button>
-          </div>
-          {metricsMessage && <p className="text-[11px] text-gray-500">{metricsMessage}</p>}
-          <div className="grid grid-cols-5 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Room Nights</label>
-              <input
-                type="number"
-                value={createForm.roomNights}
-                onChange={(e) => setCreateForm({ ...createForm, roomNights: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Revenue ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={createForm.revenue}
-                onChange={(e) => setCreateForm({ ...createForm, revenue: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">ADR ($)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={createForm.adr}
-                onChange={(e) => setCreateForm({ ...createForm, adr: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">ALOS (days)</label>
-              <input
-                type="number"
-                step="0.1"
-                max="99"
-                value={createForm.alos}
-                onChange={(e) => setCreateForm({ ...createForm, alos: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Bookings</label>
-              <input
-                type="number"
-                value={createForm.bookings}
-                onChange={(e) => setCreateForm({ ...createForm, bookings: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Lead time (days)</label>
-              <input
-                type="number"
-                value={createForm.leadTime}
-                onChange={(e) => setCreateForm({ ...createForm, leadTime: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Packages sold</label>
-              <input
-                type="number"
-                value={createForm.packagesSold}
-                onChange={(e) => setCreateForm({ ...createForm, packagesSold: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Upgrade %</label>
-              <input
-                type="number"
-                step="0.01"
-                value={createForm.upgradePercentage}
-                onChange={(e) => setCreateForm({ ...createForm, upgradePercentage: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Narrative</label>
-            <textarea
-              rows={2}
-              value={createForm.narrative}
-              onChange={(e) => setCreateForm({ ...createForm, narrative: e.target.value })}
-              placeholder="e.g. Revenue achieved — {revenue} across {bookings} bookings."
-              className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-[#01B18B] focus:outline-none"
-            />
-            <p className="mt-1 text-[11px] text-gray-500">
-              Metric tokens fill in from Tableau: <code>{'{revenue}'}</code>, <code>{'{room_nights}'}</code>,{' '}
-              <code>{'{bookings}'}</code>, <code>{'{packages_sold}'}</code>, <code>{'{adr}'}</code>,{' '}
-              <code>{'{alos}'}</code>, <code>{'{lead_time}'}</code>, <code>{'{upgrade_percentage}'}</code>.
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Images</label>
-            {imagesNote && createImages.length === 0 && (
-              <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mb-2">{imagesNote}</p>
-            )}
-            {createImages.length > 1 && (
-              <p className="text-[11px] text-gray-500 mb-1">The first image is the hero shown on the slide — hover to set it.</p>
-            )}
-            <div className="flex gap-2 flex-wrap">
-              {createImages.map((url, idx) => (
-                <div key={url} className={`relative group w-16 h-16 rounded border overflow-hidden ${idx === 0 ? 'border-[#01B18B] ring-1 ring-[#01B18B]' : 'border-gray-200'}`}>
-                  <button
-                    type="button"
-                    onClick={() => setViewingImage(url)}
-                    className="block w-full h-full"
-                    aria-label="Preview image"
-                  >
-                    <img src={uploadUrl(url) ?? ''} alt="" className="w-full h-full object-cover cursor-zoom-in" />
-                  </button>
-                  {idx === 0 && createImages.length > 1 && (
-                    <span className="absolute bottom-0 left-0 right-0 bg-[#01B18B] text-white text-[8px] font-medium text-center py-0.5">Hero</span>
-                  )}
-                  {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateImages((prev) => [url, ...prev.filter((u) => u !== url)])}
-                      className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[8px] py-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Set hero
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setCreateImages((prev) => prev.filter((u) => u !== url))}
-                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600 text-white text-[10px] leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-              <ImagePicker
-                hotelName={createForm.hotelName}
-                destination={createForm.destination}
-                existingUrls={createImages}
-                onPicked={(url) => setCreateImages((prev) => [...prev, url])}
-                onAddFetched={addFetchedImages}
-                onError={(msg) => setError(msg)}
-                size="sm"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={creating}
-              className="rounded-md bg-[#01B18B] px-4 py-1.5 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
-            >
-              {creating ? 'Creating...' : 'Create & Select'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowCreateForm(false)}
-              className="rounded-md border border-gray-300 px-4 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <CaseStudyForm
+          key={formInstance}
+          initial={formInitial}
+          destinationOptions={destinationOptions}
+          compact
+          submitLabel="Create & Select"
+          imagesNote={imagesNote}
+          onSaved={handleCreated}
+          onCancel={() => setShowCreateForm(false)}
+        />
       )}
 
       {loading ? (
@@ -783,64 +354,6 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
         </button>
       </div>
 
-      {viewingImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
-          onClick={() => setViewingImage(null)}
-        >
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setViewingImage(null); }}
-            className="absolute top-4 right-4 text-white text-3xl leading-none hover:text-gray-300"
-            aria-label="Close"
-          >
-            ×
-          </button>
-          <img
-            src={uploadUrl(viewingImage) ?? ''}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-full max-h-[90vh] object-contain rounded"
-          />
-        </div>
-      )}
-
-      {pendingDuplicates && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Possible Duplicate</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              A case study with a similar hotel name already exists:
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {pendingDuplicates.map((c) => (
-                <li key={c.id} className="flex justify-between rounded-md bg-gray-50 px-3 py-2 text-sm">
-                  <span>
-                    <span className="font-medium text-gray-900">{c.hotelName}</span>
-                    {c.destination && <span className="text-gray-500"> · {c.destination}</span>}
-                  </span>
-                  <span className="text-xs text-gray-500">{Math.round(c.similarity * 100)}% match</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                onClick={() => { setPendingDuplicates(null); setPendingPayload(null); }}
-                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDuplicateCreate}
-                disabled={creating}
-                className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
-              >
-                Create anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
