@@ -30,8 +30,7 @@ export function CaseStudies() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [destinationFilter, setDestinationFilter] = useState('');
-  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
-  const [facets, setFacets] = useState<CaseStudyFacets>({ destinations: [], propertyTypes: [] });
+  const [facets, setFacets] = useState<CaseStudyFacets>({ destinations: [] });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formInitial, setFormInitial] = useState<CaseStudyFormValues>(emptyCaseStudyForm);
@@ -65,7 +64,6 @@ export function CaseStudies() {
       const res = await getCaseStudies({
         search: search || undefined,
         destination: destinationFilter || undefined,
-        propertyType: propertyTypeFilter || undefined,
         page,
         limit: 20,
       });
@@ -78,7 +76,7 @@ export function CaseStudies() {
     }
   }
 
-  useEffect(() => { setLoading(true); load(); }, [page, search, destinationFilter, propertyTypeFilter]);
+  useEffect(() => { setLoading(true); load(); }, [page, search, destinationFilter]);
 
   useEffect(() => {
     getCaseStudyFacets().then(setFacets).catch(() => {});
@@ -219,18 +217,6 @@ export function CaseStudies() {
             <option value="">All destinations</option>
             {facets.destinations.map((d) => (
               <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        )}
-        {facets.propertyTypes.length > 0 && (
-          <select
-            value={propertyTypeFilter}
-            onChange={(e) => { setPropertyTypeFilter(e.target.value); setPage(1); }}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
-          >
-            <option value="">All property types</option>
-            {facets.propertyTypes.map((p) => (
-              <option key={p} value={p}>{p}</option>
             ))}
           </select>
         )}

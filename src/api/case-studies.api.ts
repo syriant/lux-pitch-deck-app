@@ -104,7 +104,6 @@ export async function getCaseStudies(params?: {
 
 export interface CaseStudyFacets {
   destinations: string[];
-  propertyTypes: string[];
 }
 
 export async function getCaseStudyFacets(): Promise<CaseStudyFacets> {

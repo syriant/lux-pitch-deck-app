@@ -7,6 +7,7 @@ import {
   type DuplicateCandidate,
 } from '@/api/case-studies.api';
 import { fetchTableauMetrics } from '@/api/tableau.api';
+import { fetchSalesforceOpportunity } from '@/api/salesforce.api';
 import { uploadUrl } from '@/api/upload.api';
 import { ingestBase64Images, approveLibraryImages } from '@/api/image-library.api';
 import { DestinationCombobox } from '@/components/common/DestinationCombobox';
@@ -17,7 +18,6 @@ export interface CaseStudyFormValues {
   title: string;
   hotelName: string;
   destination: string;
-  propertyType: string;
   dealId: string;
   roomNights: string;
   revenue: string;
@@ -28,16 +28,15 @@ export interface CaseStudyFormValues {
   packagesSold: string;
   upgradePercentage: string;
   narrative: string;
-  tags: string;
   images: string[];
   sourcePdfUrl: string | null;
 }
 
 export const emptyCaseStudyForm: CaseStudyFormValues = {
-  title: '', hotelName: '', destination: '', propertyType: '', dealId: '',
+  title: '', hotelName: '', destination: '', dealId: '',
   roomNights: '', revenue: '', adr: '', alos: '', leadTime: '', bookings: '',
   packagesSold: '', upgradePercentage: '',
-  narrative: '', tags: '', images: [], sourcePdfUrl: null,
+  narrative: '', images: [], sourcePdfUrl: null,
 };
 
 export function caseStudyToFormValues(item: CaseStudy): CaseStudyFormValues {
@@ -45,7 +44,6 @@ export function caseStudyToFormValues(item: CaseStudy): CaseStudyFormValues {
     title: item.title,
     hotelName: item.hotelName,
     destination: item.destination ?? '',
-    propertyType: item.propertyType ?? '',
     dealId: item.dealId ?? '',
     roomNights: item.roomNights?.toString() ?? '',
     revenue: item.revenue ?? '',
@@ -56,7 +54,6 @@ export function caseStudyToFormValues(item: CaseStudy): CaseStudyFormValues {
     packagesSold: item.packagesSold?.toString() ?? '',
     upgradePercentage: item.upgradePercentage ?? '',
     narrative: item.narrative ?? '',
-    tags: item.tags?.join(', ') ?? '',
     images: item.images ?? [],
     sourcePdfUrl: item.sourcePdfUrl,
   };
@@ -67,7 +64,6 @@ export function draftToFormValues(draft: CaseStudyDraft): CaseStudyFormValues {
     title: draft.title ?? '',
     hotelName: draft.hotelName ?? '',
     destination: draft.destination ?? '',
-    propertyType: draft.propertyType ?? '',
     dealId: '',
     roomNights: draft.roomNights != null ? String(draft.roomNights) : '',
     revenue: draft.revenue != null ? String(draft.revenue) : '',
@@ -78,7 +74,6 @@ export function draftToFormValues(draft: CaseStudyDraft): CaseStudyFormValues {
     packagesSold: draft.packagesSold != null ? String(draft.packagesSold) : '',
     upgradePercentage: draft.upgradePercentage != null ? String(draft.upgradePercentage) : '',
     narrative: draft.narrative ?? '',
-    tags: draft.tags?.join(', ') ?? '',
     images: draft.images,
     sourcePdfUrl: draft.sourcePdfUrl,
   };
@@ -180,12 +175,23 @@ export function CaseStudyForm({
         pickerSize: undefined,
       };
 
+  // One click pulls Tableau metrics and the Salesforce opportunity (hotel name
+  // + destination) in parallel. Salesforce values only fill fields that are
+  // still empty — they never overwrite what the user has typed.
   async function handleFetchMetrics() {
-    if (!form.dealId.trim()) return;
+    const dealId = form.dealId.trim();
+    if (!dealId) return;
     setFetchingMetrics(true);
     setMetricsMessage('');
-    try {
-      const m = await fetchTableauMetrics(form.dealId.trim());
+
+    const [metricsRes, oppRes] = await Promise.allSettled([
+      fetchTableauMetrics(dealId),
+      fetchSalesforceOpportunity(dealId),
+    ]);
+    const parts: string[] = [];
+
+    if (metricsRes.status === 'fulfilled') {
+      const m = metricsRes.value;
       setForm((prev) => ({
         ...prev,
         roomNights: m.roomNights?.toString() ?? prev.roomNights,
@@ -197,15 +203,32 @@ export function CaseStudyForm({
         packagesSold: m.packagesSold?.toString() ?? prev.packagesSold,
         upgradePercentage: m.upgradePercentage?.toString() ?? prev.upgradePercentage,
       }));
-      setMetricsMessage('Metrics populated from Tableau');
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      setMetricsMessage(status === 503
+      parts.push('Metrics populated from Tableau');
+    } else {
+      const status = (metricsRes.reason as { response?: { status?: number } })?.response?.status;
+      parts.push(status === 503
         ? 'Tableau is not configured yet — enter metrics manually'
         : 'Failed to fetch metrics from Tableau');
-    } finally {
-      setFetchingMetrics(false);
     }
+
+    if (oppRes.status === 'fulfilled') {
+      const opp = oppRes.value;
+      setForm((prev) => ({
+        ...prev,
+        hotelName: prev.hotelName || (opp.hotelName ?? ''),
+        destination: prev.destination || (opp.destination ?? ''),
+      }));
+      if (opp.hotelName || opp.destination) parts.push('Hotel details from Salesforce');
+    } else {
+      const status = (oppRes.reason as { response?: { status?: number } })?.response?.status;
+      // 404 = opportunity not found; 503 = integration not configured.
+      parts.push(status === 404
+        ? 'No Salesforce opportunity found for that ID'
+        : 'Hotel details unavailable from Salesforce');
+    }
+
+    setMetricsMessage(parts.join(' · '));
+    setFetchingMetrics(false);
   }
 
   // Pull clean hotel photos from LUX/Google. Adding to the case study is the
@@ -237,7 +260,6 @@ export function CaseStudyForm({
       title: form.title,
       hotelName: form.hotelName,
       destination: form.destination || undefined,
-      propertyType: form.propertyType || undefined,
       dealId: form.dealId.trim() || undefined,
       roomNights: form.roomNights ? parseInt(form.roomNights) : undefined,
       revenue: form.revenue ? parseFloat(form.revenue) : undefined,
@@ -248,7 +270,6 @@ export function CaseStudyForm({
       packagesSold: form.packagesSold ? parseInt(form.packagesSold) : undefined,
       upgradePercentage: form.upgradePercentage ? parseFloat(form.upgradePercentage) : undefined,
       narrative: form.narrative || undefined,
-      tags: form.tags ? form.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
       images,
       sourcePdfUrl: form.sourcePdfUrl ?? undefined,
     };
@@ -306,6 +327,28 @@ export function CaseStudyForm({
 
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
+      <div className="max-w-md">
+        <label className={s.label}>Salesforce Deal ID</label>
+        <div className="mt-1 flex gap-2">
+          <input type="text" value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}
+            placeholder="e.g. 006RF00000LYwIPYA1" className={`${s.input} mt-0`} />
+          <button
+            type="button"
+            disabled={!form.dealId.trim() || fetchingMetrics}
+            onClick={handleFetchMetrics}
+            className="shrink-0 rounded-md border border-[#01B18B] px-3 py-2 text-sm text-[#01B18B] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {fetchingMetrics ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
+            Fetch Metrics
+          </button>
+        </div>
+        {metricsMessage && (
+          <p className={`mt-1 text-xs ${metricsMessage.includes('populated') ? 'text-[#01B18B]' : 'text-amber-600'}`}>
+            {metricsMessage}
+          </p>
+        )}
+      </div>
+
       <div className={s.grid}>
         <div>
           <label className={s.label}>Title *</label>
@@ -325,37 +368,6 @@ export function CaseStudyForm({
             onChange={(sel) => setForm({ ...form, destination: sel.label })}
             placeholder="Search or type a destination..."
           />
-        </div>
-        <div>
-          <label className={s.label}>Property Type</label>
-          <input type="text" value={form.propertyType} onChange={(e) => setForm({ ...form, propertyType: e.target.value })}
-            placeholder="e.g. Resort, Boutique Hotel" className={s.input} />
-        </div>
-        <div>
-          <label className={s.label}>Tags (comma-separated)</label>
-          <input type="text" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })}
-            placeholder="e.g. beach, family, luxury" className={s.input} />
-        </div>
-        <div>
-          <label className={s.label}>Salesforce Deal ID</label>
-          <div className="mt-1 flex gap-2">
-            <input type="text" value={form.dealId} onChange={(e) => setForm({ ...form, dealId: e.target.value })}
-              placeholder="e.g. 006RF00000LYwIPYA1" className={`${s.input} mt-0`} />
-            <button
-              type="button"
-              disabled={!form.dealId.trim() || fetchingMetrics}
-              onClick={handleFetchMetrics}
-              className="shrink-0 rounded-md border border-[#01B18B] px-3 py-2 text-sm text-[#01B18B] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-            >
-              {fetchingMetrics ? <Spinner size="sm" className="text-[#01B18B]" /> : null}
-              Fetch Metrics
-            </button>
-          </div>
-          {metricsMessage && (
-            <p className={`mt-1 text-xs ${metricsMessage.includes('populated') ? 'text-[#01B18B]' : 'text-amber-600'}`}>
-              {metricsMessage}
-            </p>
-          )}
         </div>
       </div>
 
