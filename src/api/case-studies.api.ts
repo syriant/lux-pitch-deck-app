@@ -102,6 +102,16 @@ export async function getCaseStudies(params?: {
   return res.data;
 }
 
+export interface CaseStudyFacets {
+  destinations: string[];
+  propertyTypes: string[];
+}
+
+export async function getCaseStudyFacets(): Promise<CaseStudyFacets> {
+  const res = await apiClient.get<CaseStudyFacets>('/case-studies/facets');
+  return res.data;
+}
+
 export async function getCaseStudy(id: string): Promise<CaseStudy> {
   const res = await apiClient.get<CaseStudy>(`/case-studies/${id}`);
   return res.data;

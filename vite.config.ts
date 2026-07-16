@@ -16,5 +16,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Poll instead of relying on FS events: edits made from the WSL side of
+    // the WSL/Windows boundary don't reliably reach Windows file watchers.
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
   },
 });

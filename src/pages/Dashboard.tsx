@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDecks, createDeck, deleteDeck, type Deck } from '@/api/decks.api';
 import { getTemplates, type DeckTemplate } from '@/api/templates.api';
+import { getUsers, type User } from '@/api/users.api';
 import { useAuthStore } from '@/stores/auth.store';
 import { ConfirmModal } from '@/components/common/ConfirmModal';
 import { SUPPORTED_LOCALES } from '@/components/preview/i18n';
@@ -27,11 +28,29 @@ export function Dashboard() {
   const [templates, setTemplates] = useState<DeckTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [ownerFilter, setOwnerFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [ownerOptions, setOwnerOptions] = useState<User[]>([]);
+
+  const isAdmin = user?.roles?.includes('admin') ?? false;
+  const hasActiveFilters = !!(search || statusFilter || ownerFilter);
 
   async function load() {
     try {
-      const res = await getDecks({ limit: 20 });
+      const res = await getDecks({
+        page,
+        limit: 20,
+        search: search || undefined,
+        status: statusFilter || undefined,
+        createdBy: ownerFilter || undefined,
+      });
       setDecks(res.data);
+      setTotal(res.meta.total);
+      setTotalPages(res.meta.totalPages);
     } catch {
       setError('Failed to load decks');
     } finally {
@@ -39,7 +58,13 @@ export function Dashboard() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [page, search, statusFilter, ownerFilter]);
+
+  // Owner filter options — admins only (the users endpoint is admin-only too).
+  useEffect(() => {
+    if (!isAdmin) return;
+    getUsers().then(setOwnerOptions).catch(() => {});
+  }, [isAdmin]);
 
   async function handleShowCreate() {
     setShowCreate(true);
@@ -78,7 +103,6 @@ export function Dashboard() {
     }
   }
 
-  const isAdmin = user?.roles?.includes('admin') ?? false;
   const [deleteTarget, setDeleteTarget] = useState<Deck | null>(null);
 
   async function handleConfirmDelete() {
@@ -123,6 +147,38 @@ export function Dashboard() {
       </div>
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+
+      <div className="flex gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Search by deck or hotel name..."
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+        >
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="ready">Ready</option>
+          <option value="exported">Exported</option>
+        </select>
+        {isAdmin && (
+          <select
+            value={ownerFilter}
+            onChange={(e) => { setOwnerFilter(e.target.value); setPage(1); }}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+          >
+            <option value="">All users</option>
+            {ownerOptions.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {showCreate && (
         <form onSubmit={handleCreate} className="mb-6 rounded-lg border border-gray-200 bg-white p-6 space-y-4">
@@ -191,12 +247,23 @@ export function Dashboard() {
         <div className="text-[#7E8188]">Loading...</div>
       ) : decks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-[#7E8188]">No decks yet.</p>
-          <p className="mt-1 text-sm text-gray-400">Create your first pitch deck to get started.</p>
+          {hasActiveFilters ? (
+            <>
+              <p className="text-[#7E8188]">No decks match your search.</p>
+              <p className="mt-1 text-sm text-gray-400">Try a different search term or clear the filters.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[#7E8188]">No decks yet.</p>
+              <p className="mt-1 text-sm text-gray-400">Create your first pitch deck to get started.</p>
+            </>
+          )}
         </div>
       ) : (
         <>
-          <h2 className="text-sm font-medium text-[#7E8188] mb-3">Recent Decks</h2>
+          <h2 className="text-sm font-medium text-[#7E8188] mb-3">
+            {hasActiveFilters ? `${total} deck${total === 1 ? '' : 's'} found` : 'Recent Decks'}
+          </h2>
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-gray-200 text-left text-sm font-medium text-[#7E8188]">
@@ -278,6 +345,16 @@ export function Dashboard() {
               })}
             </tbody>
           </table>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex gap-2 justify-center">
+              <button disabled={page === 1} onClick={() => setPage(page - 1)}
+                className="rounded-md border border-gray-300 px-3 py-1 text-sm disabled:opacity-50">Prev</button>
+              <span className="px-3 py-1 text-sm text-gray-500">Page {page} of {totalPages}</span>
+              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}
+                className="rounded-md border border-gray-300 px-3 py-1 text-sm disabled:opacity-50">Next</button>
+            </div>
+          )}
         </>
       )}
 

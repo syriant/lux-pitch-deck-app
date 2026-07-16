@@ -1,6 +1,8 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import {
   getCaseStudies,
+  getCaseStudyFacets,
+  type CaseStudyFacets,
   createCaseStudy,
   updateCaseStudy,
   deleteCaseStudy,
@@ -53,6 +55,9 @@ export function CaseStudies() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [destinationFilter, setDestinationFilter] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('');
+  const [facets, setFacets] = useState<CaseStudyFacets>({ destinations: [], propertyTypes: [] });
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
@@ -95,6 +100,8 @@ export function CaseStudies() {
     try {
       const res = await getCaseStudies({
         search: search || undefined,
+        destination: destinationFilter || undefined,
+        propertyType: propertyTypeFilter || undefined,
         page,
         limit: 20,
       });
@@ -107,7 +114,11 @@ export function CaseStudies() {
     }
   }
 
-  useEffect(() => { setLoading(true); load(); }, [page, search]);
+  useEffect(() => { setLoading(true); load(); }, [page, search, destinationFilter, propertyTypeFilter]);
+
+  useEffect(() => {
+    getCaseStudyFacets().then(setFacets).catch(() => {});
+  }, []);
 
   function openCreate() {
     setForm({ ...emptyForm });
@@ -402,6 +413,30 @@ export function CaseStudies() {
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
         />
+        {facets.destinations.length > 0 && (
+          <select
+            value={destinationFilter}
+            onChange={(e) => { setDestinationFilter(e.target.value); setPage(1); }}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+          >
+            <option value="">All destinations</option>
+            {facets.destinations.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        )}
+        {facets.propertyTypes.length > 0 && (
+          <select
+            value={propertyTypeFilter}
+            onChange={(e) => { setPropertyTypeFilter(e.target.value); setPage(1); }}
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+          >
+            <option value="">All property types</option>
+            {facets.propertyTypes.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {showForm && (

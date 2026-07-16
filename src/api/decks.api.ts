@@ -122,6 +122,8 @@ export interface UpdatePropertyRequest {
 
 export async function getDecks(params?: {
   status?: string;
+  search?: string;
+  createdBy?: string;
   page?: number;
   limit?: number;
 }): Promise<DeckListResponse> {
