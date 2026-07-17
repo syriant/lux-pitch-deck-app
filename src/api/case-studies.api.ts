@@ -106,6 +106,22 @@ export interface CaseStudyFacets {
   destinations: string[];
 }
 
+export interface GeneratedNarrative {
+  title: string;
+  narrative: string;
+}
+
+/** AI title + narrative anchored to the deck's objectives (wizard inline form). */
+export async function generateCaseStudyNarrative(args: {
+  deckId: string;
+  hotelName: string;
+  destination?: string;
+  metrics: Record<string, number | undefined>;
+}): Promise<GeneratedNarrative> {
+  const res = await apiClient.post<GeneratedNarrative>('/case-studies/generate-narrative', args);
+  return res.data;
+}
+
 export async function getCaseStudyFacets(): Promise<CaseStudyFacets> {
   const res = await apiClient.get<CaseStudyFacets>('/case-studies/facets');
   return res.data;

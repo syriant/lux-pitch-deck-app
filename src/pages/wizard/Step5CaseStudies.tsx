@@ -6,7 +6,7 @@ import {
   type CaseStudyDraft,
   type CaseStudySummaryDraft,
 } from '@/api/case-studies.api';
-import { type DeckPropertyFull, setPropertyCaseStudies } from '@/api/decks.api';
+import { type DeckPropertyFull, setPropertyCaseStudies, getDeckObjectives } from '@/api/decks.api';
 import { getDestinations, type DestinationOption } from '@/api/deal-tiers.api';
 import { DealTiersMissingBanner } from '@/components/common/DealTiersMissingBanner';
 import { Spinner } from '@/components/common/Spinner';
@@ -54,6 +54,15 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
   // handleAutoUpload (below) replaces the separate single/summary handlers.
   const [pdfMessage, setPdfMessage] = useState('');
   const [imagesNote, setImagesNote] = useState('');
+  // AI Title & Narrative is only offered when the deck has a primary objective
+  // (set in Step 4) — without one there's nothing to anchor the headline to.
+  const [hasPrimaryObjective, setHasPrimaryObjective] = useState(false);
+
+  useEffect(() => {
+    getDeckObjectives(deckId)
+      .then((objs) => setHasPrimaryObjective(objs.some((o) => o.isPrimary)))
+      .catch(() => setHasPrimaryObjective(false));
+  }, [deckId]);
 
   useEffect(() => {
     getDestinations()
@@ -280,6 +289,7 @@ export function Step5CaseStudies({ deckId, properties, onBack, onNext }: Step5Pr
           compact
           submitLabel="Create & Select"
           imagesNote={imagesNote}
+          aiDeckId={hasPrimaryObjective ? deckId : undefined}
           onSaved={handleCreated}
           onCancel={() => setShowCreateForm(false)}
         />

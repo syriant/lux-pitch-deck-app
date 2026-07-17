@@ -2,6 +2,7 @@ import { useState, useRef, type FormEvent } from 'react';
 import {
   createCaseStudy,
   updateCaseStudy,
+  generateCaseStudyNarrative,
   type CaseStudy,
   type CaseStudyDraft,
   type DuplicateCandidate,
@@ -114,6 +115,12 @@ interface CaseStudyFormProps {
   submitLabel?: string;
   /** Why the images section starts empty (e.g. PDF had no extractable photos). */
   imagesNote?: string;
+  /**
+   * Deck whose campaign objectives drive the AI Title & Narrative button.
+   * Pass it only when the deck has a primary objective (wizard context) —
+   * omitted, the button is hidden entirely (e.g. the library page).
+   */
+  aiDeckId?: string;
   onSaved: (item: CaseStudy) => void;
   onCancel: () => void;
 }
@@ -132,6 +139,7 @@ export function CaseStudyForm({
   compact = false,
   submitLabel,
   imagesNote: initialImagesNote,
+  aiDeckId,
   onSaved,
   onCancel,
 }: CaseStudyFormProps) {
@@ -145,6 +153,7 @@ export function CaseStudyForm({
   const [showFetchModal, setShowFetchModal] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [generatingNarrative, setGeneratingNarrative] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const imagesNote = form.images.length === 0 ? (initialImagesNote ?? '') : '';
@@ -165,6 +174,36 @@ export function CaseStudyForm({
       setError('Failed to upload cover image');
     } finally {
       setUploadingCover(false);
+    }
+  }
+
+  async function handleGenerateNarrative() {
+    if (!aiDeckId || !form.hotelName.trim()) return;
+    setGeneratingNarrative(true);
+    setError('');
+    try {
+      const num = (v: string) => (v.trim() ? Number(v) : undefined);
+      const res = await generateCaseStudyNarrative({
+        deckId: aiDeckId,
+        hotelName: form.hotelName.trim(),
+        destination: form.destination.trim() || undefined,
+        metrics: {
+          roomNights: num(form.roomNights),
+          revenue: num(form.revenue),
+          adr: num(form.adr),
+          alos: num(form.alos),
+          leadTime: num(form.leadTime),
+          bookings: num(form.bookings),
+          packagesSold: num(form.packagesSold),
+          upgradePercentage: num(form.upgradePercentage),
+        },
+      });
+      setForm((prev) => ({ ...prev, title: res.title, narrative: res.narrative }));
+    } catch (err) {
+      const apiMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(apiMsg ?? 'Failed to generate title and narrative');
+    } finally {
+      setGeneratingNarrative(false);
     }
   }
 
@@ -363,7 +402,21 @@ export function CaseStudyForm({
   return (
     <>
     <form onSubmit={handleSubmit} className={s.container}>
-      <h3 className={s.heading}>{caseStudyId ? 'Edit Case Study' : 'New Case Study'}</h3>
+      <div className="flex items-center justify-between">
+        <h3 className={s.heading}>{caseStudyId ? 'Edit Case Study' : 'New Case Study'}</h3>
+        {aiDeckId && (
+          <button
+            type="button"
+            onClick={handleGenerateNarrative}
+            disabled={generatingNarrative || !form.hotelName.trim()}
+            title={!form.hotelName.trim() ? 'Add a hotel name first' : 'Write a title and narrative from the deck objectives and this case study’s metrics'}
+            className="rounded-md border border-[#01B18B] px-3 py-1.5 text-xs text-[#01B18B] hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {generatingNarrative ? <Spinner size="sm" className="text-[#01B18B]" /> : <span aria-hidden>✨</span>}
+            {generatingNarrative ? 'Writing…' : 'AI Title & Narrative'}
+          </button>
+        )}
+      </div>
 
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
