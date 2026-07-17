@@ -231,7 +231,9 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   };
 
   // Build rows
-  type Row = { key: string; label: string; cells: string[] };
+  // labelSuffix renders after the translated label — used for currency symbols
+  // ("NETT rate (€)"), which must not become part of the translation key.
+  type Row = { key: string; label: string; labelSuffix?: string; cells: string[] };
   const rows: Row[] = [];
 
   // Campaign period + Travel dates (#18 — also on the side-by-side now). The
@@ -278,6 +280,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   rows.push({
     key: 'rates',
     label: 'NETT rate',
+    labelSuffix: ` (${currencySymbol(property.currency)})`,
     cells: optNums.map((num) => {
       // Order rooms by price, lowest to highest.
       const rooms = groups.get(num)!.filter((r) => r.selected)
@@ -294,16 +297,19 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
 
   // Sell rate — optional, off by default (toggle in the slide header). Mirrors
   // the NETT row but uses the sell price so PCMs can choose to show partners both.
+  // Sell prices come out of the pricing tool already in AUD (LUX sells in AUD),
+  // so they always render with the AUD symbol regardless of the deal currency.
   if (showSell) {
     rows.push({
       key: 'sellrates',
       label: 'Sell rate',
+      labelSuffix: ` (${currencySymbol('AUD')})`,
       cells: optNums.map((num) => {
         // Order rooms by price, lowest to highest.
         const rooms = groups.get(num)!.filter((r) => r.selected)
           .sort((a, b) => Number(a.sellPrice ?? Infinity) - Number(b.sellPrice ?? Infinity));
         return rooms.map((r) => {
-          const price = formatMoney(r.sellPrice, property.currency) ?? '?';
+          const price = formatMoney(r.sellPrice, 'AUD') ?? '?';
           const roomLabel = r.roomType ?? 'Room';
           return r.nights && r.nights > 1
             ? `${roomLabel} ${r.nights}N – ${price}`
@@ -373,7 +379,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
             return (
               <tr key={ri} className="border-b border-gray-200">
                 <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
-                  {t(row.label, locale)}
+                  {t(row.label, locale)}{row.labelSuffix ?? ''}
                 </td>
                 {allSame ? (
                   <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>
