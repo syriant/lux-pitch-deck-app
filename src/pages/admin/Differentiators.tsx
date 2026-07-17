@@ -75,7 +75,9 @@ export function Differentiators() {
 
   async function load() {
     try {
-      setItems(await getDifferentiators());
+      const rows = await getDifferentiators();
+      // Active rows first; within each group keep the API's sort order.
+      setItems([...rows].sort((a, b) => Number(b.active) - Number(a.active)));
     } catch {
       setError('Failed to load differentiators');
     } finally {
