@@ -112,6 +112,19 @@ const fr: LocaleLabels = {
   'updated': 'mis à jour',
   // Case study slide title
   'Case Studies': 'Études de cas',
+  // Case-study stat tiles (SYR-87)
+  'Case Study': 'Étude de cas',
+  'Room nights sold': 'Nuitées vendues',
+  'Total': 'Total',
+  'Total revenue': 'Revenu total',
+  'Avg length of stay': 'Durée moyenne de séjour',
+  'Per booking': 'Par réservation',
+  'Avg lead time': 'Délai moyen de réservation',
+  'Booking in advance': "Réservation à l'avance",
+  'Upgrade rate': 'Taux de surclassement',
+  'Packages with upgrades': 'Forfaits avec surclassement',
+  'Average daily rate': 'Tarif journalier moyen',
+  'days': 'jours',
   // Hotel intro — no-destination fallback sentence
   'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
     "C'est le moment idéal pour diversifier vos canaux de distribution et conquérir une plus grande part de marché avec Luxury Escapes.",
@@ -244,6 +257,19 @@ const es: LocaleLabels = {
   'updated': 'actualizado',
   // Case study slide title
   'Case Studies': 'Casos de éxito',
+  // Case-study stat tiles (SYR-87)
+  'Case Study': 'Caso de éxito',
+  'Room nights sold': 'Noches de habitación vendidas',
+  'Total': 'Total',
+  'Total revenue': 'Ingresos totales',
+  'Avg length of stay': 'Estancia media',
+  'Per booking': 'Por reserva',
+  'Avg lead time': 'Antelación media',
+  'Booking in advance': 'Reserva anticipada',
+  'Upgrade rate': 'Tasa de mejoras',
+  'Packages with upgrades': 'Paquetes con mejora',
+  'Average daily rate': 'Tarifa media diaria',
+  'days': 'días',
   // Hotel intro — no-destination fallback sentence
   'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
     'Ahora es el momento ideal para diversificar los canales de distribución y conquistar una mayor cuota de mercado con Luxury Escapes.',
@@ -375,6 +401,19 @@ const it: LocaleLabels = {
   'updated': 'aggiornato',
   // Case study slide title
   'Case Studies': 'Casi di studio',
+  // Case-study stat tiles (SYR-87)
+  'Case Study': 'Caso di studio',
+  'Room nights sold': 'Pernottamenti venduti',
+  'Total': 'Totale',
+  'Total revenue': 'Ricavi totali',
+  'Avg length of stay': 'Soggiorno medio',
+  'Per booking': 'Per prenotazione',
+  'Avg lead time': 'Anticipo medio di prenotazione',
+  'Booking in advance': 'Prenotazione anticipata',
+  'Upgrade rate': 'Tasso di upgrade',
+  'Packages with upgrades': 'Pacchetti con upgrade',
+  'Average daily rate': 'Tariffa media giornaliera',
+  'days': 'giorni',
   // Hotel intro — no-destination fallback sentence
   'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
     'È il momento ideale per diversificare i canali di distribuzione e conquistare una maggiore quota di mercato con Luxury Escapes.',
@@ -507,6 +546,19 @@ const ja: LocaleLabels = {
   'updated': '更新日',
   // Case study slide title
   'Case Studies': '導入事例',
+  // Case-study stat tiles (SYR-87)
+  'Case Study': '導入事例',
+  'Room nights sold': '販売延べ宿泊室数',
+  'Total': '合計',
+  'Total revenue': '総収益',
+  'Avg length of stay': '平均宿泊日数',
+  'Per booking': '1予約あたり',
+  'Avg lead time': '平均リードタイム',
+  'Booking in advance': '事前予約',
+  'Upgrade rate': 'アップグレード率',
+  'Packages with upgrades': 'アップグレードを含むパッケージ',
+  'Average daily rate': '平均客室単価',
+  'days': '日',
   // Hotel intro — no-destination fallback sentence
   'Now is the ideal time to diversify distribution channels and capture greater market share with Luxury Escapes.':
     '今こそ、Luxury Escapesとともに販売チャネルを多様化し、より大きな市場シェアを獲得する絶好の機会です。',

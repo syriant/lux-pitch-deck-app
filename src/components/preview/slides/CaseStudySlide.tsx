@@ -2,12 +2,12 @@ import { type DeckCaseStudyLink, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
-import { buildCaseStudyMetricVars } from '../case-study-metrics';
+import { buildCaseStudyMetricVars, buildCaseStudyStatTiles, type CaseStudyStatTile } from '../case-study-metrics';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { uploadUrl } from '@/api/upload.api';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
-import { OCEAN_TEAL, TEAL_100, TEAL_200, TEAL_400 } from '../brand';
+import { OCEAN_TEAL, TEAL_100, TEAL_200, TEAL_400, SANDY_BEIGE, SOFT_LINE, INK } from '../brand';
 
 const TITLE_FIELD_KEY = 'caseStudy.heading';
 
@@ -19,25 +19,50 @@ interface CaseStudySlideProps {
   onGalleryAdd?: (url: string) => void;
 }
 
+/** Post Campaign Report-style stat tile — label, big value, optional sub line. */
+function StatTile({ tile, compact, locale }: { tile: CaseStudyStatTile; compact: boolean; locale?: string }) {
+  return (
+    <div
+      className="rounded flex flex-col justify-center min-w-0"
+      style={{
+        background: SANDY_BEIGE,
+        border: `1px solid ${SOFT_LINE}`,
+        borderLeft: `3px solid ${OCEAN_TEAL}`,
+        padding: compact ? '2px 4px' : '6px 10px',
+      }}
+    >
+      <div className="text-gray-500 leading-tight truncate" style={{ fontSize: compact ? 6 : 9 }}>{t(tile.label, locale)}</div>
+      <div className="font-bold leading-tight truncate" style={{ color: INK, fontSize: compact ? 11 : 20 }}>{tile.value}</div>
+      {!compact && tile.sub && (
+        <div className="text-gray-400 leading-tight truncate" style={{ fontSize: 8 }}>{t(tile.sub, locale)}</div>
+      )}
+    </div>
+  );
+}
+
 function CaseStudyCard({
   cs,
   imageFirst,
   customFields,
   onFieldChange,
+  locale,
 }: {
   cs: DeckCaseStudyLink['caseStudy'];
   imageFirst: boolean;
   customFields?: Record<string, string>;
   onFieldChange?: FieldChangeHandler;
+  locale?: string;
 }) {
   const imgSrc = cs.images?.[0] ? uploadUrl(cs.images[0]) : null;
   // Metric tokens ({revenue}, {room_nights}, …) scoped to this case study, so the
   // narrative resolves to its own numbers in preview (and, via the mirror in the
   // API, in the PPTX/PDF export).
   const metricVars = buildCaseStudyMetricVars(cs);
+  const tiles = buildCaseStudyStatTiles(cs, locale);
+  const hasTiles = tiles.length > 0;
 
   const imageBlock = (
-    <div style={{ height: '55%' }} className="overflow-hidden">
+    <div style={{ height: hasTiles ? '42%' : '55%' }} className="overflow-hidden">
       {imgSrc ? (
         <img src={imgSrc} alt={cs.hotelName} className="w-full h-full object-cover" />
       ) : (
@@ -47,7 +72,7 @@ function CaseStudyCard({
   );
 
   const textBlock = (
-    <div style={{ height: '45%' }} className="p-[5%] flex flex-col justify-center overflow-visible">
+    <div style={{ height: hasTiles ? '32%' : '45%' }} className="p-[5%] flex flex-col justify-center overflow-visible">
       <SlideRichText
         fieldKey={`caseStudy.${cs.id}.title`}
         defaultValue={cs.title}
@@ -71,13 +96,81 @@ function CaseStudyCard({
     </div>
   );
 
+  const tileStrip = hasTiles ? (
+    <div className="px-[5%] pb-[3%] grid grid-cols-3 gap-1.5 content-stretch" style={{ height: '26%' }}>
+      {tiles.map((tile) => (
+        <StatTile key={tile.key} tile={tile} compact locale={locale} />
+      ))}
+    </div>
+  ) : null;
+
   return (
     <div className="bg-white rounded shadow-lg h-full flex flex-col overflow-visible">
       {imageFirst ? (
-        <>{imageBlock}{textBlock}</>
+        <>{imageBlock}{textBlock}{tileStrip}</>
       ) : (
-        <>{textBlock}{imageBlock}</>
+        <>{textBlock}{tileStrip}{imageBlock}</>
       )}
+    </div>
+  );
+}
+
+/**
+ * Full-width layout used when exactly one case study is selected — the Post
+ * Campaign Report look: title + narrative on top, 2×3 stat tile grid on the
+ * left, hero image on the right.
+ */
+function FeaturedCaseStudyCard({
+  cs,
+  customFields,
+  onFieldChange,
+  locale,
+}: {
+  cs: DeckCaseStudyLink['caseStudy'];
+  customFields?: Record<string, string>;
+  onFieldChange?: FieldChangeHandler;
+  locale?: string;
+}) {
+  const imgSrc = cs.images?.[0] ? uploadUrl(cs.images[0]) : null;
+  const metricVars = buildCaseStudyMetricVars(cs);
+  const tiles = buildCaseStudyStatTiles(cs, locale);
+
+  return (
+    <div className="bg-white rounded shadow-lg h-full flex flex-col overflow-visible p-[3%]">
+      <SlideRichText
+        fieldKey={`caseStudy.${cs.id}.title`}
+        defaultValue={cs.title}
+        defaultSize={24}
+        customFields={customFields}
+        extraPlaceholders={metricVars}
+        onFieldChange={onFieldChange}
+        className="font-bold leading-snug mb-1"
+        style={{ color: OCEAN_TEAL }}
+      />
+      <SlideRichText
+        fieldKey={`caseStudy.${cs.id}.narrative`}
+        defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} room nights` : null].filter(Boolean).join(' · ')}
+        defaultSize={14}
+        customFields={customFields}
+        extraPlaceholders={metricVars}
+        onFieldChange={onFieldChange}
+        className="leading-[1.4]"
+        style={{ color: '#333' }}
+      />
+      <div className="flex-1 flex gap-3 min-h-0 mt-3">
+        <div className="flex-1 grid grid-cols-2 gap-2 content-stretch min-w-0">
+          {tiles.map((tile) => (
+            <StatTile key={tile.key} tile={tile} compact={false} locale={locale} />
+          ))}
+        </div>
+        <div className="w-[42%] rounded overflow-hidden shrink-0">
+          {imgSrc ? (
+            <img src={imgSrc} alt={cs.hotelName} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${TEAL_400}, ${TEAL_200})` }} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -94,6 +187,10 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
   const leftCard = swapped ? cards[1] : cards[0];
   const rightCard = swapped ? cards[0] : cards[1];
   const titlePositioned = !!(cf[`${TITLE_FIELD_KEY}.x`] && cf[`${TITLE_FIELD_KEY}.y`]);
+  // Featured layout = exactly one case study that has metrics to tile. It spans
+  // the full width, so the title's default moves to the top-left band above the
+  // card (the bottom-left default would sit under it).
+  const featured = cards.length === 1 && buildCaseStudyStatTiles(cards[0].caseStudy, deck?.renderLocale).length > 0;
 
   return (
     <div className="relative h-full w-full overflow-hidden flex flex-col">
@@ -132,12 +229,15 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
           fieldKey={TITLE_FIELD_KEY}
           customFields={cf}
           onFieldChange={onFieldChange}
-          defaultClassName="absolute bottom-[8%] left-[4%]"
+          // Default width keeps the title inside the left column (cards start
+          // at 21%) so it wraps like the PPTX title box instead of running
+          // under the left card. Featured titles sit in the top band, single-line.
+          defaultClassName={featured ? 'absolute top-[2.5%] left-[4%]' : 'absolute bottom-[8%] left-[4%] w-[17%]'}
           className="z-10 group/cstitle"
         >
           <SlideRichText
             fieldKey={TITLE_FIELD_KEY}
-            defaultValue={t('Case Studies', deck?.renderLocale)}
+            defaultValue={t(cards.length === 1 ? 'Case Study' : 'Case Studies', deck?.renderLocale)}
             defaultSize={42}
             customFields={cf}
             onFieldChange={onFieldChange}
@@ -165,18 +265,31 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
           </div>
         ) : (
           <>
-            {/* Left card — image top, text bottom (only when 2 cards) */}
-            {leftCard && rightCard && (
-              <div className="absolute" style={{ left: '21%', top: '50%', transform: 'translateY(-50%)', width: '36%', height: '80%' }}>
-                <CaseStudyCard cs={leftCard.caseStudy} imageFirst={true} customFields={cf} onFieldChange={onFieldChange} />
+            {/* Single case study with metrics — full-width featured layout
+                (Post Campaign Report look). Falls back to the standard card
+                when the study has no metrics to tile. */}
+            {featured ? (
+              /* Starts below the title band (bottom edge stays at 90% like the
+                 two-card layout) so the top-left title clears the card. */
+              <div className="absolute" style={{ left: '21%', right: '3%', top: '13%', height: '77%' }}>
+                <FeaturedCaseStudyCard cs={cards[0].caseStudy} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} />
               </div>
-            )}
+            ) : (
+              <>
+                {/* Left card — image top, text bottom (only when 2 cards) */}
+                {leftCard && rightCard && (
+                  <div className="absolute" style={{ left: '21%', top: '50%', transform: 'translateY(-50%)', width: '36%', height: '80%' }}>
+                    <CaseStudyCard cs={leftCard.caseStudy} imageFirst={true} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} />
+                  </div>
+                )}
 
-            {/* Right card — text top, image bottom (or single card) */}
-            {(rightCard || (!rightCard && leftCard)) && (
-              <div className="absolute" style={{ right: '3%', top: '50%', transform: 'translateY(-50%)', width: '36%', height: '80%' }}>
-                <CaseStudyCard cs={(rightCard ?? leftCard)!.caseStudy} imageFirst={false} customFields={cf} onFieldChange={onFieldChange} />
-              </div>
+                {/* Right card — text top, image bottom (or single card) */}
+                {(rightCard || (!rightCard && leftCard)) && (
+                  <div className="absolute" style={{ right: '3%', top: '50%', transform: 'translateY(-50%)', width: '36%', height: '80%' }}>
+                    <CaseStudyCard cs={(rightCard ?? leftCard)!.caseStudy} imageFirst={false} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} />
+                  </div>
+                )}
+              </>
             )}
 
             {/* Swap button */}
