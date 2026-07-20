@@ -114,13 +114,13 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
             >
               {cf[`deal.${property.id}.combine`] === 'true' ? 'Split details slide' : 'Combine onto one slide'}
             </button>
-            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale')) && (
+            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale') && !k.endsWith('.customRows') && !k.includes('.custom.')) && (
               <button
                 type="button"
                 onClick={async () => {
                   // Reset per-cell text/size overrides only — leave the structural
                   // combine + text-scale toggles intact.
-                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale'));
+                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale') && !k.endsWith('.customRows') && !k.includes('.custom.'));
                   for (const k of keysToRemove) {
                     await onFieldChange('custom', '', k, '');
                   }
@@ -131,6 +131,21 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
                 Refresh from options
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                let ids: string[] = [];
+                try {
+                  const parsed = JSON.parse(cf[`deal.${property.id}.customRows`] ?? '[]');
+                  if (Array.isArray(parsed)) ids = parsed.filter((x): x is string => typeof x === 'string');
+                } catch { /* ignore malformed */ }
+                onFieldChange('custom', '', `deal.${property.id}.customRows`, JSON.stringify([...ids, `r${Date.now().toString(36)}`]));
+              }}
+              className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+              title="Add a custom row (editable label + a value per option)"
+            >
+              + Add row
+            </button>
           </div>
         )}
       </div>
@@ -218,8 +233,12 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   };
 
   // Per-option allocation lines, deduped — mirrors the campaign-details slide.
+  // Rooms are ordered by cost price ascending, the same as the NETT rate row,
+  // so the allocation lists room types in the same order as the rates section.
   const optionAllocation = (optNum: number): string => {
-    const rooms = groups.get(optNum) ?? [];
+    const rooms = (groups.get(optNum) ?? [])
+      .slice()
+      .sort((a, b) => Number(a.costPrice ?? Infinity) - Number(b.costPrice ?? Infinity));
     const lines = rooms.map((r) => {
       const room = r.roomType ?? t('Room', locale);
       if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;
@@ -233,7 +252,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   // Build rows
   // labelSuffix renders after the translated label — used for currency symbols
   // ("NETT rate (€)"), which must not become part of the translation key.
-  type Row = { key: string; label: string; labelSuffix?: string; cells: string[] };
+  type Row = { key: string; label: string; labelSuffix?: string; cells: string[]; custom?: boolean; customId?: string };
   const rows: Row[] = [];
 
   // Campaign period + Travel dates (#18 — also on the side-by-side now). The
@@ -347,6 +366,21 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     rows.push({ key: 'payment', label: 'Payment', cells: optNums.map(() => t('VCC', locale)) });
   }
 
+  // Custom rows (opt-in) — appended at the end. Ordered ids live in
+  // deal.<prop>.customRows; the label + per-option cells edit inline. Nothing
+  // shows unless the PCM adds a row via the header "+ Add row" button.
+  let customRowIds: string[] = [];
+  try {
+    const raw = customFields?.[`deal.${property.id}.customRows`];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) customRowIds = parsed.filter((x): x is string => typeof x === 'string');
+    }
+  } catch { /* ignore malformed */ }
+  for (const id of customRowIds) {
+    rows.push({ key: `custom.${id}`, label: '', cells: optNums.map(() => ''), custom: true, customId: id });
+  }
+
   return (
     <div className="flex-1 px-[5%] pb-2 overflow-visible">
       <table className="w-full border-collapse" style={{ fontSize: baseFont }}>
@@ -379,7 +413,36 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
             return (
               <tr key={ri} className="border-b border-gray-200">
                 <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
-                  {t(row.label, locale)}{row.labelSuffix ?? ''}
+                  {row.custom ? (
+                    <span className="inline-flex items-start gap-1">
+                      <SlideRichText
+                        fieldKey={`deal.${property.id}.custom.${row.customId}.label`}
+                        defaultValue="New row"
+                        defaultSize={baseFont}
+                        customFields={customFields}
+                        onFieldChange={onFieldChange}
+                        style={{ color: OCEAN_TEAL, fontWeight: 700 }}
+                      />
+                      {onFieldChange && (
+                        <button
+                          type="button"
+                          title="Remove this row"
+                          onClick={() => {
+                            const next = customRowIds.filter((x) => x !== row.customId);
+                            onFieldChange('custom', '', `deal.${property.id}.customRows`, JSON.stringify(next));
+                            Object.keys(customFields ?? {})
+                              .filter((k) => k.startsWith(`deal.${property.id}.custom.${row.customId}.`))
+                              .forEach((k) => onFieldChange('custom', '', k, ''));
+                          }}
+                          className="text-[11px] leading-none text-gray-400 hover:text-red-600 cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ) : (
+                    <>{t(row.label, locale)}{row.labelSuffix ?? ''}</>
+                  )}
                 </td>
                 {allSame ? (
                   <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>

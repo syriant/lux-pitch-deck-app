@@ -4,6 +4,7 @@ import { SlideRichText } from '../SlideRichText';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
+import { currencySymbol } from '../currency';
 
 interface MarketingAssetsSlideProps {
   property?: DeckPropertyFull;
@@ -72,8 +73,14 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
     };
   };
 
-  // Build rows
-  type Row = { key: string; label: string; cells: string[] };
+  // Opt-in "Estimated marketing spend" row — off by default so existing decks
+  // are unchanged; the PCM reveals it via the header toggle and types a figure
+  // per option. Currency is the pitch currency, shown in the row label.
+  const showSpend = cf?.[`mktg.${propId}.showSpend`] === 'true';
+
+  // Build rows. `labelSuffix` renders after the translated label (currency
+  // symbol on the spend row) without becoming part of the translation key.
+  type Row = { key: string; label: string; labelSuffix?: string; cells: string[]; custom?: boolean; customId?: string };
   const rows: Row[] = [
     {
       key: 'period',
@@ -89,7 +96,11 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       key: 'allocation',
       label: 'Allocation',
       cells: uniqueOptions.map((o) => {
-        const rooms = groups.get(o.optionNumber) ?? [o];
+        // Order rooms by cost price ascending to match the NETT rate order on
+        // the deal-options slide, so allocation follows the rates-section order.
+        const rooms = ((groups.get(o.optionNumber) ?? [o]) as DeckOption[])
+          .slice()
+          .sort((a, b) => Number(a.costPrice ?? Infinity) - Number(b.costPrice ?? Infinity));
         const lines = rooms.map((r: { roomType: string | null; allocation: string | null }) => {
           const room = r.roomType ?? t('Room', locale);
           if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;
@@ -109,6 +120,32 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
     },
   ];
 
+  if (showSpend) {
+    rows.push({
+      key: 'spend',
+      label: 'Estimated marketing spend',
+      labelSuffix: ` (${currencySymbol(property?.currency)})`,
+      // Empty defaults — the PCM fills each option's figure inline (stored as a
+      // per-cell override, same mechanism as every other row).
+      cells: uniqueOptions.map(() => ''),
+    });
+  }
+
+  // Custom rows (opt-in) — appended at the end; ordered ids live in
+  // mktg.<prop>.customRows, label + per-option cells edit inline. Nothing shows
+  // unless the PCM adds a row via the header "+ Add row" button.
+  let customRowIds: string[] = [];
+  try {
+    const raw = cf?.[`mktg.${propId}.customRows`];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) customRowIds = parsed.filter((x): x is string => typeof x === 'string');
+    }
+  } catch { /* ignore malformed */ }
+  for (const id of customRowIds) {
+    rows.push({ key: `custom.${id}`, label: '', cells: uniqueOptions.map(() => ''), custom: true, customId: id });
+  }
+
   // Campaign period + Travel dates live on the deal-options slide (always shown
   // there), so they're omitted here to avoid listing the same dates twice.
   // When the PCM combines this into the deal-options slide, Allocation + Payment
@@ -117,7 +154,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const combined = cf?.[`deal.${propId}.combine`] === 'true';
   const visibleRows = combined ? [] : rows.filter((row) => row.key !== 'period' && row.key !== 'travel');
 
-  const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`));
+  const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`) && !k.endsWith('.textScale') && !k.endsWith('.showSpend') && !k.endsWith('.customRows') && !k.includes('.custom.'));
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
@@ -149,11 +186,38 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                 A+
               </button>
             </div>
+            {uniqueOptions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', `mktg.${propId}.showSpend`, showSpend ? 'false' : 'true')}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Add an editable estimated marketing spend row (in the pitch currency), off by default"
+              >
+                {showSpend ? 'Remove marketing spend' : 'Add marketing spend'}
+              </button>
+            )}
+            {uniqueOptions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  let ids: string[] = [];
+                  try {
+                    const parsed = JSON.parse(cf?.[`mktg.${propId}.customRows`] ?? '[]');
+                    if (Array.isArray(parsed)) ids = parsed.filter((x): x is string => typeof x === 'string');
+                  } catch { /* ignore malformed */ }
+                  onFieldChange('custom', '', `mktg.${propId}.customRows`, JSON.stringify([...ids, `r${Date.now().toString(36)}`]));
+                }}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Add a custom row (editable label + a value per option)"
+              >
+                + Add row
+              </button>
+            )}
             {uniqueOptions.length > 0 && hasEdits && (
               <button
                 type="button"
                 onClick={async () => {
-                  const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`));
+                  const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`) && !k.endsWith('.textScale') && !k.endsWith('.showSpend') && !k.endsWith('.customRows') && !k.includes('.custom.'));
                   for (const k of keysToRemove) {
                     await onFieldChange('custom', '', k, '');
                   }
@@ -203,7 +267,36 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                 return (
                   <tr key={row.key} className="border-b border-gray-200">
                     <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
-                      {t(row.label, locale)}
+                      {row.custom ? (
+                        <span className="inline-flex items-start gap-1">
+                          <SlideRichText
+                            fieldKey={`mktg.${propId}.custom.${row.customId}.label`}
+                            defaultValue="New row"
+                            defaultSize={baseFont}
+                            customFields={cf}
+                            onFieldChange={onFieldChange}
+                            style={{ color: OCEAN_TEAL, fontWeight: 700 }}
+                          />
+                          {onFieldChange && (
+                            <button
+                              type="button"
+                              title="Remove this row"
+                              onClick={() => {
+                                const next = customRowIds.filter((x) => x !== row.customId);
+                                onFieldChange('custom', '', `mktg.${propId}.customRows`, JSON.stringify(next));
+                                Object.keys(cf ?? {})
+                                  .filter((k) => k.startsWith(`mktg.${propId}.custom.${row.customId}.`))
+                                  .forEach((k) => onFieldChange('custom', '', k, ''));
+                              }}
+                              className="text-[11px] leading-none text-gray-400 hover:text-red-600 cursor-pointer"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </span>
+                      ) : (
+                        <>{t(row.label, locale)}{row.labelSuffix ?? ''}</>
+                      )}
                     </td>
                     {allSame ? (
                       <td className={`p-2 align-top text-center ${rowBg}`} colSpan={optNums.length}>

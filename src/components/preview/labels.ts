@@ -114,6 +114,7 @@ const fr: LocaleLabels = {
   'Case Studies': 'Études de cas',
   // Case-study stat tiles (SYR-87)
   'Case Study': 'Étude de cas',
+  'Estimated marketing spend': 'Budget marketing estimé',
   'Room nights sold': 'Nuitées vendues',
   'Total': 'Total',
   'Total revenue': 'Revenu total',
@@ -259,6 +260,7 @@ const es: LocaleLabels = {
   'Case Studies': 'Casos de éxito',
   // Case-study stat tiles (SYR-87)
   'Case Study': 'Caso de éxito',
+  'Estimated marketing spend': 'Inversión de marketing estimada',
   'Room nights sold': 'Noches de habitación vendidas',
   'Total': 'Total',
   'Total revenue': 'Ingresos totales',
@@ -403,6 +405,7 @@ const it: LocaleLabels = {
   'Case Studies': 'Casi di studio',
   // Case-study stat tiles (SYR-87)
   'Case Study': 'Caso di studio',
+  'Estimated marketing spend': 'Investimento di marketing stimato',
   'Room nights sold': 'Pernottamenti venduti',
   'Total': 'Totale',
   'Total revenue': 'Ricavi totali',
@@ -548,6 +551,7 @@ const ja: LocaleLabels = {
   'Case Studies': '導入事例',
   // Case-study stat tiles (SYR-87)
   'Case Study': '導入事例',
+  'Estimated marketing spend': '推定マーケティング費用',
   'Room nights sold': '販売延べ宿泊室数',
   'Total': '合計',
   'Total revenue': '総収益',

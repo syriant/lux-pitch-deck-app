@@ -386,7 +386,7 @@ export function Step1Hotels({
             />
             {form.isCustomDestination && form.destination && (
               <p className="mt-1 text-xs text-amber-600">
-                This destination is not in the Deal Tiers list and will be flagged for admin review.
+                This destination isn&rsquo;t in the Deal Tiers list, so no marketing assets will be auto-recommended for it. Ask an admin to add it to the Deal Tiers list, or set the property&rsquo;s grade and tier manually in Step 6.
               </p>
             )}
           </div>
