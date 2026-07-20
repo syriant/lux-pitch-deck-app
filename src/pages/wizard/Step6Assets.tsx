@@ -118,13 +118,27 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
         for (const part of parts) {
           try {
             const lookup = await lookupDealTier(part, undefined, 0);
-            results[prop.id] = lookup;
+            // The tier is GM-driven, but the GM isn't available here (we pass 0),
+            // so the lookup's tier is unreliable and collapses to the lowest tier
+            // (Tier 3, which has no GM minimum). The pricing tool already computed
+            // the tier and Step 2 saved it as prop.tier — trust it and pick the
+            // matching-tier rule for the same destination + grade so the correct
+            // asset entitlements load. Grade is fixed per destination, so it's
+            // unaffected. Falls back to the lookup when no tier was parsed.
+            let effective = lookup;
+            if (prop.tier != null && lookup.tier !== prop.tier) {
+              const correct = rules.find(
+                (r) => r.destination === lookup.destination && r.grade === lookup.grade && r.tier === prop.tier,
+              );
+              if (correct) effective = buildLookupFromRule(correct);
+            }
+            results[prop.id] = effective;
             found = true;
 
             // Persist grade and tier
             await updateProperty(deckId, prop.id, {
-              grade: lookup.grade,
-              tier: lookup.tier,
+              grade: effective.grade,
+              tier: effective.tier,
             }).catch(() => {});
 
             // Merge lookup channels with any existing saved state per option
@@ -133,7 +147,7 @@ export function Step6Assets({ deckId, properties, onBack }: Step6Props) {
             for (const group of groups) {
               const key = groupKey(prop.id, group.optionNumber);
               const merged: Record<string, boolean> = { ...(toggles[key] ?? {}) };
-              for (const channel of Object.keys(lookup.assetEntitlements)) {
+              for (const channel of Object.keys(effective.assetEntitlements)) {
                 if (!(channel in merged)) merged[channel] = false;
               }
               toggles[key] = merged;
