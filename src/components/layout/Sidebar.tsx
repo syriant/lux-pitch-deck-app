@@ -26,6 +26,7 @@ const adminLinks: NavItem[] = [
   { label: 'Image Library', path: '/admin/image-library', icon: 'image' },
   { label: 'LUX Image Check', path: '/admin/lux-image-check', icon: 'image' },
   { label: 'LLM Settings', path: '/admin/llm', icon: 'cpu' },
+  { label: 'QA Rules', path: '/admin/qa', icon: 'check' },
   { label: 'Users', path: '/admin/users', icon: 'users' },
 ];
 
@@ -81,6 +82,11 @@ const iconMap: Record<string, React.ReactNode> = {
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <circle cx="12" cy="12" r="10" />
       <path strokeLinecap="round" d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20" />
+    </svg>
+  ),
+  check: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
 };

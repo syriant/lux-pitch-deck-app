@@ -10,6 +10,7 @@ import { Templates } from './pages/admin/Templates';
 import { ImageLibrary } from './pages/admin/ImageLibrary';
 import { LuxImageCheck } from './pages/admin/LuxImageCheck';
 import { LlmSettings } from './pages/admin/LlmSettings';
+import { QaRules } from './pages/admin/QaRules';
 import { ReachStats } from './pages/admin/ReachStats';
 import { BrandStats } from './pages/admin/BrandStats';
 import { DeckWizard } from './pages/wizard/DeckWizard';
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
       { path: '/admin/image-library', element: <ImageLibrary /> },
       { path: '/admin/lux-image-check', element: <LuxImageCheck /> },
       { path: '/admin/llm', element: <LlmSettings /> },
+      { path: '/admin/qa', element: <QaRules /> },
       { path: '/admin/reach-stats', element: <ReachStats /> },
       { path: '/admin/brand-stats', element: <BrandStats /> },
       { path: '/admin/parser-test', element: <ParserTest /> },

@@ -15,6 +15,7 @@ import { translateDeck } from '@/api/translate.api';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
 import { getSalesforceStatus } from '@/api/salesforce.api';
 import { AppShell } from '@/components/layout/AppShell';
+import { QaPanel } from '@/components/preview/QaPanel';
 
 export type FieldChangeHandler = (
   entityType: 'property' | 'objective' | 'option' | 'case-study' | 'custom',
@@ -42,6 +43,7 @@ export function DeckPreview() {
   const [sfConfigured, setSfConfigured] = useState(false);
   const [sfUploading, setSfUploading] = useState(false);
   const [sfConfirmOpen, setSfConfirmOpen] = useState(false);
+  const [qaOpen, setQaOpen] = useState(false);
   const [sfResult, setSfResult] = useState<{ ok: boolean; text: string; url?: string | null } | null>(null);
 
   useEffect(() => {
@@ -591,6 +593,13 @@ export function DeckPreview() {
               />
             </label>
             <button
+              onClick={() => setQaOpen(true)}
+              title="Run an AI QA review of this deck before exporting — advisory only, it never blocks export"
+              className="rounded-md border border-[#01B18B] px-3 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5]"
+            >
+              ✓ Run QA
+            </button>
+            <button
               onClick={() => navigate(`/decks/${id}/edit`)}
               className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50"
             >
@@ -683,6 +692,8 @@ export function DeckPreview() {
           </div>
         </div>
       </div>
+
+      {id && <QaPanel deckId={id} open={qaOpen} onClose={() => setQaOpen(false)} />}
 
       {sfConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
