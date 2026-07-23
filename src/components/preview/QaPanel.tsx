@@ -3,8 +3,13 @@ import {
   runQa,
   getLatestQa,
   applyQaFixes,
+  getHygiene,
   type QaApplyFixResult,
   type QaFinding,
+  type QaFixOp,
+  type QaFixStatus,
+  type QaFixOutcome,
+  type HygieneCheck,
   type QaRun,
   type QaStatus,
 } from '@/api/qa.api';
@@ -28,9 +33,30 @@ function StatusBadge({ status }: { status: QaStatus }) {
   );
 }
 
-/** A fix is offerable only when it carries a concrete apply operation (target). */
+/** A fix is offerable only when it carries at least one concrete apply operation. */
 function isApplyable(f: QaFinding): boolean {
-  return !!(f.fix?.applyable && f.fix.target);
+  return !!(f.fix?.applyable && f.fix.ops.length > 0);
+}
+
+const truncate = (s: string): string => (s.length > 60 ? `${s.slice(0, 57)}…` : s);
+
+/** Short human label for an apply op, for the fix's op list. */
+function describeOp(op: QaFixOp, optionLabels: Record<string, string>): string {
+  const tier = (id: unknown): string => optionLabels[String(id)] ?? 'a tier';
+  switch (op.op) {
+    case 'add_objective':
+      return `Add objective: "${truncate(String(op.text ?? ''))}"`;
+    case 'reword_objective':
+      return `Reword an objective to: "${truncate(String(op.text ?? ''))}"`;
+    case 'add_differentiator':
+      return 'Add a differentiator';
+    case 'enable_marketing_asset':
+      return `Enable marketing asset "${String(op.assetKey ?? '')}" on ${tier(op.optionId)}`;
+    case 'add_inclusion':
+      return `Add inclusion "${truncate(String(op.text ?? ''))}" to ${tier(op.optionId)}`;
+    default:
+      return op.op;
+  }
 }
 
 /** One-line summary for the scorecard row: first bullet, else the narrative's lead sentence. */
@@ -40,8 +66,20 @@ function oneLine(f: QaFinding): string {
   return lead || f.narrative;
 }
 
-export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boolean; onClose: () => void }) {
+export function QaPanel({
+  deckId,
+  open,
+  onClose,
+  optionLabels = {},
+}: {
+  deckId: string;
+  open: boolean;
+  onClose: () => void;
+  /** optionId → tier label, so applied ops read "…on Diamond" not a raw id. */
+  optionLabels?: Record<string, string>;
+}) {
   const [run, setRun] = useState<QaRun | null>(null);
+  const [hygiene, setHygiene] = useState<HygieneCheck[]>([]);
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +102,7 @@ export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boole
     setError('');
     setLoading(true);
     resetStaging();
+    getHygiene(deckId).then(setHygiene).catch(() => setHygiene([]));
     getLatestQa(deckId)
       .then(setRun)
       .catch(() => setError('Failed to load the latest QA run.'))
@@ -76,6 +115,7 @@ export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boole
     try {
       setRun(await runQa(deckId));
       resetStaging();
+      getHygiene(deckId).then(setHygiene).catch(() => {});
     } catch {
       setError('QA run failed. Make sure the deck has objectives, offer options and case studies, then try again.');
     } finally {
@@ -105,6 +145,7 @@ export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boole
       });
       setStaged(new Set());
       setAppliedHint(res.results.some((r) => r.status === 'applied'));
+      getHygiene(deckId).then(setHygiene).catch(() => {});
     } catch {
       setError('Applying fixes failed. Re-run QA and try again.');
     } finally {
@@ -166,6 +207,8 @@ export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boole
             </div>
           )}
 
+          {hygiene.length > 0 && <Completeness checks={hygiene} />}
+
           {loading && !run && <div className="text-sm text-gray-500">Loading…</div>}
 
           {!loading && !run && !error && (
@@ -182,6 +225,7 @@ export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boole
                 findings={run.findings}
                 staged={staged}
                 results={results}
+                optionLabels={optionLabels}
                 onToggle={toggleStage}
               />
             </>
@@ -212,6 +256,29 @@ export function QaPanel({ deckId, open, onClose }: { deckId: string; open: boole
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function Completeness({ checks }: { checks: HygieneCheck[] }) {
+  const warnCount = checks.filter((c) => c.status === 'warn').length;
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-semibold text-gray-900">
+        Completeness{' '}
+        <span className={`font-normal ${warnCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+          — {warnCount === 0 ? 'all checks passed' : `${warnCount} to review`}
+        </span>
+      </h3>
+      <ul className="space-y-1">
+        {checks.map((c) => (
+          <li key={c.key} className="flex items-start gap-2 text-sm">
+            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${c.status === 'warn' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+            <span className="text-gray-800">{c.name}</span>
+            {c.status === 'warn' && <span className="text-gray-500">— {c.detail}</span>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -260,11 +327,13 @@ function Findings({
   findings,
   staged,
   results,
+  optionLabels,
   onToggle,
 }: {
   findings: QaFinding[];
   staged: Set<string>;
   results: Record<string, QaApplyFixResult>;
+  optionLabels: Record<string, string>;
   onToggle: (ruleKey: string) => void;
 }) {
   return (
@@ -290,6 +359,8 @@ function Findings({
                 ruleKey={f.key}
                 summary={f.fix.summary}
                 applyable={isApplyable(f)}
+                ops={f.fix.ops}
+                optionLabels={optionLabels}
                 staged={staged.has(f.key)}
                 result={results[f.key]}
                 onToggle={onToggle}
@@ -302,10 +373,25 @@ function Findings({
   );
 }
 
+const FIX_STATUS_STYLE: Record<QaFixStatus, { label: string; cls: string }> = {
+  applied: { label: 'Applied ✓', cls: 'bg-emerald-50 text-emerald-700' },
+  partial: { label: 'Partly applied', cls: 'bg-amber-50 text-amber-700' },
+  skipped: { label: 'No change', cls: 'bg-gray-200 text-gray-600' },
+  rejected: { label: 'Rejected', cls: 'bg-red-50 text-red-700' },
+};
+
+const OP_STATUS_STYLE: Record<QaFixOutcome, { label: string; cls: string }> = {
+  applied: { label: 'applied', cls: 'text-emerald-700' },
+  skipped: { label: 'no change', cls: 'text-gray-500' },
+  rejected: { label: 'rejected', cls: 'text-red-600' },
+};
+
 function FixRow({
   ruleKey,
   summary,
   applyable,
+  ops,
+  optionLabels,
   staged,
   result,
   onToggle,
@@ -313,48 +399,66 @@ function FixRow({
   ruleKey: string;
   summary: string;
   applyable: boolean;
+  ops: QaFixOp[];
+  optionLabels: Record<string, string>;
   staged: boolean;
   result?: QaApplyFixResult;
   onToggle: (ruleKey: string) => void;
 }) {
   return (
-    <div className="mt-3 flex items-start justify-between gap-3 rounded-md bg-gray-50 px-3 py-2 text-sm">
-      <div className="text-gray-600">
-        <span className="font-medium text-gray-700">Suggested fix:</span> {summary}
-        {result && result.status !== 'applied' && result.reason && (
-          <div className="mt-1 text-xs text-gray-500">{result.reason}</div>
-        )}
+    <div className="mt-3 rounded-md bg-gray-50 px-3 py-2 text-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-gray-600">
+          <span className="font-medium text-gray-700">Suggested fix:</span> {summary}
+          {result?.reason && result.status !== 'applied' && (
+            <div className="mt-1 text-xs text-gray-500">{result.reason}</div>
+          )}
+        </div>
+        <div className="shrink-0">
+          {result ? (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${FIX_STATUS_STYLE[result.status].cls}`}>
+              {FIX_STATUS_STYLE[result.status].label}
+            </span>
+          ) : applyable ? (
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                checked={staged}
+                onChange={() => onToggle(ruleKey)}
+                className="h-4 w-4 rounded border-gray-300"
+                style={{ accentColor: TEAL }}
+              />
+              Accept
+            </label>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500">
+              advisory
+            </span>
+          )}
+        </div>
       </div>
-      <div className="shrink-0">
-        {result?.status === 'applied' ? (
-          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-            Applied ✓
-          </span>
-        ) : result?.status === 'rejected' ? (
-          <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
-            Rejected
-          </span>
-        ) : result?.status === 'skipped' ? (
-          <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
-            No change
-          </span>
-        ) : applyable ? (
-          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-gray-700">
-            <input
-              type="checkbox"
-              checked={staged}
-              onChange={() => onToggle(ruleKey)}
-              className="h-4 w-4 rounded border-gray-300"
-              style={{ accentColor: TEAL }}
-            />
-            Accept
-          </label>
-        ) : (
-          <span className="inline-flex items-center rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-500">
-            advisory
-          </span>
-        )}
-      </div>
+
+      {/* The concrete changes — before apply from the fix's ops; after, from the result. */}
+      {result ? (
+        result.ops.length > 0 && (
+          <ul className="mt-2 space-y-1 border-t border-gray-200 pt-2">
+            {result.ops.map((o, i) => (
+              <li key={i} className="flex items-start justify-between gap-2 text-xs">
+                <span className="text-gray-600">{o.detail}</span>
+                <span className={`shrink-0 ${OP_STATUS_STYLE[o.status].cls}`} title={o.reason ?? ''}>
+                  {OP_STATUS_STYLE[o.status].label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : applyable && ops.length > 0 ? (
+        <ul className="mt-2 space-y-0.5 border-t border-gray-200 pt-2 text-xs text-gray-600">
+          {ops.map((o, i) => (
+            <li key={i}>• {describeOp(o, optionLabels)}</li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

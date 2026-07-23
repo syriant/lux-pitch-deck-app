@@ -29,14 +29,15 @@ interface DiffItem {
 }
 
 export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: DifferentiatorsSlideProps) {
-  // Real differentiators from the deck, or 4 fallback slots whose text comes from SLIDE_DEFAULTS
-  const items: DiffItem[] = deck.differentiators.length > 0
-    ? deck.differentiators.map((d) => ({
-        key: d.id,
-        title: d.differentiator.title,
-        description: d.differentiator.description ?? '',
-      }))
-    : [0, 1, 2, 3].map((i) => ({ key: `default-${i}` }));
+  // Differentiators selected in the wizard. The preview reflects the wizard — if
+  // none are selected, the grid is empty (matching the PPTX/PDF export, which
+  // renders only real differentiators). No default placeholders.
+  const items: DiffItem[] = deck.differentiators.map((d) => ({
+    key: d.id,
+    title: d.differentiator.title,
+    description: d.differentiator.description ?? '',
+  }));
+  const hasItems = items.length > 0;
 
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
@@ -80,29 +81,36 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
             onFieldChange={onFieldChange}
             className="mt-auto group/grid"
           >
-            <div className="grid grid-cols-2 gap-4">
-              {items.map((item) => (
-                <div key={item.key}>
-                  <div className="w-8 border-t-2 mb-2" style={{ borderColor: OCEAN_TEAL }} />
-                  <SlideRichText
-                    fieldKey={`diff.title.${item.key}`}
-                    defaultValue={item.title}
-                    defaultSize={14}
-                    customFields={cf}
-                    onFieldChange={onFieldChange}
-                    className="font-bold mb-1"
-                  />
-                  <SlideRichText
-                    fieldKey={`diff.desc.${item.key}`}
-                    defaultValue={item.description}
-                    defaultSize={10}
-                    customFields={cf}
-                    onFieldChange={onFieldChange}
-                    className="leading-relaxed"
-                  />
-                </div>
-              ))}
-            </div>
+            {hasItems ? (
+              <div className="grid grid-cols-2 gap-4">
+                {items.map((item) => (
+                  <div key={item.key}>
+                    <div className="w-8 border-t-2 mb-2" style={{ borderColor: OCEAN_TEAL }} />
+                    <SlideRichText
+                      fieldKey={`diff.title.${item.key}`}
+                      defaultValue={item.title}
+                      defaultSize={14}
+                      customFields={cf}
+                      onFieldChange={onFieldChange}
+                      className="font-bold mb-1"
+                    />
+                    <SlideRichText
+                      fieldKey={`diff.desc.${item.key}`}
+                      defaultValue={item.description}
+                      defaultSize={10}
+                      customFields={cf}
+                      onFieldChange={onFieldChange}
+                      className="leading-relaxed"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8">
+                <p className="text-sm text-gray-400">{t('No differentiators set', deck?.renderLocale)}</p>
+                <p className="text-[10px] text-gray-300 mt-1">{t('Add differentiators in the wizard', deck?.renderLocale)}</p>
+              </div>
+            )}
             {onFieldChange && gridPositioned && (
               <button
                 type="button"

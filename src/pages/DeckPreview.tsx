@@ -16,6 +16,7 @@ import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
 import { getSalesforceStatus } from '@/api/salesforce.api';
 import { AppShell } from '@/components/layout/AppShell';
 import { QaPanel } from '@/components/preview/QaPanel';
+import { getHygiene, recordExportAck, type HygieneCheck, type ExportType } from '@/api/qa.api';
 
 export type FieldChangeHandler = (
   entityType: 'property' | 'objective' | 'option' | 'case-study' | 'custom',
@@ -44,6 +45,47 @@ export function DeckPreview() {
   const [sfUploading, setSfUploading] = useState(false);
   const [sfConfirmOpen, setSfConfirmOpen] = useState(false);
   const [qaOpen, setQaOpen] = useState(false);
+  const [exportGate, setExportGate] = useState<{ type: ExportType; warnings: HygieneCheck[]; run: () => Promise<void> } | null>(null);
+
+  // optionId → tier label, so QA's applied ops read "…on Diamond" not a raw id.
+  const optionLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const p of deck?.properties ?? []) {
+      for (const o of p.options ?? []) {
+        map[o.id] = o.tierLabel?.trim() || `Option ${o.optionNumber}`;
+      }
+    }
+    return map;
+  }, [deck]);
+
+  // Run an export, but first check deterministic hygiene. If anything warns, hold
+  // the export behind a dialog; the PCM must "Export anyway", which is logged.
+  async function guardedExport(type: ExportType, run: () => Promise<void>) {
+    if (!id) return;
+    let warnings: HygieneCheck[] = [];
+    try {
+      warnings = (await getHygiene(id)).filter((c) => c.status === 'warn');
+    } catch {
+      // Hygiene lookup failed — never block the export on it.
+    }
+    if (warnings.length > 0) {
+      setExportGate({ type, warnings, run });
+      return;
+    }
+    await run();
+  }
+
+  async function confirmGatedExport() {
+    if (!exportGate || !id) return;
+    const gate = exportGate;
+    setExportGate(null);
+    try {
+      await recordExportAck(id, { exportType: gate.type, warnings: gate.warnings });
+    } catch {
+      // Logging failed — proceed with the export the PCM asked for anyway.
+    }
+    await gate.run();
+  }
   const [sfResult, setSfResult] = useState<{ ok: boolean; text: string; url?: string | null } | null>(null);
 
   useEffect(() => {
@@ -606,7 +648,7 @@ export function DeckPreview() {
               Back to Wizard
             </button>
             <button
-              onClick={async () => {
+              onClick={() => guardedExport('pdf', async () => {
                 if (!id || exportingPdf) return;
                 setExportingPdf(true);
                 try {
@@ -616,7 +658,7 @@ export function DeckPreview() {
                 } finally {
                   setExportingPdf(false);
                 }
-              }}
+              })}
               disabled={exportingPdf || exportingPdfCompressed}
               className="rounded-md border border-[#01B18B] px-4 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5"
             >
@@ -629,7 +671,7 @@ export function DeckPreview() {
               {exportingPdf ? 'Generating PDF...' : 'Export PDF'}
             </button>
             <button
-              onClick={async () => {
+              onClick={() => guardedExport('pdf_compressed', async () => {
                 if (!id || exportingPdfCompressed) return;
                 setExportingPdfCompressed(true);
                 try {
@@ -639,7 +681,7 @@ export function DeckPreview() {
                 } finally {
                   setExportingPdfCompressed(false);
                 }
-              }}
+              })}
               disabled={exportingPdf || exportingPdfCompressed}
               title="Smaller file size, suitable for email — slightly softer image quality"
               className="rounded-md border border-[#01B18B] px-4 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5"
@@ -656,8 +698,10 @@ export function DeckPreview() {
               <button
                 onClick={() => {
                   if (sfUploading) return;
-                  if (sfAlreadyUploaded) setSfConfirmOpen(true);
-                  else void runSalesforceUpload();
+                  void guardedExport('salesforce', async () => {
+                    if (sfAlreadyUploaded) setSfConfirmOpen(true);
+                    else await runSalesforceUpload();
+                  });
                 }}
                 disabled={sfUploading}
                 title="Render to PDF and attach it to the linked Salesforce opportunity"
@@ -673,7 +717,7 @@ export function DeckPreview() {
               </button>
             )}
             <button
-              onClick={async () => {
+              onClick={() => guardedExport('pptx', async () => {
                 if (!id || exporting) return;
                 setExporting(true);
                 try {
@@ -683,7 +727,7 @@ export function DeckPreview() {
                 } finally {
                   setExporting(false);
                 }
-              }}
+              })}
               disabled={exporting}
               className="rounded-md bg-[#01B18B] px-4 py-1.5 text-sm text-white hover:bg-[#009977] disabled:opacity-50"
             >
@@ -693,7 +737,58 @@ export function DeckPreview() {
         </div>
       </div>
 
-      {id && <QaPanel deckId={id} open={qaOpen} onClose={() => setQaOpen(false)} />}
+      {id && <QaPanel deckId={id} open={qaOpen} onClose={() => setQaOpen(false)} optionLabels={optionLabels} />}
+
+      {exportGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+            <div className="px-6 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900">Export with warnings?</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {exportGate.warnings.length} completeness {exportGate.warnings.length === 1 ? 'check needs' : 'checks need'} attention.
+                You can export anyway — the choice is recorded.
+              </p>
+            </div>
+
+            <ul className="mt-4 max-h-72 divide-y divide-gray-100 overflow-y-auto border-y border-gray-100">
+              {exportGate.warnings.map((w) => (
+                <li key={w.key} className="flex items-start gap-3 px-6 py-3">
+                  <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-gray-800">{w.name}</div>
+                    <div className="text-sm text-gray-500">{w.detail}</div>
+                  </div>
+                  {w.key === 'qa_reviewed' && (
+                    <button
+                      onClick={() => { setExportGate(null); setQaOpen(true); }}
+                      className="shrink-0 rounded-md border border-[#01B18B] px-2.5 py-1 text-xs font-medium text-[#01B18B] hover:bg-[#E6F9F5]"
+                    >
+                      Run QA
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex justify-end gap-2 px-6 py-4">
+              <button
+                onClick={() => setExportGate(null)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void confirmGatedExport()}
+                className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
+              >
+                Export anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {sfConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
