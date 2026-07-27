@@ -4,6 +4,8 @@ export interface TranslateDeckResult {
   locale: string;
   translated: number;
   eligible: number;
+  /** Fields skipped because the PCM hand-edited their translation (protected). */
+  protected: number;
   llm: {
     calls: number;
     inputTokens: number;

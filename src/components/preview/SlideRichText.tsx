@@ -8,6 +8,7 @@ import { isVoiceEligible, VOICE_ORIGINAL_SUFFIX } from './voice-fields';
 import { SLIDE_DEFAULTS } from './slide-defaults';
 import { useSlideEditorContext } from './SlideEditorContext';
 import { useDeckRenderContext, substitutePlaceholders } from './DeckRenderContext';
+import { DEFAULT_LOCALE, localeEditedKey } from './i18n';
 
 interface SlideRichTextProps {
   fieldKey: string;
@@ -116,6 +117,14 @@ export function SlideRichText({
     hideTimer.current = setTimeout(() => setHovered(false), 500);
   }
 
+  // Hand-edited translation (SYR-70): in a non-English locale, a field the PCM
+  // edited is protected from Re-translate. Show it plainly (dashed outline +
+  // toolbar badge); the badge click removes the protection so the next
+  // re-translate overwrites the field again.
+  const renderLocale = deckContext.renderLocale ?? DEFAULT_LOCALE;
+  const editProtected = renderLocale !== DEFAULT_LOCALE
+    && customFields?.[localeEditedKey(renderLocale, fieldKey)] === 'true';
+
   // "LUX voice" rewrite — only on prose fields, and only when there's text.
   const hasContent = !!value && value !== '<br>';
   const voiceEligible = isVoiceEligible(fieldKey);
@@ -143,7 +152,8 @@ export function SlideRichText({
   return (
     <div
       ref={wrapperRef}
-      className="w-full relative"
+      className={`w-full relative ${editProtected ? 'outline outline-1 outline-dashed outline-amber-400' : ''}`}
+      title={editProtected ? 'Edited translation — protected from re-translate' : undefined}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
@@ -176,6 +186,16 @@ export function SlideRichText({
           )}
           <AlignToggle fieldKey={`${fieldKey}.align`} align={align} onFieldChange={effectiveOnFieldChange} />
           <FontSizeControl fieldKey={`${fieldKey}.size`} size={fontSize} onFieldChange={effectiveOnFieldChange} />
+          {editProtected && (
+            <button
+              type="button"
+              onClick={() => effectiveOnFieldChange('custom', '', localeEditedKey(renderLocale, fieldKey), 'false')}
+              className="bg-amber-50 border border-amber-300 rounded shadow-md px-2 py-1 text-xs text-amber-800 hover:bg-amber-100 cursor-pointer whitespace-nowrap"
+              title="You edited this translation, so Re-translate keeps your wording. Click to remove the protection — the next re-translate will overwrite this field again."
+            >
+              🔒 Edited — kept
+            </button>
+          )}
           {canReset && (
             <button
               type="button"

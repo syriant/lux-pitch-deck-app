@@ -10,7 +10,7 @@ import { fileToSlideImages } from '@/components/preview/file-to-slide-images';
 import { uploadImage, uploadDocument } from '@/api/upload.api';
 import { SlideStrip } from '@/components/preview/SlideStrip';
 import { SlideRenderer } from '@/components/preview/SlideRenderer';
-import { SUPPORTED_LOCALES, DEFAULT_LOCALE, localeFieldKey, applyLocaleOverlay } from '@/components/preview/i18n';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, localeFieldKey, localeEditedKey, I18N_EDITED_PREFIX, applyLocaleOverlay } from '@/components/preview/i18n';
 import { translateDeck } from '@/api/translate.api';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
 import { getSalesforceStatus } from '@/api/salesforce.api';
@@ -34,6 +34,7 @@ export function DeckPreview() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeLocale, setActiveLocale] = useState(DEFAULT_LOCALE);
   const [translating, setTranslating] = useState(false);
+  const [translateNote, setTranslateNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -117,13 +118,18 @@ export function DeckPreview() {
     if (!id || translating || activeLocale === DEFAULT_LOCALE) return;
     setTranslating(true);
     try {
-      await translateDeck(id, activeLocale);
+      const result = await translateDeck(id, activeLocale);
       // Re-fetch to pick up the new i18n.<locale>.* keys the backend wrote.
       const fresh = await getFullDeck(id);
       setDeck((prev) => (prev ? { ...prev, customFields: fresh.customFields } : prev));
       if (deckRef.current) deckRef.current = { ...deckRef.current, customFields: fresh.customFields };
+      // Make the edit protection visible: say how many hand-edited fields were kept.
+      setTranslateNote(result.protected > 0
+        ? `Translated ${result.translated} fields — kept ${result.protected} you edited (hover a field with a dashed outline to unprotect it)`
+        : `Translated ${result.translated} fields`);
     } catch {
       console.error('Translation failed');
+      setTranslateNote('Translation failed — please try again');
     } finally {
       setTranslating(false);
     }
@@ -253,12 +259,22 @@ export function DeckPreview() {
           // standalone campaign-details slide is hidden when on and restored when
           // off (its rows move onto the deal-options slide).
           const combineMatch = /^deal\.(.+)\.combine$/.exec(field);
+          // Protection markers (i18nEdited.<locale>.<key>) are already absolute —
+          // written verbatim, never locale-prefixed.
+          const isMarkerKey = field.startsWith(I18N_EDITED_PREFIX);
           // English writes to the bare key (canonical source); a non-English
           // active locale writes to its prefixed key so English is preserved.
-          const persistKey = combineMatch
+          const persistKey = combineMatch || isMarkerKey
             ? field
             : (activeLocale === DEFAULT_LOCALE ? field : localeFieldKey(activeLocale, field));
           const updated: Record<string, string> = { ...current, [persistKey]: value };
+          // A hand-edit to a translated prose field is protected: Re-translate
+          // skips it so the PCM's wording survives. Layout/meta subkeys aren't
+          // translated, so they carry no marker.
+          if (!combineMatch && !isMarkerKey && activeLocale !== DEFAULT_LOCALE
+            && !/\.(size|align|x|y|w|hideIcon|voiceOriginal)$/.test(field)) {
+            updated[localeEditedKey(activeLocale, field)] = 'true';
+          }
           if (combineMatch) {
             const mktgSlideId = `marketing-assets-${combineMatch[1]}`;
             let nextHidden: string[] = [];
@@ -587,6 +603,8 @@ export function DeckPreview() {
                   <> · <a href={sfResult.url} target="_blank" rel="noreferrer" className="underline">View in Salesforce</a></>
                 )}
               </span>
+            ) : translateNote ? (
+              <span className={translateNote.startsWith('Translation failed') ? 'text-red-600' : 'text-[#01806a]'}>{translateNote}</span>
             ) : (
               <>{slides.length} slides</>
             )}
@@ -594,7 +612,7 @@ export function DeckPreview() {
           <div className="flex items-center gap-2">
             <select
               value={activeLocale}
-              onChange={(e) => setActiveLocale(e.target.value)}
+              onChange={(e) => { setActiveLocale(e.target.value); setTranslateNote(''); }}
               title="Preview & export language. English is the source; other languages are editable translations saved alongside it."
               className="rounded-md border border-gray-300 px-2 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50 cursor-pointer"
             >
@@ -609,7 +627,7 @@ export function DeckPreview() {
                 type="button"
                 onClick={handleTranslate}
                 disabled={translating}
-                title={`Auto-translate the deck's content into ${activeLocaleLabel} with AI. You can edit any field afterwards; English is never changed.`}
+                title={`Auto-translate the deck's content into ${activeLocaleLabel} with AI. Fields you have edited in ${activeLocaleLabel} are protected and will not be overwritten — hover a protected field to remove its protection. English is never changed.`}
                 className="rounded-md border border-[#01B18B] px-3 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5] disabled:opacity-70 flex items-center gap-1.5 whitespace-nowrap"
               >
                 {translating && (

@@ -67,7 +67,7 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd 
     : {};
 
   return (
-    <DeckRenderContext.Provider value={{ placeholders, deckId: deck.id }}>
+    <DeckRenderContext.Provider value={{ placeholders, deckId: deck.id, renderLocale: deck.renderLocale }}>
       <div
         className="bg-white shadow-lg overflow-hidden"
         style={{

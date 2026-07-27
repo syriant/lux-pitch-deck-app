@@ -41,6 +41,18 @@ export function localeFieldKey(locale: string, key: string): string {
   return `${I18N_PREFIX}${locale}.${key}`;
 }
 
+export const I18N_EDITED_PREFIX = 'i18nEdited.';
+
+/**
+ * customFields marker ('true') set when the PCM hand-edits `key`'s `locale`
+ * translation — re-translate skips marked fields so manual fixes survive.
+ * Cleared (set 'false') via the field's "Edited — kept" badge to make the
+ * field re-translatable again. Mirrors lux-pitch-deck-api/src/modules/export/i18n.ts.
+ */
+export function localeEditedKey(locale: string, key: string): string {
+  return `${I18N_EDITED_PREFIX}${locale}.${key}`;
+}
+
 /**
  * Produce a customFields view for `locale`: the English base with the locale's
  * translated keys overlaid (prefix stripped). `en`/empty returns the base
