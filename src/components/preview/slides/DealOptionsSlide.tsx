@@ -20,6 +20,11 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
     group.push(opt);
     map.set(opt.optionNumber, group);
   }
+  // A tier unticked in Step 2 (no selected rows) gets no column — matching
+  // the tactical slides and Step 6 grouping.
+  for (const [num, rows] of map) {
+    if (!rows.some((r) => r.selected)) map.delete(num);
+  }
   return map;
 }
 
@@ -96,6 +101,16 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
             >
               {cf['deal.showSellRates'] === 'true' ? 'Hide sell rates' : 'Show sell rates'}
             </button>
+            {property.options.some((o) => (o.nights ?? 0) > 1) && (
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', 'deal.showPerNight', cf['deal.showPerNight'] === 'true' ? 'false' : 'true')}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Also show the equivalent per-night rate next to multi-night package prices (off by default)"
+              >
+                {cf['deal.showPerNight'] === 'true' ? 'Hide per-night rates' : 'Show per-night rates'}
+              </button>
+            )}
             {hasForecast && (
               <button
                 type="button"
@@ -188,6 +203,8 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   const optNums = Array.from(groups.keys()).sort();
   const showSell = customFields?.['deal.showSellRates'] === 'true';
   const showForecast = customFields?.['deal.showForecast'] === 'true';
+  // Opt-in per-night rate alongside multi-night package prices (#SYR-89, ~5 PCM requests).
+  const showPerNight = customFields?.['deal.showPerNight'] === 'true';
   // When combined, the campaign-details slide's rows (Allocation, Payment) move
   // onto this table and that slide is hidden via hiddenSlides (see DeckPreview).
   const combined = customFields?.[`deal.${property.id}.combine`] === 'true';
@@ -307,9 +324,13 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       return rooms.map((r) => {
         const price = formatMoney(r.costPrice, property.currency) ?? '?';
         const roomLabel = r.roomType ?? t('Room', locale);
-        return r.nights && r.nights > 1
-          ? `${roomLabel} ${r.nights}N – ${price}`
-          : `${roomLabel} – ${price} ${t('per night', locale)}`;
+        if (r.nights && r.nights > 1) {
+          const perNight = showPerNight ? formatMoney(Number(r.costPrice) / r.nights, property.currency) : null;
+          return perNight
+            ? `${roomLabel} ${r.nights}N – ${price} (${perNight} ${t('per night', locale)})`
+            : `${roomLabel} ${r.nights}N – ${price}`;
+        }
+        return `${roomLabel} – ${price} ${t('per night', locale)}`;
       }).join('\n');
     }),
   });
@@ -329,10 +350,14 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
           .sort((a, b) => Number(a.sellPrice ?? Infinity) - Number(b.sellPrice ?? Infinity));
         return rooms.map((r) => {
           const price = formatMoney(r.sellPrice, 'AUD') ?? '?';
-          const roomLabel = r.roomType ?? 'Room';
-          return r.nights && r.nights > 1
-            ? `${roomLabel} ${r.nights}N – ${price}`
-            : `${roomLabel} – ${price} per night`;
+          const roomLabel = r.roomType ?? t('Room', locale);
+          if (r.nights && r.nights > 1) {
+            const perNight = showPerNight ? formatMoney(Number(r.sellPrice) / r.nights, 'AUD') : null;
+            return perNight
+              ? `${roomLabel} ${r.nights}N – ${price} (${perNight} ${t('per night', locale)})`
+              : `${roomLabel} ${r.nights}N – ${price}`;
+          }
+          return `${roomLabel} – ${price} ${t('per night', locale)}`;
         }).join('\n');
       }),
     });

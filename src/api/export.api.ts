@@ -1,4 +1,46 @@
 import { apiClient } from './client';
+import { useAuthStore } from '../stores/auth.store';
+
+// Blob downloads use fetch rather than apiClient (axios/XHR): large binary
+// responses were failing mid-body in Edge with net::ERR_FAILED under the XHR
+// stack, while the same request via fetch completes. Everything else stays on
+// axios; this path re-implements the bearer header + one 401 refresh retry.
+async function fetchBlobDownload(path: string, params?: Record<string, string>): Promise<void> {
+  const base = import.meta.env.VITE_API_URL as string;
+  const qs = params && Object.keys(params).length ? `?${new URLSearchParams(params)}` : '';
+  const url = `${base}${path}${qs}`;
+
+  const doFetch = (token: string | null) => fetch(url, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+
+  let res = await doFetch(useAuthStore.getState().accessToken);
+  if (res.status === 401) {
+    const newToken = await useAuthStore.getState().refresh();
+    if (!newToken) throw new Error('Session expired');
+    res = await doFetch(newToken);
+  }
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+
+  const blob = await res.blob();
+
+  const disposition = res.headers.get('content-disposition');
+  let filename = path.endsWith('/pdf') ? 'deck.pdf' : 'deck.pptx';
+  if (disposition) {
+    const match = disposition.match(/filename="?([^";\n]+)"?/);
+    if (match) filename = match[1];
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(objectUrl);
+}
 
 export async function exportPdf(
   deckId: string,
@@ -7,29 +49,7 @@ export async function exportPdf(
   const params: Record<string, string> = {};
   if (opts.compressed) params.compressed = 'true';
   if (opts.locale && opts.locale !== 'en') params.locale = opts.locale;
-  const res = await apiClient.post(`/export/${deckId}/pdf`, {}, {
-    params: Object.keys(params).length ? params : undefined,
-    responseType: 'blob',
-    timeout: 120_000,
-  });
-
-  const blob = new Blob([res.data], { type: 'application/pdf' });
-
-  const disposition = res.headers['content-disposition'] as string | undefined;
-  let filename = 'deck.pdf';
-  if (disposition) {
-    const match = disposition.match(/filename="?([^";\n]+)"?/);
-    if (match) filename = match[1];
-  }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await fetchBlobDownload(`/export/${deckId}/pdf`, params);
 }
 
 export interface SalesforceUploadResult {
@@ -51,29 +71,7 @@ export async function exportToSalesforce(deckId: string): Promise<SalesforceUplo
 }
 
 export async function exportPptx(deckId: string, opts: { locale?: string } = {}): Promise<void> {
-  const res = await apiClient.post(`/export/${deckId}/pptx`, {}, {
-    params: opts.locale && opts.locale !== 'en' ? { locale: opts.locale } : undefined,
-    responseType: 'blob',
-  });
-
-  const blob = new Blob([res.data], {
-    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  });
-
-  // Extract filename from Content-Disposition header if available
-  const disposition = res.headers['content-disposition'] as string | undefined;
-  let filename = 'deck.pptx';
-  if (disposition) {
-    const match = disposition.match(/filename="?([^";\n]+)"?/);
-    if (match) filename = match[1];
-  }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const params: Record<string, string> = {};
+  if (opts.locale && opts.locale !== 'en') params.locale = opts.locale;
+  await fetchBlobDownload(`/export/${deckId}/pptx`, params);
 }

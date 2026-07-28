@@ -125,7 +125,7 @@ export function DeckPreview() {
       if (deckRef.current) deckRef.current = { ...deckRef.current, customFields: fresh.customFields };
       // Make the edit protection visible: say how many hand-edited fields were kept.
       setTranslateNote(result.protected > 0
-        ? `Translated ${result.translated} fields — kept ${result.protected} you edited (hover a field with a dashed outline to unprotect it)`
+        ? `Translated ${result.translated} fields — kept ${result.protected} edited`
         : `Translated ${result.translated} fields`);
     } catch {
       console.error('Translation failed');
@@ -595,7 +595,7 @@ export function DeckPreview() {
 
         {/* Bottom bar */}
         <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 shrink-0">
-          <div className="text-sm text-[#7E8188]">
+          <div className="min-w-0 flex-1 pr-4 text-sm text-[#7E8188]">
             {sfResult ? (
               <span className={sfResult.ok ? 'text-[#01806a]' : 'text-red-600'}>
                 {sfResult.text}
@@ -604,12 +604,17 @@ export function DeckPreview() {
                 )}
               </span>
             ) : translateNote ? (
-              <span className={translateNote.startsWith('Translation failed') ? 'text-red-600' : 'text-[#01806a]'}>{translateNote}</span>
+              <span
+                className={`block truncate ${translateNote.startsWith('Translation failed') ? 'text-red-600' : 'text-[#01806a]'}`}
+                title="Fields you edited in this language are protected from re-translation — hover a field with a dashed outline and click the badge to allow it again."
+              >
+                {translateNote}
+              </span>
             ) : (
               <>{slides.length} slides</>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <select
               value={activeLocale}
               onChange={(e) => { setActiveLocale(e.target.value); setTranslateNote(''); }}
@@ -740,8 +745,8 @@ export function DeckPreview() {
                 setExporting(true);
                 try {
                   await exportPptx(id, { locale: activeLocale });
-                } catch {
-                  console.error('Export failed');
+                } catch (err) {
+                  console.error('Export failed', err);
                 } finally {
                   setExporting(false);
                 }

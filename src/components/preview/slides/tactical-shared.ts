@@ -70,6 +70,9 @@ export function uniqueOptionsByNumber(options: DeckOption[]): DeckOption[] {
   }
   const picked: DeckOption[] = [];
   for (const rows of byOpt.values()) {
+    // A tier unticked in Step 2 (no selected rows) is excluded everywhere —
+    // slides, wizard steps — matching the side-by-side and per-package slides.
+    if (!rows.some((r) => r.selected)) continue;
     const withTactical = rows.find(
       (r) => (r.rooms != null && r.rooms.length > 0)
         || (r.tacticalDetails != null && Object.keys(r.tacticalDetails).length > 0),

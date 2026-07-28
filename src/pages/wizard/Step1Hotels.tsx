@@ -305,7 +305,7 @@ export function Step1Hotels({
           )}
         </div>
         <p className="text-xs text-gray-500 mb-2">
-          Pre-fills hotel, destination, and Hotel Introduction from the linked opportunity in Salesforce.
+          Pre-fills hotel, destination, and Quote from Partner from the linked opportunity in Salesforce.
         </p>
         <div className="flex gap-2">
           <input
@@ -421,7 +421,7 @@ export function Step1Hotels({
 
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-5">
         <label className="block text-sm font-medium text-gray-700">
-          Hotel Introduction
+          Quote from Partner
           <span className="ml-2 text-xs font-normal text-gray-500">
             shown on slide 2 — leave blank to use the template default
           </span>

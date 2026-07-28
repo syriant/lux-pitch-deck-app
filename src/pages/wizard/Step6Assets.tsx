@@ -43,6 +43,9 @@ function groupOptionsByNumber(options: DeckOption[]): OptionGroup[] {
   }
   return Array.from(map.entries())
     .sort(([a], [b]) => a - b)
+    // A tier unticked in Step 2 (no selected rows) is excluded from the rest
+    // of the wizard, matching the preview and exports.
+    .filter(([, opts]) => opts.some((o) => o.selected))
     .map(([optionNumber, opts]) => ({
       optionNumber,
       tierLabel: opts[0]?.tierLabel ?? null,

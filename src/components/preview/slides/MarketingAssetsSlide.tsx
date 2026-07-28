@@ -22,8 +22,12 @@ function fmtDateRange(start: string | null, end: string | null, locale?: string)
 }
 
 function getUniqueOptions(options: DeckOption[]): DeckOption[] {
+  // A tier unticked in Step 2 (no selected rows) gets no column — matching
+  // the tactical slides and Step 6 grouping.
+  const tiersWithSelection = new Set(options.filter((o) => o.selected).map((o) => o.optionNumber));
   const seen = new Set<number>();
   return options.filter((o) => {
+    if (!tiersWithSelection.has(o.optionNumber)) return false;
     if (seen.has(o.optionNumber)) return false;
     seen.add(o.optionNumber);
     return true;
@@ -36,6 +40,9 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
     const group = map.get(opt.optionNumber) ?? [];
     group.push(opt);
     map.set(opt.optionNumber, group);
+  }
+  for (const [num, rows] of map) {
+    if (!rows.some((r) => r.selected)) map.delete(num);
   }
   return map;
 }

@@ -25,6 +25,11 @@ function groupByOption(options: DeckOption[]): Map<number, DeckOption[]> {
     group.push(opt);
     map.set(opt.optionNumber, group);
   }
+  // A tier unticked in Step 2 (no selected rows) gets no column — matching
+  // the tactical slides and Step 6 grouping.
+  for (const [num, rows] of map) {
+    if (!rows.some((r) => r.selected)) map.delete(num);
+  }
   return map;
 }
 
