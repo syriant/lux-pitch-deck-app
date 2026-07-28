@@ -84,8 +84,19 @@ export interface CaseStudyStatTile {
   sub: string;
 }
 
+/**
+ * Tile keys hidden via the case-study slide's toggle buttons (shown by default;
+ * the toggles store 'false' to hide). Mirrored in the API's placeholders.ts.
+ */
+export function hiddenCaseStudyTileKeys(cf?: Record<string, string> | null): string[] {
+  const hidden: string[] = [];
+  if (cf?.['caseStudy.showRevenue'] === 'false') hidden.push('revenue');
+  if (cf?.['caseStudy.showAdr'] === 'false') hidden.push('adr');
+  return hidden;
+}
+
 /** Tiles for the metrics a case study actually has, in report order (max 6). */
-export function buildCaseStudyStatTiles(cs: CaseStudyMetricSource, locale?: string | null): CaseStudyStatTile[] {
+export function buildCaseStudyStatTiles(cs: CaseStudyMetricSource, locale?: string | null, hiddenKeys?: string[]): CaseStudyStatTile[] {
   const tiles: CaseStudyStatTile[] = [];
   const rn = n(cs.roomNights);
   if (rn !== null) {
@@ -117,5 +128,5 @@ export function buildCaseStudyStatTiles(cs: CaseStudyMetricSource, locale?: stri
   if (adr !== null) {
     tiles.push({ key: 'adr', label: 'ADR', value: adr % 1 ? `$${adr.toFixed(2)}` : `$${adr.toLocaleString('en-US')}`, sub: 'Average daily rate' });
   }
-  return tiles;
+  return hiddenKeys?.length ? tiles.filter((tile) => !hiddenKeys.includes(tile.key)) : tiles;
 }

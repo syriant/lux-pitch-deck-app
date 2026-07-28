@@ -2,10 +2,9 @@ import { type DeckCaseStudyLink, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
-import { buildCaseStudyMetricVars, buildCaseStudyStatTiles, type CaseStudyStatTile } from '../case-study-metrics';
+import { buildCaseStudyMetricVars, buildCaseStudyStatTiles, hiddenCaseStudyTileKeys, type CaseStudyStatTile } from '../case-study-metrics';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
-import { uploadUrl } from '@/api/upload.api';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, TEAL_100, TEAL_200, TEAL_400, SANDY_BEIGE, SOFT_LINE, INK } from '../brand';
 
@@ -53,21 +52,28 @@ function CaseStudyCard({
   onFieldChange?: FieldChangeHandler;
   locale?: string;
 }) {
-  const imgSrc = cs.images?.[0] ? uploadUrl(cs.images[0]) : null;
   // Metric tokens ({revenue}, {room_nights}, …) scoped to this case study, so the
   // narrative resolves to its own numbers in preview (and, via the mirror in the
   // API, in the PPTX/PDF export).
   const metricVars = buildCaseStudyMetricVars(cs);
-  const tiles = buildCaseStudyStatTiles(cs, locale);
+  const tiles = buildCaseStudyStatTiles(cs, locale, hiddenCaseStudyTileKeys(customFields));
   const hasTiles = tiles.length > 0;
 
+  // Card image — pick WHICH of the case study's own photos to feature (per-deck
+  // override; defaults to the record's first image). Deliberately not the deck
+  // gallery: the pitched hotel's photos don't belong on another hotel's case study.
   const imageBlock = (
     <div style={{ height: hasTiles ? '42%' : '55%' }} className="overflow-hidden">
-      {imgSrc ? (
-        <img src={imgSrc} alt={cs.hotelName} className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${TEAL_400}, ${TEAL_200})` }} />
-      )}
+      <SlideImage
+        fieldKey={`caseStudy.${cs.id}.image`}
+        customFields={customFields}
+        defaultValue={cs.images?.[0] ?? null}
+        gallery={cs.images ?? []}
+        onFieldChange={onFieldChange}
+        className="w-full h-full"
+        fallbackGradient={`linear-gradient(135deg, ${TEAL_400}, ${TEAL_200})`}
+        placeholderText={onFieldChange ? 'Card image' : ''}
+      />
     </div>
   );
 
@@ -85,7 +91,7 @@ function CaseStudyCard({
       />
       <SlideRichText
         fieldKey={`caseStudy.${cs.id}.narrative`}
-        defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} room nights` : null].filter(Boolean).join(' · ')}
+        defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} ${t('room nights', locale)}` : null].filter(Boolean).join(' · ')}
         defaultSize={15}
         customFields={customFields}
         extraPlaceholders={metricVars}
@@ -97,7 +103,9 @@ function CaseStudyCard({
   );
 
   const tileStrip = hasTiles ? (
-    <div className="px-[5%] pb-[3%] grid grid-cols-3 gap-1.5 content-stretch" style={{ height: '26%' }}>
+    // Fixed 3×2 grid — sized for the full 6 tiles so sparse metrics don't
+    // stretch into tall tiles; unused cells stay as whitespace.
+    <div className="px-[5%] pb-[3%] grid grid-cols-3 grid-rows-2 gap-1.5" style={{ height: '26%' }}>
       {tiles.map((tile) => (
         <StatTile key={tile.key} tile={tile} compact locale={locale} />
       ))}
@@ -131,9 +139,8 @@ function FeaturedCaseStudyCard({
   onFieldChange?: FieldChangeHandler;
   locale?: string;
 }) {
-  const imgSrc = cs.images?.[0] ? uploadUrl(cs.images[0]) : null;
   const metricVars = buildCaseStudyMetricVars(cs);
-  const tiles = buildCaseStudyStatTiles(cs, locale);
+  const tiles = buildCaseStudyStatTiles(cs, locale, hiddenCaseStudyTileKeys(customFields));
 
   return (
     <div className="bg-white rounded shadow-lg h-full flex flex-col overflow-visible p-[3%]">
@@ -149,7 +156,7 @@ function FeaturedCaseStudyCard({
       />
       <SlideRichText
         fieldKey={`caseStudy.${cs.id}.narrative`}
-        defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} room nights` : null].filter(Boolean).join(' · ')}
+        defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} ${t('room nights', locale)}` : null].filter(Boolean).join(' · ')}
         defaultSize={14}
         customFields={customFields}
         extraPlaceholders={metricVars}
@@ -158,17 +165,24 @@ function FeaturedCaseStudyCard({
         style={{ color: '#333' }}
       />
       <div className="flex-1 flex gap-3 min-h-0 mt-3">
-        <div className="flex-1 grid grid-cols-2 gap-2 content-stretch min-w-0">
+        {/* Fixed 2×3 grid — sized for the full 6 tiles so sparse metrics don't
+            balloon into oversized tiles; unused cells stay as whitespace. */}
+        <div className="flex-1 grid grid-cols-2 grid-rows-3 gap-2 min-w-0">
           {tiles.map((tile) => (
             <StatTile key={tile.key} tile={tile} compact={false} locale={locale} />
           ))}
         </div>
         <div className="w-[42%] rounded overflow-hidden shrink-0">
-          {imgSrc ? (
-            <img src={imgSrc} alt={cs.hotelName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${TEAL_400}, ${TEAL_200})` }} />
-          )}
+          <SlideImage
+            fieldKey={`caseStudy.${cs.id}.image`}
+            customFields={customFields}
+            defaultValue={cs.images?.[0] ?? null}
+            gallery={cs.images ?? []}
+            onFieldChange={onFieldChange}
+            className="w-full h-full"
+            fallbackGradient={`linear-gradient(135deg, ${TEAL_400}, ${TEAL_200})`}
+            placeholderText={onFieldChange ? 'Hero image' : ''}
+          />
         </div>
       </div>
     </div>
@@ -190,7 +204,7 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
   // Featured layout = exactly one case study that has metrics to tile. It spans
   // the full width, so the title's default moves to the top-left band above the
   // card (the bottom-left default would sit under it).
-  const featured = cards.length === 1 && buildCaseStudyStatTiles(cards[0].caseStudy, deck?.renderLocale).length > 0;
+  const featured = cards.length === 1 && buildCaseStudyStatTiles(cards[0].caseStudy, deck?.renderLocale, hiddenCaseStudyTileKeys(cf)).length > 0;
 
   return (
     <div className="relative h-full w-full overflow-hidden flex flex-col">
@@ -220,6 +234,33 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
               className="w-8 h-8 rounded"
               placeholderText=""
             />
+          </div>
+        )}
+
+        {/* Tile toggles — ADR and Total revenue tiles are shown by default;
+            these hide them deck-wide (all case-study slides, preview + export). */}
+        {onFieldChange && hasCaseStudies && (
+          <div className="absolute top-2 right-2 z-20 flex gap-1">
+            {cards.some((c) => c.caseStudy.revenue != null) && (
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', 'caseStudy.showRevenue', cf['caseStudy.showRevenue'] === 'false' ? 'true' : 'false')}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Show or hide the Total revenue stat tile on case-study slides (on by default)"
+              >
+                {cf['caseStudy.showRevenue'] === 'false' ? 'Show total revenue' : 'Hide total revenue'}
+              </button>
+            )}
+            {cards.some((c) => c.caseStudy.adr != null) && (
+              <button
+                type="button"
+                onClick={() => onFieldChange('custom', '', 'caseStudy.showAdr', cf['caseStudy.showAdr'] === 'false' ? 'true' : 'false')}
+                className="text-[10px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer whitespace-nowrap"
+                title="Show or hide the ADR stat tile on case-study slides (on by default)"
+              >
+                {cf['caseStudy.showAdr'] === 'false' ? 'Show ADR' : 'Hide ADR'}
+              </button>
+            )}
           </div>
         )}
 

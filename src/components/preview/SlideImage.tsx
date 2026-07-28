@@ -7,6 +7,9 @@ import { OCEAN_TEAL, TEAL_200, TEAL_400 } from './brand';
 interface SlideImageProps {
   fieldKey: string;
   customFields?: Record<string, string>;
+  /** Image shown when no customFields override is set (e.g. a record's own
+      image). Removing an override in the picker reverts to this. */
+  defaultValue?: string | null;
   gallery?: string[];
   onFieldChange?: FieldChangeHandler;
   onGalleryAdd?: (url: string) => void;
@@ -18,6 +21,7 @@ interface SlideImageProps {
 export function SlideImage({
   fieldKey,
   customFields,
+  defaultValue,
   gallery = [],
   onFieldChange,
   onGalleryAdd,
@@ -26,7 +30,8 @@ export function SlideImage({
   placeholderText = 'Click to set image',
 }: SlideImageProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const imageUrl = uploadUrl(customFields?.[fieldKey] ?? null);
+  const value = customFields?.[fieldKey] || defaultValue || null;
+  const imageUrl = uploadUrl(value);
 
   function handleSelect(url: string) {
     onFieldChange?.('custom', '', fieldKey, url);
@@ -62,10 +67,17 @@ export function SlideImage({
       {showPicker && (
         <ImagePicker
           gallery={gallery}
-          currentImage={customFields?.[fieldKey] ?? null}
+          currentImage={value}
           onSelect={handleSelect}
           onUpload={onGalleryAdd}
-          onRemove={() => onFieldChange?.('custom', '', fieldKey, '')}
+          // With a defaultValue, removal reverts to it — only offer the button
+          // when an override actually exists, and label it accordingly.
+          onRemove={
+            !defaultValue || customFields?.[fieldKey]
+              ? () => onFieldChange?.('custom', '', fieldKey, '')
+              : undefined
+          }
+          removeLabel={defaultValue ? 'Revert to default image' : undefined}
           onClose={() => setShowPicker(false)}
         />
       )}

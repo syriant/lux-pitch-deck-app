@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { uploadImage, uploadUrl } from '@/api/upload.api';
 import { Spinner } from '@/components/common/Spinner';
 
@@ -8,10 +9,13 @@ interface ImagePickerProps {
   onSelect: (url: string) => void;
   onUpload?: (url: string) => void | Promise<void>;
   onRemove?: () => void;
+  /** Label for the remove button — e.g. "Revert to default image" when removal
+      falls back to a default rather than leaving the slot empty. */
+  removeLabel?: string;
   onClose: () => void;
 }
 
-export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemove, onClose }: ImagePickerProps) {
+export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemove, removeLabel = 'Remove image', onClose }: ImagePickerProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -31,7 +35,10 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
     }
   }
 
-  return (
+  // Portal to <body>: the preview slide is CSS-transformed (scaled), and a
+  // transformed ancestor becomes the containing block for position:fixed — a
+  // picker opened from inside a card would otherwise be clipped to the slide.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
@@ -90,7 +97,7 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
             onClick={() => { onRemove(); onClose(); }}
             className="mt-3 w-full rounded-md border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
-            Remove image
+            {removeLabel}
           </button>
         )}
 
@@ -110,6 +117,7 @@ export function ImagePicker({ gallery, currentImage, onSelect, onUpload, onRemov
           }}
         />
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
