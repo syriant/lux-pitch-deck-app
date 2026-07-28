@@ -5,6 +5,7 @@ import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 const HEADLINE_FIELD_KEY = 'diff.headline';
@@ -42,12 +43,19 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
   const hotelName = deck.properties[0]?.propertyName ?? deck.name;
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const cf = { ...deck.templateDefaults, ...deck.customFields };
+  // Per-slide text scale — PPTX reads the same key.
+  const textScale = readTextScale(cf, 'differentiators.textScale') / 100;
 
   const headlinePositioned = isPositioned(cf, HEADLINE_FIELD_KEY);
   const gridPositioned = isPositioned(cf, GRID_FIELD_KEY);
 
   return (
     <div data-slide-root="true" className="relative h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
+      {onFieldChange && (
+        <div className="absolute top-2 right-2 z-20">
+          <TextScaleControl fieldKey="differentiators.textScale" customFields={cf} onFieldChange={onFieldChange} />
+        </div>
+      )}
       <div className="flex-1 flex p-[5%] gap-[4%]">
         <div className="flex-1 flex flex-col">
           <DraggableSlideElement
@@ -90,6 +98,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
                       fieldKey={`diff.title.${item.key}`}
                       defaultValue={item.title}
                       defaultSize={14}
+                      sizeScale={textScale}
                       customFields={cf}
                       onFieldChange={onFieldChange}
                       className="font-bold mb-1"
@@ -98,6 +107,7 @@ export function DifferentiatorsSlide({ deck, onFieldChange, onGalleryAdd }: Diff
                       fieldKey={`diff.desc.${item.key}`}
                       defaultValue={item.description}
                       defaultSize={10}
+                      sizeScale={textScale}
                       customFields={cf}
                       onFieldChange={onFieldChange}
                       className="leading-relaxed"

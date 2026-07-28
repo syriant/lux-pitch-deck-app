@@ -69,13 +69,18 @@ export function SlideRenderer({ slide, deck, scale, onFieldChange, onGalleryAdd 
   return (
     <DeckRenderContext.Provider value={{ placeholders, deckId: deck.id, renderLocale: deck.renderLocale }}>
       <div
-        className="bg-white shadow-lg overflow-hidden"
+        className="bg-white shadow-lg overflow-hidden relative"
         style={{
           aspectRatio: '16 / 9',
           ...style,
         }}
       >
-        {content}
+        {/* Absolute wrapper so content can never stretch the box: a slide is
+            ALWAYS 16:9 like the export, and oversized content (e.g. text
+            scaled up) clips instead of silently growing the slide. */}
+        <div className="absolute inset-0">
+          {content}
+        </div>
       </div>
     </DeckRenderContext.Provider>
   );

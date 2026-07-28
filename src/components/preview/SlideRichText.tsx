@@ -18,6 +18,12 @@ interface SlideRichTextProps {
    */
   defaultValue?: string;
   defaultSize?: number;
+  /**
+   * Per-slide text-scale multiplier (1 = 100%). Applied to the RESOLVED size —
+   * stored .size override or default — so the slide's A−/A+ control always has
+   * effect even when a template/user size is stored. PPTX templates mirror this.
+   */
+  sizeScale?: number;
   customFields?: Record<string, string>;
   /**
    * Extra placeholder tokens merged over the deck-level ones, for values scoped
@@ -33,6 +39,7 @@ export function SlideRichText({
   fieldKey,
   defaultValue,
   defaultSize,
+  sizeScale = 1,
   customFields,
   extraPlaceholders,
   onFieldChange,
@@ -46,7 +53,11 @@ export function SlideRichText({
 
   const rawValue = customFields?.[fieldKey] || resolvedDefault;
   const align = (customFields?.[`${fieldKey}.align`] as Align) || (style?.textAlign as Align) || 'left';
-  const fontSize = Number(customFields?.[`${fieldKey}.size`]) || resolvedDefaultSize;
+  // Base size (stored override or default) is what the per-field editor shows
+  // and steps; the slide-level scale applies at render only — otherwise editing
+  // would write the scaled value back and compound on every interaction.
+  const baseFontSize = Number(customFields?.[`${fieldKey}.size`]) || resolvedDefaultSize;
+  const fontSize = baseFontSize * sizeScale;
 
   // Template editor context — when present, show a reset button on overridden fields
   // and skip placeholder substitution (so the admin sees the raw {key} syntax).
@@ -185,7 +196,7 @@ export function SlideRichText({
             />
           )}
           <AlignToggle fieldKey={`${fieldKey}.align`} align={align} onFieldChange={effectiveOnFieldChange} />
-          <FontSizeControl fieldKey={`${fieldKey}.size`} size={fontSize} onFieldChange={effectiveOnFieldChange} />
+          <FontSizeControl fieldKey={`${fieldKey}.size`} size={baseFontSize} onFieldChange={effectiveOnFieldChange} />
           {editProtected && (
             <button
               type="button"

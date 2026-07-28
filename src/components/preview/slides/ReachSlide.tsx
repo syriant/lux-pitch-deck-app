@@ -10,6 +10,7 @@ import { SlideImage } from '../SlideImage';
 import { SLIDE_DEFAULTS } from '../slide-defaults';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { t, dateLocaleTag } from '../labels';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { OCEAN_TEAL } from '../brand';
 
 const TITLE_FIELD_KEY = 'reach.title';
@@ -49,6 +50,7 @@ function drawMapWithLabels(
   img: HTMLImageElement,
   reachByRegion: Record<string, string>,
   locale?: string,
+  textScale: number = 1,
 ): void {
   const maybeCtx = canvas.getContext('2d');
   if (!maybeCtx) return;
@@ -87,8 +89,8 @@ function drawMapWithLabels(
     const y = iy + cy * sy;
     const fullKey = `reach.${key}`;
     const members = reachByRegion[key] ?? SLIDE_DEFAULTS[fullKey]?.value ?? '';
-    const nameSize = Math.max(12, Math.round(20 * sx));
-    const countSize = Math.max(16, Math.round(30 * sx));
+    const nameSize = Math.round(Math.max(12, Math.round(20 * sx)) * textScale);
+    const countSize = Math.round(Math.max(16, Math.round(30 * sx)) * textScale);
 
     // Name lines — translate via key; wrap on whitespace (English names break on \n).
     const lines = t(key, locale).split(/\n|\s+/);
@@ -121,6 +123,8 @@ function drawMapWithLabels(
 
 export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProps) {
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
+  // Per-slide text scale (map region labels) — PPTX reads the same key.
+  const textScale = readTextScale(cf, 'reach.textScale') / 100;
   const locale = deck?.renderLocale;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
@@ -149,9 +153,9 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
 
   const redraw = useCallback(() => {
     if (canvasRef.current && imgRef.current) {
-      drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion, locale);
+      drawMapWithLabels(canvasRef.current, imgRef.current, reachByRegion, locale, textScale);
     }
-  }, [reachByRegion, locale]);
+  }, [reachByRegion, locale, textScale]);
 
   useEffect(() => {
     const img = new Image();
@@ -174,17 +178,20 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
         {bgImgUrl && (
           <div className="absolute inset-0" style={{ backgroundImage: `url(${bgImgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
         )}
-        {deck && onFieldChange && onGalleryAdd && (
-          <div className="absolute top-2 right-2 z-10">
-            <SlideImage
-              fieldKey="image.reach"
-              customFields={cf}
-              gallery={deck.gallery}
-              onFieldChange={onFieldChange}
-              onGalleryAdd={onGalleryAdd}
-              className="w-8 h-8 rounded"
-              placeholderText="+"
-            />
+        {deck && onFieldChange && (
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+            <TextScaleControl fieldKey="reach.textScale" customFields={cf} onFieldChange={onFieldChange} />
+            {onGalleryAdd && (
+              <SlideImage
+                fieldKey="image.reach"
+                customFields={cf}
+                gallery={deck.gallery}
+                onFieldChange={onFieldChange}
+                onGalleryAdd={onGalleryAdd}
+                className="w-8 h-8 rounded"
+                placeholderText="+"
+              />
+            )}
           </div>
         )}
         {!bgImgUrl && (
@@ -204,6 +211,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
           >
             <SlideRichText
               fieldKey="reach.title"
+              sizeScale={textScale}
               customFields={cf}
               onFieldChange={onFieldChange}
               style={{ fontFamily: SLIDE_DISPLAY_STACK, textAlign: 'center' }}
@@ -227,6 +235,7 @@ export function ReachSlide({ deck, onFieldChange, onGalleryAdd }: ReachSlideProp
           >
             <SlideRichText
               fieldKey="reach.subtitle"
+              sizeScale={textScale}
               defaultValue={subtitleDefault}
               customFields={cf}
               onFieldChange={onFieldChange}

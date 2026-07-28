@@ -5,6 +5,7 @@ import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
 import { currencySymbol } from '../currency';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 
 interface MarketingAssetsSlideProps {
   property?: DeckPropertyFull;
@@ -57,7 +58,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   const propId = property?.id ?? 'empty';
   const locale = deck?.renderLocale;
   // Global text-size modifier for the whole table (50–200%).
-  const textScale = Math.min(200, Math.max(50, Number(cf?.[`mktg.${propId}.textScale`]) || 100));
+  const textScale = readTextScale(cf, `mktg.${propId}.textScale`);
   const baseFont = Math.round(9 * (textScale / 100));
 
   const optionLabels = uniqueOptions.map((o) =>
@@ -176,23 +177,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
         />
         {onFieldChange && (
           <div className="flex items-center gap-1 ml-2 shrink-0">
-            <div className="flex items-center gap-1" title="Scale all table text on this slide">
-              <button
-                type="button"
-                onClick={() => onFieldChange('custom', '', `mktg.${propId}.textScale`, String(Math.max(50, textScale - 10)))}
-                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
-              >
-                A−
-              </button>
-              <span className="text-[10px] text-gray-500 w-9 text-center tabular-nums">{textScale}%</span>
-              <button
-                type="button"
-                onClick={() => onFieldChange('custom', '', `mktg.${propId}.textScale`, String(Math.min(200, textScale + 10)))}
-                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
-              >
-                A+
-              </button>
-            </div>
+            <TextScaleControl fieldKey={`mktg.${propId}.textScale`} customFields={cf} onFieldChange={onFieldChange} title="Scale all table text on this slide" />
             {uniqueOptions.length > 0 && (
               <button
                 type="button"

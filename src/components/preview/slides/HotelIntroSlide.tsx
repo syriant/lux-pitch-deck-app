@@ -6,6 +6,7 @@ import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { useSlideEditorContext } from '../SlideEditorContext';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { OCEAN_TEAL, TEAL_200, TEAL_400 } from '../brand';
 
 const VALUE_PROP_FIELD_KEY = 'hotelIntro.valueProp';
@@ -49,14 +50,24 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
   }
 
   const valuePropPositioned = isPositioned(cf, VALUE_PROP_FIELD_KEY);
+  // Per-slide text scale — the PPTX template reads the same key.
+  const textScale = readTextScale(cf, 'hotelIntro.textScale') / 100;
 
   return (
     <div data-slide-root="true" className="relative h-full w-full flex flex-col overflow-hidden">
-      <div className="flex-1 flex">
-        <div className="w-[50%] flex flex-col p-[5%]" style={{ backgroundColor: OCEAN_TEAL }}>
+      {onFieldChange && (
+        <div className="absolute top-2 right-2 z-20">
+          <TextScaleControl fieldKey="hotelIntro.textScale" customFields={cf} onFieldChange={onFieldChange} />
+        </div>
+      )}
+      {/* min-h-0 at each flex level: oversized text (A+ scale) must clip inside
+          the left panel, not inflate the row — a taller row stretches the photo
+          panel and cover-crop re-zooms the image. */}
+      <div className="flex-1 flex min-h-0">
+        <div className="w-[50%] flex flex-col p-[5%] min-h-0 overflow-hidden" style={{ backgroundColor: OCEAN_TEAL }}>
           <img src="/le-logo-white.svg" alt="Luxury Escapes" className="h-5 w-auto self-start mb-6" />
 
-          <div className="flex-1 flex items-center">
+          <div className="flex-1 flex items-center min-h-0">
             <DraggableSlideElement
               fieldKey={VALUE_PROP_FIELD_KEY}
               customFields={cf}
@@ -65,6 +76,8 @@ export function HotelIntroSlide({ deck, onFieldChange }: HotelIntroSlideProps) {
             >
               <SlideRichText
                 fieldKey="hotelIntro.valueProp"
+                defaultSize={34}
+                sizeScale={textScale}
                 customFields={cf}
                 onFieldChange={onFieldChange}
                 className="font-bold text-white leading-snug"

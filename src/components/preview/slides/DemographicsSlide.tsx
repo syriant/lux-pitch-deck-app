@@ -5,6 +5,7 @@ import { t, dateLocaleTag } from '../labels';
 import { uploadUrl } from '@/api/upload.api';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface DemographicsSlideProps {
@@ -23,24 +24,31 @@ const segmentImages = [
 
 export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: DemographicsSlideProps) {
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
+  // Content text scale — factory sizes × scale; stored .size overrides win as-is.
+  const textScale = readTextScale(cf, 'demographics.textScale') / 100;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
   const bgImgUrl = cf?.['image.demographics'] ? uploadUrl(cf['image.demographics']) : null;
 
   return (
     <div className="h-full w-full flex flex-col relative" style={{ backgroundColor: SANDY_BEIGE }}>
-      {/* Optional background image */}
-      {deck && onFieldChange && onGalleryAdd && (
-        <div className="absolute top-2 right-2 z-10">
-          <SlideImage
-            fieldKey="image.demographics"
-            customFields={cf}
-            gallery={deck.gallery}
-            onFieldChange={onFieldChange}
-            onGalleryAdd={onGalleryAdd}
-            className="w-8 h-8 rounded"
-            placeholderText="+"
-          />
+      {/* Optional background image + per-slide text scale (PPTX reads the same key;
+          the preview's rich-text sizes come from stored content, so the scale shows
+          in the export) */}
+      {deck && onFieldChange && (
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+          <TextScaleControl fieldKey="demographics.textScale" customFields={cf} onFieldChange={onFieldChange} />
+          {onGalleryAdd && (
+            <SlideImage
+              fieldKey="image.demographics"
+              customFields={cf}
+              gallery={deck.gallery}
+              onFieldChange={onFieldChange}
+              onGalleryAdd={onGalleryAdd}
+              className="w-8 h-8 rounded"
+              placeholderText="+"
+            />
+          )}
         </div>
       )}
       {bgImgUrl && (
@@ -58,6 +66,8 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
         />
         <SlideRichText
           fieldKey="demo.subheadline"
+          defaultSize={17}
+          sizeScale={textScale}
           customFields={cf}
           onFieldChange={onFieldChange}
           className="mt-1"
@@ -72,6 +82,8 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
             </div>
             <SlideRichText
               fieldKey={`demo.segment.${i}`}
+              defaultSize={14}
+              sizeScale={textScale}
               customFields={cf}
               onFieldChange={onFieldChange}
               className="leading-snug mt-2 font-medium"
@@ -83,6 +95,8 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
       <div className="relative mx-[6%] flex-1 border-t-2 pt-3" style={{ borderColor: OCEAN_TEAL }}>
         <SlideRichText
           fieldKey="demo.audienceTitle"
+          defaultSize={20}
+          sizeScale={textScale}
           customFields={cf}
           onFieldChange={onFieldChange}
           className="font-bold mb-2"
@@ -93,6 +107,8 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
             <span>•</span>
             <SlideRichText
               fieldKey="demo.stat1"
+              defaultSize={15}
+              sizeScale={textScale}
               customFields={cf}
               onFieldChange={onFieldChange}
               className="flex-1"
@@ -102,6 +118,8 @@ export function DemographicsSlide({ deck, onFieldChange, onGalleryAdd }: Demogra
             <span>•</span>
             <SlideRichText
               fieldKey="demo.stat2"
+              defaultSize={15}
+              sizeScale={textScale}
               customFields={cf}
               onFieldChange={onFieldChange}
               className="flex-1"

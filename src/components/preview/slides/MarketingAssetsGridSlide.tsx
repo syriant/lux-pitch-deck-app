@@ -7,6 +7,7 @@ import { getDealTierRules, type DealTierRule } from '@/api/deal-tiers.api';
 import { SlideRichText } from '../SlideRichText';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE, BURNT_ORANGE, INK } from '../brand';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 
 interface MarketingAssetsGridSlideProps {
   property?: DeckPropertyFull;
@@ -130,7 +131,7 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
   // base size (channel names + column headers inherit it), so scaling it + the
   // description default covers all the slide's text.
   const propId = property?.id ?? 'empty';
-  const textScale = Math.min(200, Math.max(50, Number(cf[`mktgAssets.${propId}.textScale`]) || 100));
+  const textScale = readTextScale(cf, `mktgAssets.${propId}.textScale`);
   const scale = textScale / 100;
   const fontPx = Math.round((rowCount <= 7 ? 9 : rowCount <= 10 ? 8 : rowCount <= 13 ? 7 : 6) * scale);
   const descSize = Math.round(9 * scale);
@@ -150,22 +151,8 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
           style={{ fontFamily: SLIDE_DISPLAY_STACK, color: OCEAN_TEAL }}
         />
         {onFieldChange && (
-          <div className="flex items-center gap-1 ml-2 shrink-0" title="Scale all text on this slide">
-            <button
-              type="button"
-              onClick={() => onFieldChange('custom', '', `mktgAssets.${propId}.textScale`, String(Math.max(50, textScale - 10)))}
-              className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
-            >
-              A−
-            </button>
-            <span className="text-[10px] text-gray-500 w-9 text-center tabular-nums">{textScale}%</span>
-            <button
-              type="button"
-              onClick={() => onFieldChange('custom', '', `mktgAssets.${propId}.textScale`, String(Math.min(200, textScale + 10)))}
-              className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
-            >
-              A+
-            </button>
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            <TextScaleControl fieldKey={`mktgAssets.${propId}.textScale`} customFields={cf} onFieldChange={onFieldChange} />
           </div>
         )}
       </div>

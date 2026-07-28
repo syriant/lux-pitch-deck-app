@@ -3,6 +3,7 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { EditableText } from '../EditableText';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { t, dateLocaleTag } from '../labels';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
@@ -28,11 +29,18 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
   const destination = property?.destination ?? property?.propertyName ?? t('Your Destination', locale);
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const propKey = property?.id ?? 'empty';
+  // Per-slide (per-property) text scale — PPTX reads the same key.
+  const textScale = readTextScale(cf, `regionStats.${propKey}.textScale`) / 100;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="h-full w-full flex flex-col bg-white">
+    <div className="relative h-full w-full flex flex-col bg-white">
+      {onFieldChange && (
+        <div className="absolute top-2 right-2 z-20">
+          <TextScaleControl fieldKey={`regionStats.${propKey}.textScale`} customFields={cf} onFieldChange={onFieldChange} />
+        </div>
+      )}
       <div className="flex-1 flex min-h-0">
         {/* Left content */}
         <div className="w-[58%] flex flex-col">
@@ -61,7 +69,7 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
           <SlideRichText
             fieldKey={`region.${propKey}.narrative`}
             defaultValue="Last year, {destination} wasn't actively promoted. This year, consistent campaigns drove a 197% increase in production, showing the impact of keeping the destination top of mind and inspiring travellers to choose {destination} for their next getaway"
-            defaultSize={15}
+            defaultSize={Math.round(15 * textScale)}
             customFields={cf}
             onFieldChange={onFieldChange}
             className="leading-relaxed mb-3"
@@ -77,14 +85,14 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
                   <SlideRichText
                     fieldKey={`region.${propKey}.${m.keySuffix}`}
                     defaultValue={m.def}
-                    defaultSize={17}
+                    defaultSize={Math.round(17 * textScale)}
                     customFields={cf}
                     onFieldChange={onFieldChange}
                     className="whitespace-pre-line leading-snug"
                     style={{ color: '#000' }}
                   />
                   {m.label && (
-                    <div className="text-[14px] leading-snug mt-0.5" style={{ color: '#444' }}>{t(m.label, locale)}</div>
+                    <div className="leading-snug mt-0.5" style={{ color: '#444', fontSize: 14 * textScale }}>{t(m.label, locale)}</div>
                   )}
                 </div>
               </div>
@@ -93,13 +101,13 @@ export function RegionStatsSlide({ property, deck, onFieldChange, onGalleryAdd }
 
           {/* Market Coverage */}
           <div className="mt-3 pt-2">
-            <p className="text-[15px] font-semibold underline mb-1" style={{ color: '#000' }}>{t('Market Coverage', locale)}</p>
+            <p className="font-semibold underline mb-1" style={{ color: '#000', fontSize: 15 * textScale }}>{t('Market Coverage', locale)}</p>
             <div className="flex items-start gap-1.5">
-              <span className="text-[14px]" style={{ color: '#333' }}>•</span>
+              <span style={{ color: '#333', fontSize: 14 * textScale }}>•</span>
               <SlideRichText
                 fieldKey={`region.${propKey}.coverage`}
                 defaultValue="Maximum two {destination} hotels featured per month"
-                defaultSize={14}
+                defaultSize={Math.round(14 * textScale)}
                 customFields={cf}
                 onFieldChange={onFieldChange}
                 style={{ color: '#333' }}

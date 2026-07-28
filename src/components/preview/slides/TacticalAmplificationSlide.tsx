@@ -10,6 +10,7 @@ import {
 } from './tactical-shared';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { OCEAN_TEAL, SANDY_BEIGE, BURNT_ORANGE, INK } from '../brand';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 
 interface Props {
   property?: DeckPropertyFull;
@@ -48,9 +49,15 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
   const optionColPct = 22;
   const labelColPct = 100 - optionColPct * options.length;
 
+  // Per-slide text scale for the table content (headline has its own inline
+  // size control). Keyed per property; the PPTX template reads the same key.
+  const propId = property?.id ?? 'empty';
+  const textScaleKey = `tacticalAmp.${propId}.textScale`;
+  const textScale = readTextScale(cf, textScaleKey) / 100;
+
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
-      <div className="px-[5%] pt-[4%] pb-3">
+      <div className="px-[5%] pt-[4%] pb-3 flex items-start justify-between">
         <SlideRichText
           fieldKey="tactical.amplification.headline"
           defaultValue="Marketing Amplification"
@@ -60,6 +67,11 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
           className="font-bold"
           style={{ color: OCEAN_TEAL }}
         />
+        {onFieldChange && (
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            <TextScaleControl fieldKey={textScaleKey} customFields={cf} onFieldChange={onFieldChange} />
+          </div>
+        )}
       </div>
 
       {!prop || options.length === 0 ? (
@@ -71,7 +83,7 @@ export function TacticalAmplificationSlide({ property, deck, onFieldChange }: Pr
         </div>
       ) : (
         <div className="flex-1 px-[5%] pb-2 overflow-visible">
-          <table className="w-full text-[10px] border-collapse table-fixed h-full">
+          <table className="w-full border-collapse table-fixed h-full" style={{ fontSize: 10 * textScale }}>
             <colgroup>
               <col style={{ width: `${labelColPct}%` }} />
               {options.map((_o, i) => <col key={i} style={{ width: `${optionColPct}%` }} />)}

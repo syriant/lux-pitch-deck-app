@@ -6,6 +6,7 @@ import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { translateInclusion } from '../i18n';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 
 interface DealOptionsSlideProps {
   property?: DeckPropertyFull;
@@ -58,8 +59,6 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
   // when at least one option actually carries a room-night forecast.
   const hasForecast = !!property && property.options.some((o) => o.tacticalDetails?.roomNightForecast != null || o.tacticalDetails?.revenueForecast != null);
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
-  // Per-property table text-size (50–200%), mirroring the campaign-details slide.
-  const dealTextScale = property ? Math.min(200, Math.max(50, Number(cf[`deal.${property.id}.textScale`]) || 100)) : 100;
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -76,23 +75,7 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
         />
         {onFieldChange && hasOptions && (
           <div className="flex items-center gap-2 ml-2">
-            <div className="flex items-center gap-1" title="Scale all table text on this slide">
-              <button
-                type="button"
-                onClick={() => onFieldChange('custom', '', `deal.${property.id}.textScale`, String(Math.max(50, dealTextScale - 10)))}
-                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
-              >
-                A−
-              </button>
-              <span className="text-[10px] text-gray-500 w-9 text-center tabular-nums">{dealTextScale}%</span>
-              <button
-                type="button"
-                onClick={() => onFieldChange('custom', '', `deal.${property.id}.textScale`, String(Math.min(200, dealTextScale + 10)))}
-                className="text-[11px] bg-white/80 hover:bg-white text-gray-600 rounded px-2 py-1 shadow cursor-pointer"
-              >
-                A+
-              </button>
-            </div>
+            <TextScaleControl fieldKey={`deal.${property.id}.textScale`} customFields={cf} onFieldChange={onFieldChange} title="Scale all table text on this slide" />
             <button
               type="button"
               onClick={() => onFieldChange('custom', '', 'deal.showSellRates', cf['deal.showSellRates'] === 'true' ? 'false' : 'true')}
@@ -209,7 +192,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   // onto this table and that slide is hidden via hiddenSlides (see DeckPreview).
   const combined = customFields?.[`deal.${property.id}.combine`] === 'true';
   // Per-property table text-size (50–200%), driven by the header A−/A+ control.
-  const textScale = Math.min(200, Math.max(50, Number(customFields?.[`deal.${property.id}.textScale`]) || 100));
+  const textScale = readTextScale(customFields, `deal.${property.id}.textScale`);
   const baseFont = Math.round(9 * (textScale / 100));
   const locale = deck?.renderLocale;
 

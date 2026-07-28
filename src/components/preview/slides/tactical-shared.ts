@@ -164,6 +164,16 @@ export function tacticalTableSize(customFields: Record<string, string> | null | 
   return Number.isFinite(n) && n > 0 ? Math.min(16, Math.max(4, n)) : 9;
 }
 
+export function tacticalInclSizeKey(optionId: string): string {
+  return `tactical.inclSize.${optionId}`;
+}
+
+/** Right-panel (INCLUSIONS / EXTRA NIGHTS) text size for the Single Page slide (default 10). */
+export function tacticalInclSize(customFields: Record<string, string> | null | undefined, optionId: string): number {
+  const n = Number(customFields?.[tacticalInclSizeKey(optionId)]);
+  return Number.isFinite(n) && n > 0 ? Math.min(16, Math.max(4, n)) : 10;
+}
+
 export type ExtraGuestFeeBasis = 'net' | 'sell';
 
 /** Deck-wide choice of which Extra Guest Surcharge to display; defaults to sell. */

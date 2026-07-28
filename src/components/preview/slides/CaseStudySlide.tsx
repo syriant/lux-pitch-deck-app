@@ -3,6 +3,7 @@ import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { buildCaseStudyMetricVars, buildCaseStudyStatTiles, hiddenCaseStudyTileKeys, type CaseStudyStatTile } from '../case-study-metrics';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { SlideImage } from '../SlideImage';
 import { DraggableSlideElement, resetSlideElementPosition } from '../DraggableSlideElement';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
@@ -19,7 +20,7 @@ interface CaseStudySlideProps {
 }
 
 /** Post Campaign Report-style stat tile — label, big value, optional sub line. */
-function StatTile({ tile, compact, locale }: { tile: CaseStudyStatTile; compact: boolean; locale?: string }) {
+function StatTile({ tile, compact, locale, scale = 1 }: { tile: CaseStudyStatTile; compact: boolean; locale?: string; scale?: number }) {
   return (
     <div
       className="rounded flex flex-col justify-center min-w-0"
@@ -30,10 +31,10 @@ function StatTile({ tile, compact, locale }: { tile: CaseStudyStatTile; compact:
         padding: compact ? '2px 4px' : '6px 10px',
       }}
     >
-      <div className="text-gray-500 leading-tight truncate" style={{ fontSize: compact ? 6 : 9 }}>{t(tile.label, locale)}</div>
-      <div className="font-bold leading-tight truncate" style={{ color: INK, fontSize: compact ? 11 : 20 }}>{tile.value}</div>
+      <div className="text-gray-500 leading-tight truncate" style={{ fontSize: (compact ? 6 : 9) * scale }}>{t(tile.label, locale)}</div>
+      <div className="font-bold leading-tight truncate" style={{ color: INK, fontSize: (compact ? 11 : 20) * scale }}>{tile.value}</div>
       {!compact && tile.sub && (
-        <div className="text-gray-400 leading-tight truncate" style={{ fontSize: 8 }}>{t(tile.sub, locale)}</div>
+        <div className="text-gray-400 leading-tight truncate" style={{ fontSize: 8 * scale }}>{t(tile.sub, locale)}</div>
       )}
     </div>
   );
@@ -45,12 +46,18 @@ function CaseStudyCard({
   customFields,
   onFieldChange,
   locale,
+  textScale = 1,
+  tileScale = 1,
 }: {
   cs: DeckCaseStudyLink['caseStudy'];
   imageFirst: boolean;
   customFields?: Record<string, string>;
   onFieldChange?: FieldChangeHandler;
   locale?: string;
+  /** Per-slide text scale as a multiplier (1 = 100%). */
+  textScale?: number;
+  /** Separate multiplier for the metric stat tiles. */
+  tileScale?: number;
 }) {
   // Metric tokens ({revenue}, {room_nights}, …) scoped to this case study, so the
   // narrative resolves to its own numbers in preview (and, via the mirror in the
@@ -83,6 +90,7 @@ function CaseStudyCard({
         fieldKey={`caseStudy.${cs.id}.title`}
         defaultValue={cs.title}
         defaultSize={20}
+        sizeScale={textScale}
         customFields={customFields}
         extraPlaceholders={metricVars}
         onFieldChange={onFieldChange}
@@ -93,6 +101,7 @@ function CaseStudyCard({
         fieldKey={`caseStudy.${cs.id}.narrative`}
         defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} ${t('room nights', locale)}` : null].filter(Boolean).join(' · ')}
         defaultSize={15}
+        sizeScale={textScale}
         customFields={customFields}
         extraPlaceholders={metricVars}
         onFieldChange={onFieldChange}
@@ -107,7 +116,7 @@ function CaseStudyCard({
     // stretch into tall tiles; unused cells stay as whitespace.
     <div className="px-[5%] pb-[3%] grid grid-cols-3 grid-rows-2 gap-1.5" style={{ height: '26%' }}>
       {tiles.map((tile) => (
-        <StatTile key={tile.key} tile={tile} compact locale={locale} />
+        <StatTile key={tile.key} tile={tile} compact locale={locale} scale={tileScale} />
       ))}
     </div>
   ) : null;
@@ -133,11 +142,17 @@ function FeaturedCaseStudyCard({
   customFields,
   onFieldChange,
   locale,
+  textScale = 1,
+  tileScale = 1,
 }: {
   cs: DeckCaseStudyLink['caseStudy'];
   customFields?: Record<string, string>;
   onFieldChange?: FieldChangeHandler;
   locale?: string;
+  /** Per-slide text scale as a multiplier (1 = 100%). */
+  textScale?: number;
+  /** Separate multiplier for the metric stat tiles. */
+  tileScale?: number;
 }) {
   const metricVars = buildCaseStudyMetricVars(cs);
   const tiles = buildCaseStudyStatTiles(cs, locale, hiddenCaseStudyTileKeys(customFields));
@@ -148,6 +163,7 @@ function FeaturedCaseStudyCard({
         fieldKey={`caseStudy.${cs.id}.title`}
         defaultValue={cs.title}
         defaultSize={24}
+        sizeScale={textScale}
         customFields={customFields}
         extraPlaceholders={metricVars}
         onFieldChange={onFieldChange}
@@ -158,6 +174,7 @@ function FeaturedCaseStudyCard({
         fieldKey={`caseStudy.${cs.id}.narrative`}
         defaultValue={cs.narrative || [cs.destination, cs.roomNights != null ? `${cs.roomNights.toLocaleString()} ${t('room nights', locale)}` : null].filter(Boolean).join(' · ')}
         defaultSize={14}
+        sizeScale={textScale}
         customFields={customFields}
         extraPlaceholders={metricVars}
         onFieldChange={onFieldChange}
@@ -169,7 +186,7 @@ function FeaturedCaseStudyCard({
             balloon into oversized tiles; unused cells stay as whitespace. */}
         <div className="flex-1 grid grid-cols-2 grid-rows-3 gap-2 min-w-0">
           {tiles.map((tile) => (
-            <StatTile key={tile.key} tile={tile} compact={false} locale={locale} />
+            <StatTile key={tile.key} tile={tile} compact={false} locale={locale} scale={tileScale} />
           ))}
         </div>
         <div className="w-[42%] rounded overflow-hidden shrink-0">
@@ -205,6 +222,13 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
   // the full width, so the title's default moves to the top-left band above the
   // card (the bottom-left default would sit under it).
   const featured = cards.length === 1 && buildCaseStudyStatTiles(cards[0].caseStudy, deck?.renderLocale, hiddenCaseStudyTileKeys(cf)).length > 0;
+  // Per-slide scales, keyed on the slide id (case-study slides are chunked, so
+  // each pair of studies scales independently). Card text and the metric tiles
+  // scale separately. PPTX reads the same keys.
+  const textScaleKey = slideId ? `caseStudy.${slideId}.textScale` : 'caseStudy.textScale';
+  const textScale = readTextScale(cf, textScaleKey) / 100;
+  const tileScaleKey = slideId ? `caseStudy.${slideId}.tileScale` : 'caseStudy.tileScale';
+  const tileScale = readTextScale(cf, tileScaleKey) / 100;
 
   return (
     <div className="relative h-full w-full overflow-hidden flex flex-col">
@@ -240,7 +264,9 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
         {/* Tile toggles — ADR and Total revenue tiles are shown by default;
             these hide them deck-wide (all case-study slides, preview + export). */}
         {onFieldChange && hasCaseStudies && (
-          <div className="absolute top-2 right-2 z-20 flex gap-1">
+          <div className="absolute top-2 right-2 z-20 flex items-center gap-2">
+            <TextScaleControl fieldKey={textScaleKey} customFields={cf} onFieldChange={onFieldChange} label="Text" title="Scale card title and narrative text" />
+            <TextScaleControl fieldKey={tileScaleKey} customFields={cf} onFieldChange={onFieldChange} label="Tiles" title="Scale the metric tile text" />
             {cards.some((c) => c.caseStudy.revenue != null) && (
               <button
                 type="button"
@@ -313,21 +339,21 @@ export function CaseStudySlide({ slideId, caseStudies, deck, onFieldChange, onGa
               /* Starts below the title band (bottom edge stays at 90% like the
                  two-card layout) so the top-left title clears the card. */
               <div className="absolute" style={{ left: '21%', right: '3%', top: '13%', height: '77%' }}>
-                <FeaturedCaseStudyCard cs={cards[0].caseStudy} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} />
+                <FeaturedCaseStudyCard cs={cards[0].caseStudy} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} textScale={textScale} tileScale={tileScale} />
               </div>
             ) : (
               <>
                 {/* Left card — image top, text bottom (only when 2 cards) */}
                 {leftCard && rightCard && (
                   <div className="absolute" style={{ left: '21%', top: '50%', transform: 'translateY(-50%)', width: '36%', height: '80%' }}>
-                    <CaseStudyCard cs={leftCard.caseStudy} imageFirst={true} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} />
+                    <CaseStudyCard cs={leftCard.caseStudy} imageFirst={true} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} textScale={textScale} tileScale={tileScale} />
                   </div>
                 )}
 
                 {/* Right card — text top, image bottom (or single card) */}
                 {(rightCard || (!rightCard && leftCard)) && (
                   <div className="absolute" style={{ right: '3%', top: '50%', transform: 'translateY(-50%)', width: '36%', height: '80%' }}>
-                    <CaseStudyCard cs={(rightCard ?? leftCard)!.caseStudy} imageFirst={false} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} />
+                    <CaseStudyCard cs={(rightCard ?? leftCard)!.caseStudy} imageFirst={false} customFields={cf} onFieldChange={onFieldChange} locale={deck?.renderLocale} textScale={textScale} tileScale={tileScale} />
                   </div>
                 )}
               </>

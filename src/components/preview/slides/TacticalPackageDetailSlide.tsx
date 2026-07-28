@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { type DeckOption, type DeckPropertyFull, type FullDeck } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
-import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee, tacticalTableSize, tacticalTableSizeKey } from './tactical-shared';
+import { TIER_PALETTE, tierBadgeName, isShown, extraGuestFeeBasis, resolveGuestFee, tacticalTableSize, tacticalTableSizeKey, tacticalInclSize, tacticalInclSizeKey } from './tactical-shared';
 import { t, dateLocaleTag } from '../labels';
 import { translateInclusion } from '../i18n';
 import { FontSizeControl } from '../FontSizeControl';
@@ -111,8 +111,10 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
   const showSurcharge = isShown(hidden, 'surchargePeriods');
   const showGuests = isShown(hidden, 'extraGuestPolicy') && guests.length > 0;
   const feeBasis = extraGuestFeeBasis(deck?.customFields);
-  // Per-package table text size, adjustable inline on the slide (default 9).
+  // Left tables and right panels each get their own inline size control —
+  // stored per option, mirrored by the PPTX template.
   const tablePx = tacticalTableSize(deck?.customFields, opt.id);
+  const inclPx = tacticalInclSize(deck?.customFields, opt.id);
   const showIncl = isShown(hidden, 'inclusions');
   const showExtraNightIncl = isShown(hidden, 'extraNightInclusions') && extraNightIncl.length > 0;
   const rateCols = (showRoomType ? 1 : 0) + (showAllot ? 1 : 0) + (showOcc ? 1 : 0)
@@ -153,6 +155,8 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           <div className="absolute top-1 right-[4%] z-20 flex items-center gap-1 rounded bg-black/60 px-2 py-1 opacity-0 transition-opacity group-hover:opacity-100">
             <span className="text-[10px] text-white/70">Table text</span>
             <FontSizeControl fieldKey={tacticalTableSizeKey(opt.id)} size={tablePx} min={4} max={16} step={0.5} onFieldChange={onFieldChange} />
+            <span className="text-[10px] text-white/70 ml-2">Inclusions text</span>
+            <FontSizeControl fieldKey={tacticalInclSizeKey(opt.id)} size={inclPx} min={4} max={16} step={0.5} onFieldChange={onFieldChange} />
           </div>
         )}
         <div
@@ -287,7 +291,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
         <div className="flex gap-2" style={{ flexBasis: '40%' }}>
           {showIncl && (
           <div className="flex-1 flex flex-col">
-            <div className="px-3 py-1.5 text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: badgeFill, color: onAccent }}>
+            <div className="px-3 py-1.5 text-center font-bold tracking-wider" style={{ backgroundColor: badgeFill, color: onAccent, fontSize: inclPx }}>
               {t('INCLUSIONS', locale)}
             </div>
             <div className="flex-1 bg-white p-2 overflow-hidden">
@@ -296,7 +300,7 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
               ) : inclusions4.map((item, i) => (
                 <div key={i} className="flex items-center gap-2 py-0.5">
                   <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: keyline }} />
-                  <span className="text-[10px]" style={{ color: INK }}>{translateInclusion(item, cf)}</span>
+                  <span style={{ color: INK, fontSize: inclPx }}>{translateInclusion(item, cf)}</span>
                 </div>
               ))}
             </div>
@@ -304,14 +308,14 @@ export function TacticalPackageDetailSlide({ property, option, deck, onFieldChan
           )}
           {showExtraNightIncl && (
             <div className="flex-1 flex flex-col">
-              <div className="px-3 py-1.5 text-center text-[10px] font-bold tracking-wider" style={{ backgroundColor: badgeFill, color: onAccent }}>
+              <div className="px-3 py-1.5 text-center font-bold tracking-wider" style={{ backgroundColor: badgeFill, color: onAccent, fontSize: inclPx }}>
                 {t('EXTRA NIGHTS', locale)}
               </div>
               <div className="flex-1 bg-white p-2 overflow-hidden">
                 {extraNightIncl.map((item, i) => (
                   <div key={i} className="flex items-center gap-2 py-0.5">
                     <span className="inline-block w-3 h-0.5 flex-shrink-0" style={{ backgroundColor: keyline }} />
-                    <span className="text-[10px]" style={{ color: INK }}>{translateInclusion(item, cf)}</span>
+                    <span style={{ color: INK, fontSize: inclPx }}>{translateInclusion(item, cf)}</span>
                   </div>
                 ))}
               </div>

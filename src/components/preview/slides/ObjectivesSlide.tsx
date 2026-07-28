@@ -4,6 +4,7 @@ import { t, dateLocaleTag } from '../labels';
 import { SlideRichText } from '../SlideRichText';
 import { SlideImage } from '../SlideImage';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
+import { TextScaleControl, readTextScale } from '../TextScaleControl';
 import { OCEAN_TEAL, SANDY_BEIGE } from '../brand';
 
 interface ObjectivesSlideProps {
@@ -21,9 +22,16 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
   const cf = { ...deck?.templateDefaults, ...deck?.customFields };
   const hotelName = deck?.properties[0]?.propertyName ?? deck?.name ?? '';
   const date = new Date().toLocaleDateString(dateLocaleTag(deck?.renderLocale), { day: 'numeric', month: 'long', year: 'numeric' });
+  // Per-slide text scale — the PPTX template reads the same key.
+  const textScale = readTextScale(cf, 'objectives.textScale') / 100;
 
   return (
-    <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
+    <div className="relative h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
+      {onFieldChange && (
+        <div className="absolute top-2 right-2 z-20">
+          <TextScaleControl fieldKey="objectives.textScale" customFields={cf} onFieldChange={onFieldChange} />
+        </div>
+      )}
       <div className="flex-1 flex p-[5%] gap-[4%]">
         {/* Left column — heading + photo */}
         <div className="w-[52%] flex flex-col">
@@ -69,6 +77,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
                     fieldKey={`obj.primary.${primary.id}`}
                     defaultValue={primary.objectiveText}
                     defaultSize={15}
+          sizeScale={textScale}
                     customFields={cf}
                     onFieldChange={onFieldChange}
                     className="leading-relaxed"
@@ -91,6 +100,7 @@ export function ObjectivesSlide({ objectives, deck, onFieldChange, onGalleryAdd 
                     fieldKey="obj.secondary.all"
                     defaultValue={secondary.map((obj) => obj.objectiveText).join('<br><br>')}
                     defaultSize={15}
+          sizeScale={textScale}
                     customFields={cf}
                     onFieldChange={onFieldChange}
                     className="leading-relaxed"
