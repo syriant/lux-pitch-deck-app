@@ -1,23 +1,66 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  getAnalyticsOverview, getAnalyticsTimeseries, getAnalyticsFunnel, syncSalesforceStages,
-  type PcmOverviewRow, type TimeseriesBucket, type AnalyticsFunnel,
+  getAnalyticsOverview, getAnalyticsTimeseries, getAnalyticsFunnel, getAnalyticsHotels,
+  syncSalesforceStages,
+  type PcmOverviewRow, type TimeseriesBucket, type AnalyticsFunnel, type HotelConversionRow,
 } from '@/api/analytics.api';
+import { PcmDetailDrawer } from '@/components/analytics/PcmDetailDrawer';
+import { toCsv, downloadCsv, type CsvColumn } from '@/lib/csv';
 
-type RangeKey = '30d' | '90d' | 'all';
+type RangeKey = '30d' | '90d' | 'all' | 'custom';
 
 const RANGES: Array<{ key: RangeKey; label: string; days: number | null }> = [
   { key: '30d', label: 'Last 30 days', days: 30 },
   { key: '90d', label: 'Last 90 days', days: 90 },
   { key: 'all', label: 'All time', days: null },
+  { key: 'custom', label: 'Custom', days: null },
 ];
 
-function rangeParams(key: RangeKey): { from?: string } {
+// The admin's chosen period survives reloads — they tend to work in one window
+// (a quarter, a campaign) across several visits.
+const RANGE_STORAGE_KEY = 'lux-analytics-range';
+
+interface StoredRange {
+  range: RangeKey;
+  customFrom: string;
+  customTo: string;
+}
+
+function loadStoredRange(): StoredRange {
+  const fallback: StoredRange = { range: '90d', customFrom: '', customTo: '' };
+  try {
+    const raw = localStorage.getItem(RANGE_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<StoredRange>;
+    if (!RANGES.some((r) => r.key === parsed.range)) return fallback;
+    return {
+      range: parsed.range as RangeKey,
+      customFrom: typeof parsed.customFrom === 'string' ? parsed.customFrom : '',
+      customTo: typeof parsed.customTo === 'string' ? parsed.customTo : '',
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function rangeParams(key: RangeKey, customFrom: string, customTo: string): { from?: string; to?: string } {
+  if (key === 'custom') {
+    return {
+      ...(customFrom ? { from: new Date(`${customFrom}T00:00:00`).toISOString() } : {}),
+      // Inclusive of the end date the admin picked, not midnight at its start.
+      ...(customTo ? { to: new Date(`${customTo}T23:59:59.999`).toISOString() } : {}),
+    };
+  }
   const range = RANGES.find((r) => r.key === key)!;
   if (!range.days) return {};
   const from = new Date();
   from.setDate(from.getDate() - range.days);
   return { from: from.toISOString() };
+}
+
+function rangeSlug(key: RangeKey, customFrom: string, customTo: string): string {
+  if (key !== 'custom') return key;
+  return `${customFrom || 'start'}_${customTo || 'today'}`;
 }
 
 function formatDuration(hours: number | null): string {
@@ -36,6 +79,37 @@ function formatWhen(iso: string | null): string {
   if (days < 30) return `${days}d ago`;
   return new Date(iso).toLocaleDateString();
 }
+
+const PCM_CSV_COLUMNS: Array<CsvColumn<PcmOverviewRow>> = [
+  { header: 'PCM', value: (r) => r.name },
+  { header: 'Email', value: (r) => r.email },
+  { header: 'Region', value: (r) => r.region },
+  { header: 'Pitches', value: (r) => r.decksCreated },
+  { header: 'Exports PPTX', value: (r) => r.exportsPptx },
+  { header: 'Exports PDF', value: (r) => r.exportsPdf },
+  { header: 'Exports Salesforce', value: (r) => r.exportsSalesforce },
+  { header: 'Decks exported', value: (r) => r.decksExported },
+  { header: 'Avg hours to first export', value: (r) => r.avgHoursToFirstExport },
+  { header: 'AI calls', value: (r) => r.aiCalls },
+  { header: 'AI cost USD', value: (r) => r.aiCostUsd },
+  { header: 'Decks linked to SF', value: (r) => r.decksLinkedToSf },
+  { header: 'Decks sent to SF', value: (r) => r.decksSentToSf },
+  { header: 'Closed won', value: (r) => r.decksWon },
+  { header: 'Conversion %', value: (r) => r.conversionRate },
+  { header: 'Last active', value: (r) => r.lastActiveAt },
+];
+
+const HOTEL_CSV_COLUMNS: Array<CsvColumn<HotelConversionRow>> = [
+  { header: 'Hotel', value: (r) => r.hotel },
+  { header: 'Destination', value: (r) => r.destination },
+  { header: 'Pitches', value: (r) => r.pitches },
+  { header: 'Linked to SF', value: (r) => r.linked },
+  { header: 'Sent to SF', value: (r) => r.sent },
+  { header: 'Closed won', value: (r) => r.won },
+  { header: 'Win rate %', value: (r) => r.winRate },
+  { header: 'Won amount', value: (r) => r.wonAmount },
+  { header: 'Last pitched', value: (r) => r.lastPitchedAt },
+];
 
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -110,8 +184,12 @@ function MiniBarChart({ title, buckets, pick, emptyLabel }: {
 }
 
 export function Analytics() {
-  const [range, setRange] = useState<RangeKey>('90d');
+  const stored = loadStoredRange();
+  const [range, setRange] = useState<RangeKey>(stored.range);
+  const [customFrom, setCustomFrom] = useState(stored.customFrom);
+  const [customTo, setCustomTo] = useState(stored.customTo);
   const [rows, setRows] = useState<PcmOverviewRow[]>([]);
+  const [hotels, setHotels] = useState<HotelConversionRow[]>([]);
   const [sfLastSyncedAt, setSfLastSyncedAt] = useState<string | null>(null);
   const [buckets, setBuckets] = useState<TimeseriesBucket[]>([]);
   const [funnel, setFunnel] = useState<AnalyticsFunnel | null>(null);
@@ -119,21 +197,24 @@ export function Analytics() {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
+  const [openPcmId, setOpenPcmId] = useState<string | null>(null);
 
-  const load = useCallback(async (selected: RangeKey) => {
+  const load = useCallback(async (selected: RangeKey, from: string, to: string) => {
     setLoading(true);
     setError('');
     try {
-      const params = rangeParams(selected);
-      const [overview, series, funnelData] = await Promise.all([
+      const params = rangeParams(selected, from, to);
+      const [overview, series, funnelData, hotelRows] = await Promise.all([
         getAnalyticsOverview(params),
         getAnalyticsTimeseries({ ...params, interval: 'week' }),
         getAnalyticsFunnel(params),
+        getAnalyticsHotels(params),
       ]);
       setRows(overview.data);
       setSfLastSyncedAt(overview.sfLastSyncedAt);
       setBuckets(series);
       setFunnel(funnelData);
+      setHotels(hotelRows);
     } catch {
       setError('Failed to load analytics');
     } finally {
@@ -141,7 +222,23 @@ export function Analytics() {
     }
   }, []);
 
-  useEffect(() => { load(range); }, [range, load]);
+  // A half-entered custom range would query from the beginning of time on every
+  // keystroke, so wait until both dates are set before reloading.
+  const customReady = range !== 'custom' || (!!customFrom && !!customTo);
+
+  useEffect(() => {
+    if (!customReady) return;
+    load(range, customFrom, customTo);
+  }, [range, customFrom, customTo, customReady, load]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(RANGE_STORAGE_KEY, JSON.stringify({ range, customFrom, customTo }));
+    } catch {
+      // Private mode or a full quota — the dashboard still works, it just won't
+      // remember the period.
+    }
+  }, [range, customFrom, customTo]);
 
   async function handleSync(): Promise<void> {
     setSyncing(true);
@@ -153,7 +250,7 @@ export function Analytics() {
           ? result.skipped
           : `Synced ${result.updated} of ${result.linkedDecks} linked decks`,
       );
-      await load(range);
+      await load(range, customFrom, customTo);
     } catch {
       setSyncMessage('Salesforce sync failed');
     } finally {
@@ -185,22 +282,51 @@ export function Analytics() {
             release 1.1.18 onward — earlier exports and logins aren't counted.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className={`rounded-md px-3 py-1.5 text-sm ${
-                range === r.key
-                  ? 'bg-[#01B18B] text-white'
-                  : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setRange(r.key)}
+                className={`rounded-md px-3 py-1.5 text-sm ${
+                  range === r.key
+                    ? 'bg-[#01B18B] text-white'
+                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {range === 'custom' && (
+            <div className="flex items-center gap-2 text-sm">
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo || undefined}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                aria-label="From date"
+                className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+              />
+              <span className="text-gray-400">to</span>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+                aria-label="To date"
+                className="rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-[#01B18B] focus:outline-none focus:ring-1 focus:ring-[#01B18B]"
+              />
+            </div>
+          )}
         </div>
       </div>
+
+      {range === 'custom' && !customReady && (
+        <div className="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-700">
+          Pick both a start and an end date to load the custom period.
+        </div>
+      )}
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
@@ -260,7 +386,7 @@ export function Analytics() {
             </div>
           )}
 
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-gray-900">By PCM</h2>
             <div className="flex items-center gap-3 text-xs text-gray-500">
               <span>
@@ -273,6 +399,16 @@ export function Analytics() {
                 className="rounded-md bg-[#01B18B] px-3 py-1.5 text-xs text-white hover:bg-[#009977] disabled:opacity-40"
               >
                 {syncing ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button
+                onClick={() => downloadCsv(
+                  `pcm-usage-${rangeSlug(range, customFrom, customTo)}.csv`,
+                  toCsv(activeRows, PCM_CSV_COLUMNS),
+                )}
+                disabled={activeRows.length === 0}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                Export CSV
               </button>
             </div>
           </div>
@@ -302,7 +438,12 @@ export function Analytics() {
                 {activeRows.map((r) => {
                   const exports = r.exportsPptx + r.exportsPdf + r.exportsSalesforce;
                   return (
-                    <tr key={r.userId} className="border-b border-gray-100 last:border-0">
+                    <tr
+                      key={r.userId}
+                      onClick={() => setOpenPcmId(r.userId)}
+                      className="cursor-pointer border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                      title={`View ${r.name}'s decks and activity`}
+                    >
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">
                           {r.name}
@@ -336,8 +477,73 @@ export function Analytics() {
               </tbody>
             </table>
           </div>
+          <p className="mt-2 text-xs text-gray-500">Click a PCM to see their decks, AI usage and activity.</p>
+
+          <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">By hotel</h2>
+            <button
+              onClick={() => downloadCsv(
+                `hotel-conversion-${rangeSlug(range, customFrom, customTo)}.csv`,
+                toCsv(hotels, HOTEL_CSV_COLUMNS),
+              )}
+              disabled={hotels.length === 0}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-4 py-3">Hotel</th>
+                  <th className="px-4 py-3 text-right">Pitches</th>
+                  <th className="px-4 py-3 text-right" title="Decks linked to a Salesforce opportunity / sent to Salesforce">SF linked / sent</th>
+                  <th className="px-4 py-3 text-right">Closed won</th>
+                  <th className="px-4 py-3 text-right" title="Closed-won decks as a share of decks linked to a Salesforce opportunity">Win rate</th>
+                  <th className="px-4 py-3 text-right" title="Sum of Amount on won opportunities">Won value</th>
+                  <th className="px-4 py-3 text-right">Last pitched</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hotels.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                      No hotels pitched in this period
+                    </td>
+                  </tr>
+                )}
+                {hotels.map((h) => (
+                  <tr key={h.hotel} className="border-b border-gray-100 last:border-0">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-900">{h.hotel}</div>
+                      <div className="text-xs text-gray-500">{h.destination ?? '—'}</div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900">{h.pitches}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{h.linked} / {h.sent}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">{h.won}</td>
+                    <td className="px-4 py-3 text-right text-gray-700">
+                      {h.winRate !== null ? `${h.winRate}%` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-700">
+                      {h.wonAmount > 0 ? `$${h.wonAmount.toLocaleString()}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-500">
+                      {h.lastPitchedAt ? formatWhen(h.lastPitchedAt) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Win rate and won value come from the linked Salesforce opportunity, so they only cover decks a PCM linked.
+          </p>
         </>
       )}
+
+      {openPcmId && <PcmDetailDrawer userId={openPcmId} onClose={() => setOpenPcmId(null)} />}
     </div>
   );
 }

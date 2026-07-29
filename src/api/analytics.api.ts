@@ -45,6 +45,40 @@ export interface AnalyticsFunnel {
   won: number;
 }
 
+export interface HotelConversionRow {
+  hotel: string;
+  destination: string | null;
+  pitches: number;
+  linked: number;
+  sent: number;
+  won: number;
+  winRate: number | null;
+  wonAmount: number;
+  lastPitchedAt: string | null;
+}
+
+export interface PcmDeckRow {
+  deckId: string;
+  name: string;
+  hotel: string | null;
+  destination: string | null;
+  createdAt: string;
+  exports: number;
+  lastExportAt: string | null;
+  previewed: boolean;
+  salesforceOpportunityId: string | null;
+  sfStageName: string | null;
+  sfIsWon: boolean | null;
+  aiCalls: number;
+}
+
+export interface PcmDetail {
+  user: { id: string; name: string; email: string; region: string | null; roles: string[]; active: boolean };
+  decks: PcmDeckRow[];
+  aiByFeature: Array<{ feature: string; calls: number; costUsd: number }>;
+  recentActivity: Array<{ eventType: string; deckId: string | null; deckName: string | null; createdAt: string }>;
+}
+
 export interface StageSyncResult {
   linkedDecks: number;
   updated: number;
@@ -71,6 +105,16 @@ export async function getAnalyticsTimeseries(
 
 export async function getAnalyticsFunnel(params?: AnalyticsRangeParams): Promise<AnalyticsFunnel> {
   const res = await apiClient.get<AnalyticsFunnel>('/admin/analytics/funnel', { params });
+  return res.data;
+}
+
+export async function getAnalyticsHotels(params?: AnalyticsRangeParams): Promise<HotelConversionRow[]> {
+  const res = await apiClient.get<HotelConversionRow[]>('/admin/analytics/hotels', { params });
+  return res.data;
+}
+
+export async function getPcmDetail(userId: string): Promise<PcmDetail> {
+  const res = await apiClient.get<PcmDetail>(`/admin/analytics/pcm/${userId}`);
   return res.data;
 }
 
