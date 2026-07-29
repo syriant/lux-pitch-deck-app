@@ -10,6 +10,7 @@ import { Templates } from './pages/admin/Templates';
 import { ImageLibrary } from './pages/admin/ImageLibrary';
 import { LuxImageCheck } from './pages/admin/LuxImageCheck';
 import { LlmSettings } from './pages/admin/LlmSettings';
+import { Analytics } from './pages/admin/Analytics';
 import { QaRules } from './pages/admin/QaRules';
 import { ReachStats } from './pages/admin/ReachStats';
 import { BrandStats } from './pages/admin/BrandStats';
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
       </RequireRole>
     ),
     children: [
+      { path: '/admin/analytics', element: <Analytics /> },
       { path: '/admin/users', element: <Users /> },
       { path: '/admin/differentiators', element: <Differentiators /> },
       { path: '/admin/objectives', element: <ObjectiveTemplates /> },

@@ -14,6 +14,7 @@ import { SUPPORTED_LOCALES, DEFAULT_LOCALE, localeFieldKey, localeEditedKey, I18
 import { translateDeck } from '@/api/translate.api';
 import { exportPptx, exportPdf, exportToSalesforce } from '@/api/export.api';
 import { getSalesforceStatus } from '@/api/salesforce.api';
+import { recordPreviewEvent } from '@/api/analytics.api';
 import { AppShell } from '@/components/layout/AppShell';
 import { QaPanel } from '@/components/preview/QaPanel';
 import { getHygiene, recordExportAck, type HygieneCheck, type ExportType } from '@/api/qa.api';
@@ -92,6 +93,10 @@ export function DeckPreview() {
   useEffect(() => {
     getSalesforceStatus().then((s) => setSfConfigured(s.configured)).catch(() => setSfConfigured(false));
   }, []);
+
+  useEffect(() => {
+    if (id) void recordPreviewEvent(id);
+  }, [id]);
 
   const sfOppId = deck?.salesforceOpportunityId ?? null;
   const sfAlreadyUploaded = !!(sfOppId && deck?.customFields?.[`salesforce.contentDocumentId.${sfOppId}`]);

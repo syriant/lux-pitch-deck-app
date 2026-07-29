@@ -17,6 +17,7 @@ const libraryLinks: NavItem[] = [
 ];
 
 const adminLinks: NavItem[] = [
+  { label: 'Analytics', path: '/admin/analytics', icon: 'chart' },
   { label: 'Differentiators', path: '/admin/differentiators', icon: 'star' },
   { label: 'Objectives', path: '/admin/objectives', icon: 'target' },
   { label: 'Deal Tiers', path: '/admin/deal-tiers', icon: 'layers' },
@@ -31,6 +32,11 @@ const adminLinks: NavItem[] = [
 ];
 
 const iconMap: Record<string, React.ReactNode> = {
+  chart: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 20V10m6 10V4m6 16v-7m4 7H2" />
+    </svg>
+  ),
   grid: (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
