@@ -64,17 +64,21 @@ function FunnelBar({ label, value, max }: { label: string; value: number; max: n
   );
 }
 
-function MiniBarChart({ title, buckets, pick }: {
+function MiniBarChart({ title, buckets, pick, emptyLabel }: {
   title: string;
   buckets: TimeseriesBucket[];
   pick: (b: TimeseriesBucket) => number;
+  emptyLabel: string;
 }) {
   const max = Math.max(...buckets.map(pick), 1);
+  // All-zero buckets would render an empty plot area with axis labels, which
+  // reads as broken rather than "nothing yet".
+  const isEmpty = buckets.length === 0 || buckets.every((b) => pick(b) === 0);
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="mb-3 text-sm font-medium text-gray-900">{title}</div>
-      {buckets.length === 0 ? (
-        <div className="flex h-24 items-center justify-center text-xs text-gray-400">No data yet</div>
+      {isEmpty ? (
+        <div className="flex h-24 items-center justify-center text-xs text-gray-400">{emptyLabel}</div>
       ) : (
         <div className="flex h-24 items-end gap-1">
           {buckets.map((b) => {
@@ -95,7 +99,7 @@ function MiniBarChart({ title, buckets, pick }: {
           })}
         </div>
       )}
-      {buckets.length > 0 && (
+      {!isEmpty && (
         <div className="mt-1 flex justify-between text-[10px] text-gray-400">
           <span>{new Date(buckets[0].date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
           <span>{new Date(buckets[buckets.length - 1].date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
@@ -163,11 +167,12 @@ export function Analytics() {
     (acc, r) => ({
       decks: acc.decks + r.decksCreated,
       exports: acc.exports + r.exportsPptx + r.exportsPdf + r.exportsSalesforce,
+      linked: acc.linked + r.decksLinkedToSf,
       sent: acc.sent + r.decksSentToSf,
       won: acc.won + r.decksWon,
       aiCost: acc.aiCost + r.aiCostUsd,
     }),
-    { decks: 0, exports: 0, sent: 0, won: 0, aiCost: 0 },
+    { decks: 0, exports: 0, linked: 0, sent: 0, won: 0, aiCost: 0 },
   );
 
   return (
@@ -206,18 +211,34 @@ export function Analytics() {
           <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
             <StatTile label="Decks created" value={String(totals.decks)} />
             <StatTile label="Exports" value={String(totals.exports)} sub="PPTX + PDF + Salesforce" />
-            <StatTile label="Sent to Salesforce" value={String(totals.sent)} />
+            <StatTile
+              label="Linked to Salesforce"
+              value={String(totals.linked)}
+              sub={`${totals.sent} sent from the tool`}
+            />
             <StatTile
               label="Closed won"
               value={String(totals.won)}
-              sub={totals.sent > 0 ? `${Math.round((totals.won / totals.sent) * 1000) / 10}% conversion` : 'No decks sent yet'}
+              sub={totals.linked > 0
+                ? `${Math.round((totals.won / totals.linked) * 1000) / 10}% of linked decks`
+                : 'No decks linked yet'}
             />
             <StatTile label="AI spend" value={`$${totals.aiCost.toFixed(2)}`} sub="LLM cost (USD)" />
           </div>
 
           <div className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <MiniBarChart title="Decks created per week" buckets={buckets} pick={(b) => b.decksCreated} />
-            <MiniBarChart title="Exports per week" buckets={buckets} pick={(b) => b.exports} />
+            <MiniBarChart
+              title="Decks created per week"
+              buckets={buckets}
+              pick={(b) => b.decksCreated}
+              emptyLabel="No decks created in this period"
+            />
+            <MiniBarChart
+              title="Exports per week"
+              buckets={buckets}
+              pick={(b) => b.exports}
+              emptyLabel="No exports recorded yet"
+            />
           </div>
 
           {funnel && (
@@ -231,6 +252,11 @@ export function Analytics() {
                 <FunnelBar label="Sent to Salesforce" value={funnel.sentToSf} max={funnel.created} />
                 <FunnelBar label="Closed won" value={funnel.won} max={funnel.created} />
               </div>
+              <p className="mt-3 text-xs text-gray-500">
+                Each row counts decks created in this period. Closed won is measured against decks{' '}
+                <em>linked</em> to an opportunity — an opportunity can close won whether or not the deck
+                was pushed to Salesforce from here, so it can exceed the sent count.
+              </p>
             </div>
           )}
 
@@ -261,7 +287,7 @@ export function Analytics() {
                   <th className="px-4 py-3 text-right" title="Average time from deck creation to first export">Avg time to complete</th>
                   <th className="px-4 py-3 text-right">AI usage</th>
                   <th className="px-4 py-3 text-right" title="Decks linked to a Salesforce opportunity / sent to Salesforce">SF linked / sent</th>
-                  <th className="px-4 py-3 text-right" title="Closed-won decks as a share of decks sent to Salesforce">Conversion</th>
+                  <th className="px-4 py-3 text-right" title="Closed-won decks as a share of decks linked to a Salesforce opportunity">Conversion</th>
                   <th className="px-4 py-3 text-right">Last active</th>
                 </tr>
               </thead>
