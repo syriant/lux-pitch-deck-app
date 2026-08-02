@@ -5,6 +5,7 @@ import { AlignToggle, type Align } from './AlignToggle';
 import { FontSizeControl } from './FontSizeControl';
 import { LuxVoiceButton } from './LuxVoiceButton';
 import { isVoiceEligible, VOICE_ORIGINAL_SUFFIX } from './voice-fields';
+import { recordAiDecision } from '@/api/analytics.api';
 import { SLIDE_DEFAULTS } from './slide-defaults';
 import { useSlideEditorContext } from './SlideEditorContext';
 import { useDeckRenderContext, substitutePlaceholders } from './DeckRenderContext';
@@ -152,11 +153,17 @@ export function SlideRichText({
       effectiveOnFieldChange('custom', '', `${fieldKey}${VOICE_ORIGINAL_SUFFIX}`, value);
     }
     effectiveOnFieldChange('custom', '', fieldKey, suggestion);
+    if (deckContext.deckId) {
+      void recordAiDecision(deckContext.deckId, true, 'lux_voice_rewrite', fieldKey);
+    }
     handleVoiceOpenChange(false);
   };
 
   const revertVoice = () => {
     effectiveOnFieldChange('custom', '', fieldKey, storedOriginal ?? value);
+    if (deckContext.deckId) {
+      void recordAiDecision(deckContext.deckId, false, 'lux_voice_rewrite', fieldKey);
+    }
     handleVoiceOpenChange(false);
   };
 

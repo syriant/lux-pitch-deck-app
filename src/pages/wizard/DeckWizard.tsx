@@ -9,6 +9,7 @@ import { Step3Images } from './Step3Images';
 import { Step4Objectives } from './Step4Objectives';
 import { Step5CaseStudies } from './Step5CaseStudies';
 import { Step6Assets } from './Step6Assets';
+import { recordWizardStep } from '@/api/analytics.api';
 
 export function DeckWizard() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,13 @@ export function DeckWizard() {
 
   async function changeStep(step: number) {
     await flushAndNavigate(() => setCurrentStep(step));
+  }
+
+  // Only forward moves count as completing a step — jumping back to review an
+  // earlier step shouldn't register as progress.
+  function completeStep(step: number, { advance = true }: { advance?: boolean } = {}) {
+    if (id) void recordWizardStep(id, step);
+    if (advance) setCurrentStep(step + 1);
   }
 
   async function loadDeck() {
@@ -73,7 +81,12 @@ export function DeckWizard() {
           <h1 className="text-2xl font-bold text-[#363A45]">{deck.name}</h1>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => flushAndNavigate(() => navigate(`/decks/${deck.id}/preview`))}
+              onClick={() => {
+                // Leaving the last step for the preview is what "finished the
+                // wizard" looks like — step 6 has no Next button of its own.
+                if (currentStep === 6) completeStep(6, { advance: false });
+                void flushAndNavigate(() => navigate(`/decks/${deck.id}/preview`));
+              }}
               className="text-sm text-[#01B18B] hover:text-[#009977]"
             >
               Preview
@@ -98,7 +111,7 @@ export function DeckWizard() {
             salesforceOpportunityId={deck.salesforceOpportunityId}
             onPropertiesChange={loadDeck}
             onDeckChange={loadDeck}
-            onNext={() => setCurrentStep(2)}
+            onNext={() => completeStep(1)}
           />
         )}
 
@@ -109,7 +122,7 @@ export function DeckWizard() {
             properties={deck.properties}
             onDeckChange={loadDeck}
             onBack={() => setCurrentStep(1)}
-            onNext={() => setCurrentStep(3)}
+            onNext={() => completeStep(2)}
           />
         )}
 
@@ -123,7 +136,7 @@ export function DeckWizard() {
             hotelName={deck.properties[0]?.propertyName ?? null}
             destination={deck.properties[0]?.destination ?? null}
             onBack={() => setCurrentStep(2)}
-            onNext={() => setCurrentStep(4)}
+            onNext={() => completeStep(3)}
           />
         )}
 
@@ -133,7 +146,7 @@ export function DeckWizard() {
             deck={deck}
             registerSave={registerStepSave}
             onBack={() => setCurrentStep(3)}
-            onNext={() => setCurrentStep(5)}
+            onNext={() => completeStep(4)}
           />
         )}
 
@@ -142,7 +155,7 @@ export function DeckWizard() {
             deckId={deck.id}
             properties={deck.properties}
             onBack={() => setCurrentStep(4)}
-            onNext={() => setCurrentStep(6)}
+            onNext={() => completeStep(5)}
           />
         )}
 

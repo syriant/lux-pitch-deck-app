@@ -37,9 +37,10 @@ const DECK_CSV_COLUMNS: Array<CsvColumn<PcmDetail['decks'][number]>> = [
   { header: 'Hotel', value: (d) => d.hotel },
   { header: 'Destination', value: (d) => d.destination },
   { header: 'Created', value: (d) => d.createdAt },
-  { header: 'Previewed', value: (d) => (d.previewed ? 'yes' : 'no') },
+  { header: 'Previewed', value: (d) => (d.predatesTracking && !d.previewed ? 'unknown' : d.previewed ? 'yes' : 'no') },
   { header: 'Exports', value: (d) => d.exports },
   { header: 'Last export', value: (d) => d.lastExportAt },
+  { header: 'Predates tracking', value: (d) => (d.predatesTracking ? 'yes' : 'no') },
   { header: 'AI calls', value: (d) => d.aiCalls },
   { header: 'SF opportunity', value: (d) => d.salesforceOpportunityId },
   { header: 'SF stage', value: (d) => d.sfStageName },
@@ -133,6 +134,7 @@ export function PcmDetailDrawer({ userId, onClose }: { userId: string; onClose: 
                         <th className="px-3 py-2">Deck / hotel</th>
                         <th className="px-3 py-2">Created</th>
                         <th className="px-3 py-2 text-right">Exports</th>
+                        <th className="px-3 py-2 text-center">Previewed</th>
                         <th className="px-3 py-2 text-right">AI</th>
                         <th className="px-3 py-2">Salesforce</th>
                       </tr>
@@ -154,9 +156,38 @@ export function PcmDetailDrawer({ userId, onClose }: { userId: string; onClose: 
                               {d.destination ? ` · ${d.destination}` : ''}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-gray-600">{formatDate(d.createdAt)}</td>
-                          <td className="px-3 py-2 text-right text-gray-700" title={d.lastExportAt ? `Last export ${formatDateTime(d.lastExportAt)}` : 'Never exported'}>
-                            {d.exports > 0 ? d.exports : d.previewed ? 'previewed' : '—'}
+                          <td className="px-3 py-2 text-gray-600">
+                            {formatDate(d.createdAt)}
+                            {d.predatesTracking && (
+                              <div className="text-xs text-amber-600" title="Created before activity tracking began — earlier exports and previews weren't recorded">
+                                predates tracking
+                              </div>
+                            )}
+                          </td>
+                          <td
+                            className="px-3 py-2 text-right"
+                            title={d.lastExportAt
+                              ? `Last export ${formatDateTime(d.lastExportAt)}`
+                              : d.predatesTracking
+                                ? 'No export recorded — but this deck predates tracking, so earlier exports are unknown'
+                                : 'Never exported'}
+                          >
+                            {d.exports > 0 ? (
+                              <span className="text-gray-700">{d.exports}</span>
+                            ) : d.predatesTracking ? (
+                              <span className="text-gray-400">unknown</span>
+                            ) : (
+                              <span className="text-gray-700">0</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs">
+                            {d.previewed ? (
+                              <span className="text-[#01B18B]">yes</span>
+                            ) : d.predatesTracking ? (
+                              <span className="text-gray-400">unknown</span>
+                            ) : (
+                              <span className="text-gray-500">no</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right text-gray-700">{d.aiCalls > 0 ? d.aiCalls : '—'}</td>
                           <td className="px-3 py-2">
@@ -209,6 +240,14 @@ export function PcmDetailDrawer({ userId, onClose }: { userId: string; onClose: 
                       <span className="text-gray-700">
                         {EVENT_LABELS[a.eventType] ?? a.eventType}
                         {a.deckName && <span className="text-gray-500"> — {a.deckName}</span>}
+                        {a.onOthersDeck && (
+                          <span
+                            className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500"
+                            title="Another PCM's deck — not counted as that PCM's engagement"
+                          >
+                            other PCM&rsquo;s deck
+                          </span>
+                        )}
                       </span>
                       <span className="shrink-0 text-xs text-gray-400">{formatDateTime(a.createdAt)}</span>
                     </li>
