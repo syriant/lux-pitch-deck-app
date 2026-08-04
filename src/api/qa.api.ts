@@ -54,7 +54,8 @@ export interface QaApplyResponse {
   results: QaApplyFixResult[];
 }
 
-export type HygieneStatus = 'pass' | 'warn';
+export type HygieneSeverity = 'warn' | 'info';
+export type HygieneStatus = 'pass' | HygieneSeverity;
 
 export interface HygieneCheck {
   key: string;
@@ -79,6 +80,37 @@ export interface UpdateQaRuleRequest {
   prompt?: string;
   active?: boolean;
   sortOrder?: number;
+}
+
+export interface CreateQaRuleRequest {
+  key: string;
+  name: string;
+  prompt: string;
+  sortOrder?: number;
+}
+
+/** Admin view of one hygiene check: registry metadata + stored overrides. */
+export interface HygieneCheckConfig {
+  key: string;
+  defaultName: string;
+  description: string;
+  hasThreshold: boolean;
+  thresholdLabel: string | null;
+  defaultThreshold: number | null;
+  /** Display name override; null = registry default. */
+  name: string | null;
+  enabled: boolean;
+  severity: HygieneSeverity;
+  /** Threshold override; null = registry default. */
+  threshold: number | null;
+  updatedAt: string | null;
+}
+
+export interface UpdateHygieneCheckRequest {
+  name?: string | null;
+  enabled?: boolean;
+  severity?: HygieneSeverity;
+  threshold?: number | null;
 }
 
 // PCM — QA over a deck
@@ -126,5 +158,28 @@ export async function listQaRules(): Promise<QaRule[]> {
 
 export async function updateQaRule(key: string, data: UpdateQaRuleRequest): Promise<QaRule> {
   const res = await apiClient.patch<QaRule>(`/admin/qa/rules/${key}`, data);
+  return res.data;
+}
+
+export async function createQaRule(data: CreateQaRuleRequest): Promise<QaRule> {
+  const res = await apiClient.post<QaRule>('/admin/qa/rules', data);
+  return res.data;
+}
+
+export async function deleteQaRule(key: string): Promise<void> {
+  await apiClient.delete(`/admin/qa/rules/${key}`);
+}
+
+// Admin — hygiene check configuration
+export async function listHygieneChecks(): Promise<HygieneCheckConfig[]> {
+  const res = await apiClient.get<HygieneCheckConfig[]>('/admin/qa/hygiene');
+  return res.data;
+}
+
+export async function updateHygieneCheck(
+  key: string,
+  data: UpdateHygieneCheckRequest,
+): Promise<HygieneCheckConfig> {
+  const res = await apiClient.patch<HygieneCheckConfig>(`/admin/qa/hygiene/${key}`, data);
   return res.data;
 }

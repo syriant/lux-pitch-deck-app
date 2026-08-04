@@ -260,6 +260,13 @@ export function QaPanel({
   );
 }
 
+// `info` checks are advisory-only: shown here but they never gate an export.
+const HYGIENE_DOT: Record<HygieneCheck['status'], string> = {
+  pass: 'bg-emerald-500',
+  warn: 'bg-amber-500',
+  info: 'bg-sky-400',
+};
+
 function Completeness({ checks }: { checks: HygieneCheck[] }) {
   const warnCount = checks.filter((c) => c.status === 'warn').length;
   return (
@@ -273,9 +280,9 @@ function Completeness({ checks }: { checks: HygieneCheck[] }) {
       <ul className="space-y-1">
         {checks.map((c) => (
           <li key={c.key} className="flex items-start gap-2 text-sm">
-            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${c.status === 'warn' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+            <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${HYGIENE_DOT[c.status]}`} />
             <span className="text-gray-800">{c.name}</span>
-            {c.status === 'warn' && <span className="text-gray-500">— {c.detail}</span>}
+            {c.status !== 'pass' && <span className="text-gray-500">— {c.detail}</span>}
           </li>
         ))}
       </ul>
