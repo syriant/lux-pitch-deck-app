@@ -5,6 +5,7 @@ import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
 import { currencySymbol } from '../currency';
+import { sortRoomsGrouped } from '../room-sort';
 import { TextScaleControl, readTextScale } from '../TextScaleControl';
 
 interface MarketingAssetsSlideProps {
@@ -104,11 +105,9 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
       key: 'allocation',
       label: 'Allocation',
       cells: uniqueOptions.map((o) => {
-        // Order rooms by cost price ascending to match the NETT rate order on
-        // the deal-options slide, so allocation follows the rates-section order.
-        const rooms = ((groups.get(o.optionNumber) ?? [o]) as DeckOption[])
-          .slice()
-          .sort((a, b) => Number(a.costPrice ?? Infinity) - Number(b.costPrice ?? Infinity));
+        // Match the NETT rate order on the deal-options slide, so allocation
+        // follows the rates-section order.
+        const rooms = sortRoomsGrouped((groups.get(o.optionNumber) ?? [o]) as DeckOption[], (r) => r.costPrice);
         const lines = rooms.map((r: { roomType: string | null; allocation: string | null }) => {
           const room = r.roomType ?? t('Room', locale);
           if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;

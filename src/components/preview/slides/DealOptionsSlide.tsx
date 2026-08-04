@@ -2,6 +2,7 @@ import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/dec
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
 import { formatMoney, currencySymbol } from '../currency';
+import { sortRoomsGrouped } from '../room-sort';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { translateInclusion } from '../i18n';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
@@ -236,9 +237,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
   // Rooms are ordered by cost price ascending, the same as the NETT rate row,
   // so the allocation lists room types in the same order as the rates section.
   const optionAllocation = (optNum: number): string => {
-    const rooms = (groups.get(optNum) ?? [])
-      .slice()
-      .sort((a, b) => Number(a.costPrice ?? Infinity) - Number(b.costPrice ?? Infinity));
+    const rooms = sortRoomsGrouped(groups.get(optNum) ?? [], (r) => r.costPrice);
     const lines = rooms.map((r) => {
       const room = r.roomType ?? t('Room', locale);
       if (!r.allocation) return `${room} – ? ${t('rooms per night', locale)}`;
@@ -301,9 +300,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     label: 'NETT rate',
     labelSuffix: ` (${currencySymbol(property.currency)})`,
     cells: optNums.map((num) => {
-      // Order rooms by price, lowest to highest.
-      const rooms = groups.get(num)!.filter((r) => r.selected)
-        .sort((a, b) => Number(a.costPrice ?? Infinity) - Number(b.costPrice ?? Infinity));
+      const rooms = sortRoomsGrouped(groups.get(num)!.filter((r) => r.selected), (r) => r.costPrice);
       return rooms.map((r) => {
         const price = formatMoney(r.costPrice, property.currency) ?? '?';
         const roomLabel = r.roomType ?? t('Room', locale);
@@ -328,9 +325,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       label: 'Sell rate',
       labelSuffix: ` (${currencySymbol('AUD')})`,
       cells: optNums.map((num) => {
-        // Order rooms by price, lowest to highest.
-        const rooms = groups.get(num)!.filter((r) => r.selected)
-          .sort((a, b) => Number(a.sellPrice ?? Infinity) - Number(b.sellPrice ?? Infinity));
+        const rooms = sortRoomsGrouped(groups.get(num)!.filter((r) => r.selected), (r) => r.sellPrice);
         return rooms.map((r) => {
           const price = formatMoney(r.sellPrice, 'AUD') ?? '?';
           const roomLabel = r.roomType ?? t('Room', locale);
