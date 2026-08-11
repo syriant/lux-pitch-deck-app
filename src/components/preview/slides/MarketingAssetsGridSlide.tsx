@@ -8,6 +8,7 @@ import { SlideRichText } from '../SlideRichText';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
 import { OCEAN_TEAL, SANDY_BEIGE, BURNT_ORANGE, INK } from '../brand';
 import { TextScaleControl, readTextScale } from '../TextScaleControl';
+import { applyMarketingChannelOrder, computeMarketingAssetChannels, slugifyChannel } from '../slide-types';
 
 interface MarketingAssetsGridSlideProps {
   property?: DeckPropertyFull;
@@ -118,10 +119,28 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
       const rule = rulesByTier[tier];
       if (rule) for (const ch of Object.keys(rule.assetEntitlements)) set.add(ch);
     }
-    return Array.from(set).filter((ch) =>
+    const list = Array.from(set).filter((ch) =>
       optNums.some((num) => groups.get(num)![0].marketingAssets?.[ch] === true),
     );
+    return property ? applyMarketingChannelOrder(list, deck?.customFields, property.id) : list;
   })();
+
+  // Reordering swaps within the FULL ordered channel list (not just this
+  // slide's chunk), so a row can cross a pagination boundary; buildSlideList
+  // re-chunks from the saved order on the next render. dealTierRules from the
+  // deck payload is the same source buildSlideList orders by; the queried
+  // admin rules are only the fallback path's source.
+  const moveChannel = (channel: string, dir: -1 | 1) => {
+    if (!onFieldChange || !property) return;
+    const ruleSet = (deck?.dealTierRules?.length ? deck.dealTierRules : rules) as NonNullable<FullDeck['dealTierRules']>;
+    const full = computeMarketingAssetChannels(property, ruleSet, deck?.customFields);
+    const idx = full.indexOf(channel);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= full.length) return;
+    const next = full.slice();
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onFieldChange('custom', '', `mktgAssets.${property.id}.order`, JSON.stringify(next.map(slugifyChannel)));
+  };
 
   // Marketing Assets is capped at 2 slides, so a heavy deck can put more than
   // the comfortable 6 channels on one slide. Scale the text/padding/ticks down
@@ -223,8 +242,28 @@ export function MarketingAssetsGridSlide({ property, deck, channels: chunkedChan
                 // Channel name is translatable per deck (i18n overlay populates the .name key).
                 const channelName = cf?.[`mktgAssets.${property!.id}.${slug}.name`] || channel;
                 return (
-                  <tr key={channel}>
-                    <td className={`align-top ${rowBg}`} style={{ padding: cellPad }}>
+                  <tr key={channel} className="group">
+                    <td className={`align-top relative ${rowBg}`} style={{ padding: cellPad }}>
+                      {onFieldChange && (
+                        <div className="absolute top-1 right-1 z-10 hidden group-hover:flex gap-1">
+                          <button
+                            type="button"
+                            title="Move this asset up"
+                            onClick={() => moveChannel(channel, -1)}
+                            className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            title="Move this asset down"
+                            onClick={() => moveChannel(channel, 1)}
+                            className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      )}
                       <div className="font-bold mb-0.5" style={{ color: OCEAN_TEAL }}>{channelName}</div>
                       {description && (
                         <SlideRichText

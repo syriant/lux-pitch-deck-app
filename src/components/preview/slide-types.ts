@@ -99,9 +99,44 @@ function findRulesByTierForProperty(
   return out;
 }
 
+export function slugifyChannel(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Apply the PCM's saved row order for the marketing grid — customFields
+ * `mktgAssets.<propId>.order` holds a JSON array of channel slugs. Channels
+ * missing from the saved order keep their natural position after the ordered
+ * ones (e.g. a newly ticked asset appears at the bottom until moved).
+ */
+export function applyMarketingChannelOrder(
+  channels: string[],
+  customFields: Record<string, string> | null | undefined,
+  propId: string,
+): string[] {
+  const raw = customFields?.[`mktgAssets.${propId}.order`];
+  if (!raw) return channels;
+  let slugs: unknown;
+  try {
+    slugs = JSON.parse(raw);
+  } catch {
+    return channels;
+  }
+  if (!Array.isArray(slugs)) return channels;
+  const pos = new Map<string, number>();
+  slugs.forEach((s, i) => {
+    if (typeof s === 'string') pos.set(s, i);
+  });
+  return channels
+    .map((ch, i) => ({ ch, i, p: pos.get(slugifyChannel(ch)) ?? slugs.length + i }))
+    .sort((a, b) => a.p - b.p || a.i - b.i)
+    .map((x) => x.ch);
+}
+
 export function computeMarketingAssetChannels(
   prop: DeckPropertyFull,
   rules: NonNullable<FullDeck['dealTierRules']> = [],
+  customFields?: Record<string, string> | null,
 ): string[] {
   const rulesByTier = findRulesByTierForProperty(rules, { grade: prop.grade, destination: prop.destination });
   const all = new Set<string>();
@@ -115,7 +150,8 @@ export function computeMarketingAssetChannels(
     seen.add(o.optionNumber);
     return true;
   });
-  return Array.from(all).filter((ch) => opts.some((o) => o.marketingAssets?.[ch] === true));
+  const channels = Array.from(all).filter((ch) => opts.some((o) => o.marketingAssets?.[ch] === true));
+  return applyMarketingChannelOrder(channels, customFields, prop.id);
 }
 
 export function buildSlideList(deck: FullDeck): SlideDefinition[] {
@@ -211,7 +247,7 @@ function buildFromSlideOrder(deck: FullDeck): SlideDefinition[] {
               });
             }
           } else if (slideType === 'marketing-assets-grid') {
-            const channels = computeMarketingAssetChannels(prop, deck.dealTierRules ?? []);
+            const channels = computeMarketingAssetChannels(prop, deck.dealTierRules ?? [], deck.customFields);
             const chunks = chunkMarketingAssetChannels(channels);
             let mktgOffset = 0;
             for (let ci = 0; ci < chunks.length; ci++) {
