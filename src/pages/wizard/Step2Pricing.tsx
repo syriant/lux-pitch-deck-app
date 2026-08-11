@@ -4,6 +4,7 @@ import { type DeckPropertyFull, type FullDeck, type SetOptionRequest, type Tacti
 import { TacticalPackagesSection } from './TacticalPackagesSection';
 import { CampaignDatesEditor } from './CampaignDatesEditor';
 import { formatMoney } from '@/components/preview/currency';
+import { sortRoomsGrouped } from '@/components/preview/room-sort';
 
 interface Step2Props {
   deckId: string;
@@ -209,7 +210,7 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-1">Pricing Tool Upload</h2>
-      <p className="text-sm text-gray-500 mb-6">Upload a pricing tool for each property.</p>
+      <p className="text-sm text-gray-500 mb-6">Upload a pricing tool for each property &mdash; the spreadsheet, or the JSON export from the online pricing tool.</p>
 
       <fieldset
         disabled={anyLoading}
@@ -252,7 +253,7 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
                     <input
                       ref={(el) => { fileInputRefs.current[prop.id] = el; }}
                       type="file"
-                      accept=".xlsx,.xlsm,.xls"
+                      accept=".xlsx,.xlsm,.xls,.json"
                       onChange={(e) => handleFileChange(prop.id, e)}
                       className="block text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-[#01B18B] file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-[#009977]"
                     />
@@ -271,7 +272,7 @@ export function Step2Pricing({ deckId, deck, properties, onDeckChange, onBack, o
                     )}
                   </div>
 
-                  {versionWarnings.has(prop.id) && state?.result && !state.result.version.startsWith('5.1') && (
+                  {versionWarnings.has(prop.id) && state?.result && !state.result.version.startsWith('5.1') && !state.result.version.startsWith('json') && (
                     <div className="mb-3 rounded-md bg-amber-50 border border-amber-200 p-3 flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium text-amber-800">
@@ -432,11 +433,19 @@ function SavedOptionsView({ deckId, options, currency }: { deckId: string; optio
     }
   }
 
+  // Saved rows arrive in (optionNumber, id) order — id is a UUID, so within an
+  // option the rows are effectively shuffled. Group room types together for
+  // display (cheapest type first, shorter stay first), matching the NETT/sell
+  // rate lists. Display-only: the API's row order is load-bearing elsewhere
+  // (first row per option owns the marketing-assets grid).
   const grouped = new Map<number, typeof options>();
   for (const opt of options) {
     const group = grouped.get(opt.optionNumber) ?? [];
     group.push(opt);
     grouped.set(opt.optionNumber, group);
+  }
+  for (const [optNum, group] of grouped) {
+    grouped.set(optNum, sortRoomsGrouped(group, (o) => o.costPrice));
   }
 
   return (
