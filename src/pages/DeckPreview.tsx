@@ -17,6 +17,7 @@ import { getSalesforceStatus } from '@/api/salesforce.api';
 import { recordPreviewEvent } from '@/api/analytics.api';
 import { AppShell } from '@/components/layout/AppShell';
 import { QaPanel } from '@/components/preview/QaPanel';
+import { VendorInfoPanel } from '@/components/preview/VendorInfoPanel';
 import { getHygiene, recordExportAck, type HygieneCheck, type ExportType } from '@/api/qa.api';
 
 export type FieldChangeHandler = (
@@ -47,6 +48,7 @@ export function DeckPreview() {
   const [sfUploading, setSfUploading] = useState(false);
   const [sfConfirmOpen, setSfConfirmOpen] = useState(false);
   const [qaOpen, setQaOpen] = useState(false);
+  const [vendorOpen, setVendorOpen] = useState(false);
   const [exportGate, setExportGate] = useState<{ type: ExportType; warnings: HygieneCheck[]; run: () => Promise<void> } | null>(null);
 
   // optionId → tier label, so QA's applied ops read "…on Diamond" not a raw id.
@@ -670,6 +672,13 @@ export function DeckPreview() {
               ✓ Run QA
             </button>
             <button
+              onClick={() => setVendorOpen(true)}
+              title="Web research on the hotel and its parent group for negotiation prep — internal only, never exported"
+              className="rounded-md border border-[#01B18B] px-3 py-1.5 text-sm text-[#01B18B] hover:bg-[#E6F9F5]"
+            >
+              ⌕ Vendor info
+            </button>
+            <button
               onClick={() => navigate(`/decks/${id}/edit`)}
               className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-[#7E8188] hover:bg-gray-50"
             >
@@ -766,6 +775,7 @@ export function DeckPreview() {
       </div>
 
       {id && <QaPanel deckId={id} open={qaOpen} onClose={() => setQaOpen(false)} optionLabels={optionLabels} />}
+      {id && <VendorInfoPanel deckId={id} open={vendorOpen} onClose={() => setVendorOpen(false)} />}
 
       {exportGate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
