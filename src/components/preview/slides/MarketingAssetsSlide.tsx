@@ -7,6 +7,7 @@ import { OCEAN_TEAL, SANDY_BEIGE, INK } from '../brand';
 import { currencySymbol } from '../currency';
 import { sortRoomsGrouped } from '../room-sort';
 import { TextScaleControl, readTextScale } from '../TextScaleControl';
+import { applyRowOrder, moveRowKey, rowOrderKey } from '../row-order';
 
 interface MarketingAssetsSlideProps {
   property?: DeckPropertyFull;
@@ -159,9 +160,20 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
   // move there too and this slide is hidden (via hiddenSlides) — render empty so
   // nothing duplicates even if the slide is manually un-hidden.
   const combined = cf?.[`deal.${propId}.combine`] === 'true';
-  const visibleRows = combined ? [] : rows.filter((row) => row.key !== 'period' && row.key !== 'travel');
+  const shownRows = combined ? [] : rows.filter((row) => row.key !== 'period' && row.key !== 'travel');
 
-  const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`) && !k.endsWith('.textScale') && !k.endsWith('.showSpend') && !k.endsWith('.customRows') && !k.includes('.custom.'));
+  // PCM row order (hover ↑/↓ on the row label), saved as mktg.<prop>.rowOrder —
+  // same mechanism as the campaign-options table.
+  const orderKey = rowOrderKey('mktg', propId);
+  const visibleRows = applyRowOrder(shownRows, cf, orderKey);
+
+  const moveRow = (key: string, dir: -1 | 1) => {
+    if (!onFieldChange) return;
+    const keys = moveRowKey(visibleRows, key, dir);
+    if (keys) onFieldChange('custom', '', orderKey, JSON.stringify(keys));
+  };
+
+  const hasEdits = cf && Object.keys(cf).some((k) => k.startsWith(`mktg.${propId}.`) && !k.endsWith('.textScale') && !k.endsWith('.showSpend') && !k.endsWith('.customRows') && !k.endsWith('.rowOrder') && !k.includes('.custom.'));
 
   return (
     <div className="h-full w-full flex flex-col" style={{ backgroundColor: SANDY_BEIGE }}>
@@ -208,7 +220,7 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
               <button
                 type="button"
                 onClick={async () => {
-                  const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`) && !k.endsWith('.textScale') && !k.endsWith('.showSpend') && !k.endsWith('.customRows') && !k.includes('.custom.'));
+                  const keysToRemove = Object.keys(cf!).filter((k) => k.startsWith(`mktg.${propId}.`) && !k.endsWith('.textScale') && !k.endsWith('.showSpend') && !k.endsWith('.customRows') && !k.endsWith('.rowOrder') && !k.includes('.custom.'));
                   for (const k of keysToRemove) {
                     await onFieldChange('custom', '', k, '');
                   }
@@ -256,8 +268,28 @@ export function MarketingAssetsSlide({ property, deck, onFieldChange }: Marketin
                   && placeholder !== '-'
                   && effective.every((v) => v === effective[0]);
                 return (
-                  <tr key={row.key} className="border-b border-gray-200">
-                    <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
+                  <tr key={row.key} className="border-b border-gray-200 group">
+                    <td className={`p-2 font-bold align-top relative ${rowBg}`} style={{ color: OCEAN_TEAL }}>
+                      {onFieldChange && (
+                        <div className="absolute top-0.5 right-0.5 z-10 hidden group-hover:flex gap-1">
+                          <button
+                            type="button"
+                            title="Move this row up"
+                            onClick={() => moveRow(row.key, -1)}
+                            className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50 cursor-pointer"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            title="Move this row down"
+                            onClick={() => moveRow(row.key, 1)}
+                            className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50 cursor-pointer"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      )}
                       {row.custom ? (
                         <span className="inline-flex items-start gap-1">
                           <SlideRichText

@@ -1,8 +1,10 @@
 import { type DeckPropertyFull, type FullDeck, type DeckOption } from '@/api/decks.api';
 import { type FieldChangeHandler } from '@/pages/DeckPreview';
 import { SlideRichText } from '../SlideRichText';
-import { formatMoney, currencySymbol } from '../currency';
+import { currencySymbol } from '../currency';
 import { sortRoomsGrouped } from '../room-sort';
+import { buildRateLines } from '../rate-lines';
+import { applyRowOrder, moveRowKey, rowOrderKey } from '../row-order';
 import { t, optionColumnLabel, dateLocaleTag } from '../labels';
 import { translateInclusion } from '../i18n';
 import { SLIDE_DISPLAY_STACK } from '../fonts';
@@ -113,13 +115,13 @@ export function DealOptionsSlide({ property, deck, onFieldChange }: DealOptionsS
             >
               {cf[`deal.${property.id}.combine`] === 'true' ? 'Split details slide' : 'Combine onto one slide'}
             </button>
-            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale') && !k.endsWith('.customRows') && !k.includes('.custom.')) && (
+            {cf && Object.keys(cf).some((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale') && !k.endsWith('.customRows') && !k.endsWith('.rowOrder') && !k.includes('.custom.')) && (
               <button
                 type="button"
                 onClick={async () => {
                   // Reset per-cell text/size overrides only — leave the structural
-                  // combine + text-scale toggles intact.
-                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale') && !k.endsWith('.customRows') && !k.includes('.custom.'));
+                  // combine + text-scale + row-order settings intact.
+                  const keysToRemove = Object.keys(cf).filter((k) => k.startsWith(`deal.${property.id}.`) && !k.endsWith('.combine') && !k.endsWith('.textScale') && !k.endsWith('.customRows') && !k.endsWith('.rowOrder') && !k.includes('.custom.'));
                   for (const k of keysToRemove) {
                     await onFieldChange('custom', '', k, '');
                   }
@@ -291,28 +293,22 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     }),
   });
 
-  // Rates row — show nett (cost) price. If nights > 1, show as package (e.g. "Standard Room 2N – $290");
-  // otherwise show per-night (e.g. "Standard Room – $290 per night").
+  // Rates row — show nett (cost) price. A room type priced at several stay
+  // lengths gets one line ("Centennial King – $399 (2N), $591 (3N)"); a single
+  // stay length keeps the package form ("Standard Room 2N – $290"), and a
+  // one-night rate shows per-night ("Standard Room – $290 per night").
   // Rows ticked off in Step 2 are excluded; per the chosen behaviour we keep the
   // option column even when every row is unticked (renders empty).
   rows.push({
     key: 'rates',
     label: 'NETT rate',
     labelSuffix: ` (${currencySymbol(property.currency)})`,
-    cells: optNums.map((num) => {
-      const rooms = sortRoomsGrouped(groups.get(num)!.filter((r) => r.selected), (r) => r.costPrice);
-      return rooms.map((r) => {
-        const price = formatMoney(r.costPrice, property.currency) ?? '?';
-        const roomLabel = r.roomType ?? t('Room', locale);
-        if (r.nights && r.nights > 1) {
-          const perNight = showPerNight ? formatMoney(Number(r.costPrice) / r.nights, property.currency) : null;
-          return perNight
-            ? `${roomLabel} ${r.nights}N – ${price} (${perNight} ${t('per night', locale)})`
-            : `${roomLabel} ${r.nights}N – ${price}`;
-        }
-        return `${roomLabel} – ${price} ${t('per night', locale)}`;
-      }).join('\n');
-    }),
+    cells: optNums.map((num) => buildRateLines(
+      groups.get(num)!.filter((r) => r.selected),
+      (r) => r.costPrice,
+      property.currency,
+      { showPerNight, locale },
+    ).join('\n')),
   });
 
   // Sell rate — optional, off by default (toggle in the slide header). Mirrors
@@ -324,20 +320,12 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
       key: 'sellrates',
       label: 'Sell rate',
       labelSuffix: ` (${currencySymbol('AUD')})`,
-      cells: optNums.map((num) => {
-        const rooms = sortRoomsGrouped(groups.get(num)!.filter((r) => r.selected), (r) => r.sellPrice);
-        return rooms.map((r) => {
-          const price = formatMoney(r.sellPrice, 'AUD') ?? '?';
-          const roomLabel = r.roomType ?? t('Room', locale);
-          if (r.nights && r.nights > 1) {
-            const perNight = showPerNight ? formatMoney(Number(r.sellPrice) / r.nights, 'AUD') : null;
-            return perNight
-              ? `${roomLabel} ${r.nights}N – ${price} (${perNight} ${t('per night', locale)})`
-              : `${roomLabel} ${r.nights}N – ${price}`;
-          }
-          return `${roomLabel} – ${price} ${t('per night', locale)}`;
-        }).join('\n');
-      }),
+      cells: optNums.map((num) => buildRateLines(
+        groups.get(num)!.filter((r) => r.selected),
+        (r) => r.sellPrice,
+        'AUD',
+        { showPerNight, locale },
+      ).join('\n')),
     });
   }
 
@@ -384,6 +372,16 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
     rows.push({ key: `custom.${id}`, label: '', cells: optNums.map(() => ''), custom: true, customId: id });
   }
 
+  // PCM row order (hover ↑/↓ on the row label), saved as deal.<prop>.rowOrder.
+  const orderKey = rowOrderKey('deal', property.id);
+  const orderedRows = applyRowOrder(rows, customFields, orderKey);
+
+  const moveRow = (key: string, dir: -1 | 1) => {
+    if (!onFieldChange) return;
+    const keys = moveRowKey(orderedRows, key, dir);
+    if (keys) onFieldChange('custom', '', orderKey, JSON.stringify(keys));
+  };
+
   return (
     <div className="flex-1 px-[5%] pb-2 overflow-visible">
       <table className="w-full border-collapse" style={{ fontSize: baseFont }}>
@@ -398,7 +396,7 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, ri) => {
+          {orderedRows.map((row, ri) => {
             const rowBg = ri % 2 === 0 ? 'bg-[#EEF3F2]' : 'bg-white';
             // Merge adjacent option cells when they resolve to the same text
             // (after applying any per-cell custom-field overrides). Cuts the
@@ -414,8 +412,28 @@ function OptionsTable({ property, deck, customFields, onFieldChange }: { propert
               && effective.every((v) => v === effective[0]);
 
             return (
-              <tr key={ri} className="border-b border-gray-200">
-                <td className={`p-2 font-bold align-top ${rowBg}`} style={{ color: OCEAN_TEAL }}>
+              <tr key={row.key} className="border-b border-gray-200 group">
+                <td className={`p-2 font-bold align-top relative ${rowBg}`} style={{ color: OCEAN_TEAL }}>
+                  {onFieldChange && (
+                    <div className="absolute top-0.5 right-0.5 z-10 hidden group-hover:flex gap-1">
+                      <button
+                        type="button"
+                        title="Move this row up"
+                        onClick={() => moveRow(row.key, -1)}
+                        className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50 cursor-pointer"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        title="Move this row down"
+                        onClick={() => moveRow(row.key, 1)}
+                        className="rounded border border-gray-300 bg-white px-1 py-0.5 text-[9px] leading-none text-gray-600 shadow hover:bg-gray-50 cursor-pointer"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  )}
                   {row.custom ? (
                     <span className="inline-flex items-start gap-1">
                       <SlideRichText
