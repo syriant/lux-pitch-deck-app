@@ -66,6 +66,9 @@ export function Dashboard() {
     getUsers().then(setOwnerOptions).catch(() => {});
   }, [isAdmin]);
 
+  // Sunset switch — set once LUX's own environment took over (see vite-env.d.ts).
+  const migratedUrl: string | undefined = import.meta.env.VITE_MIGRATED_URL || undefined;
+
   async function handleShowCreate() {
     setShowCreate(true);
     setLoadingTemplates(true);
@@ -96,8 +99,9 @@ export function Dashboard() {
       setSelectedTemplateId(null);
       navigate(`/decks/${deck.id}/edit`);
       return;
-    } catch {
-      setError('Failed to create deck');
+    } catch (err) {
+      const apiMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(typeof apiMsg === 'string' ? apiMsg : 'Failed to create deck');
     } finally {
       setCreating(false);
     }
@@ -138,13 +142,23 @@ export function Dashboard() {
             Welcome back{user?.name ? `, ${user.name}` : ''}
           </p>
         </div>
-        <button
-          onClick={handleShowCreate}
-          className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
-        >
-          Create New Deck
-        </button>
+        {!migratedUrl && (
+          <button
+            onClick={handleShowCreate}
+            className="rounded-md bg-[#01B18B] px-4 py-2 text-sm text-white hover:bg-[#009977]"
+          >
+            Create New Deck
+          </button>
+        )}
       </div>
+
+      {migratedUrl && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          The pitch deck tool has moved. New decks can no longer be created here, please use{' '}
+          <a href={migratedUrl} className="font-medium underline">{migratedUrl.replace(/^https?:\/\//, '')}</a>{' '}
+          instead. Existing decks remain available here until this site is shut down.
+        </div>
+      )}
 
       {error && <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
